@@ -3,8 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Portail DELIGNY R&D pour acceder aux logiciels, au store et au desk client." />
-  <title>DELIGNY R&D - Portail logiciels</title>
+  <meta name="description" content="Vitrine R&D DELIGNY : conception produit, logiciel et structure informatique." />
+  <title>DELIGNY R&D - Vitrine R&D</title>
+  <!--
+    Profil STATIC_FORTRESS (deploy/STATIC_FORTRESS_CHECKLIST.md) — adapte a
+    l'hebergement reel (GitHub Pages, pas le VPS/nginx prevu initialement).
+    GitHub Pages ne permet aucun en-tete HTTP personnalise : HSTS,
+    X-Content-Type-Options et Permissions-Policy sont donc IMPOSSIBLES ici
+    (ils exigent un vrai en-tete serveur, pas une balise meta) — limite
+    de la plateforme, pas un oubli. Seuls CSP et Referrer-Policy sont
+    reellement appliques via balises meta ci-dessous. Pour une parite
+    complete avec Atlas Fortress, il faudrait un proxy devant GitHub Pages
+    (ex. Cloudflare gratuit, regle de reecriture d'en-tetes) — non fait,
+    geste a decider par Baptiste.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -13,7 +27,7 @@
       <span class="brand-mark">D</span>
       <span>
         <strong>DELIGNY R&D</strong>
-        <small>Portail logiciels</small>
+        <small>Vitrine R&D</small>
       </span>
     </a>
     <nav class="nav" aria-label="Navigation principale">
@@ -30,12 +44,13 @@
 
   <main>
     <section class="hero" id="desk">
-      <p class="eyebrow">Acces central aux outils DELIGNY</p>
-      <h1>Un portail pour piloter Atlas, les studios, les moteurs et les futurs produits.</h1>
+      <p class="eyebrow">Vitrine R&D DELIGNY</p>
+      <h1>La vitrine R&D DELIGNY : conception produit, logiciel et structure informatique.</h1>
       <p class="lead">
-        DELIGNY R&D regroupe les applications en un seul espace : lancer un logiciel,
-        suivre les acces, preparer les offres et pousser le developpement utile
-        jusqu'a l'ouverture du paiement public.
+        DELIGNY R&D montre ici ce qui est reellement concu et construit : objets et
+        produits physiques, logiciels et studios developpes en interne, infrastructure
+        et systemes qui les font tourner. Un espace pour decouvrir et tester, pas un
+        tableau de bord interne.
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#logiciels">Ouvrir les logiciels</a>

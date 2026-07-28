@@ -1,21 +1,25 @@
 :root {
-  --ink: #15131a;
-  --muted: #6a6470;
-  --line: rgba(21, 19, 26, 0.10);
-  --line-2: rgba(21, 19, 26, 0.06);
-  --paper: #efeae0;
-  --panel: #ffffff;
-  --soft: #f5f1e8;
-  --accent: #bd4f1c;
-  --accent-2: #a43d2b;
-  --gold: #b58422;
-  --green: #2e7d46;
-  --blue: #4a5d7e;
-  --shadow: 0 1px 2px rgba(21, 19, 26, 0.05);
-  --shadow-lift: 0 24px 60px rgba(21, 19, 26, 0.08);
-  /* Souveraineté : "Marianne"/"Spectral" si auto-hébergées, sinon stack système — aucun CDN. */
-  --font-display: "Spectral", "Marianne", Georgia, "Times New Roman", serif;
-  --font-body: "Marianne", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --ink: #f2ead9;
+  --ink-dim: #cfc0a4;
+  --muted: #a3927a;
+  --line: rgba(242, 234, 217, 0.12);
+  --line-2: rgba(242, 234, 217, 0.07);
+  --paper: #100e0c;
+  --panel: #1a1611;
+  --soft: #221c15;
+  --accent: #c9903f;
+  --accent-2: #8a5a2b;
+  --gold: #e4bd76;
+  --green: #7a9b74;
+  --blue: #5b7794;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 30px 70px rgba(0, 0, 0, 0.55);
+  /* Souverainete : polices systeme uniquement, aucun CDN (CSP style-src 'self').
+     Serif d'affichage = New York/Georgia sur Mac ; sans geometrique = Futura
+     (police Bauhaus authentique, presente nativement sur macOS). */
+  --font-display: ui-serif, "New York", Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-body: Futura, "Century Gothic", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
 }
 
 * {
@@ -47,7 +51,7 @@ a {
   justify-content: space-between;
   gap: 24px;
   padding: 20px 32px;
-  background: rgba(239, 234, 224, 0.85);
+  background: rgba(16, 14, 12, 0.82);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(18px);
 }
@@ -61,14 +65,14 @@ a {
 
 .brand-mark {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   place-items: center;
-  color: #fff;
-  background: var(--ink);
+  color: #14110d;
+  background: linear-gradient(135deg, var(--gold), var(--accent-2));
   font-family: var(--font-display);
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 50%;
 }
 
 .brand strong,
@@ -83,8 +87,9 @@ a {
 .brand small {
   margin-top: 2px;
   color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -99,15 +104,16 @@ a {
 .nav a {
   padding: 4px 0;
   color: var(--muted);
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   border-bottom: 1px solid transparent;
 }
 
 .nav a:hover {
-  color: var(--ink);
+  color: var(--gold);
   background: none;
   border-bottom-color: var(--accent);
 }
@@ -118,6 +124,8 @@ main {
 }
 
 .hero {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -127,13 +135,53 @@ main {
   text-align: center;
 }
 
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: -12%;
+  width: min(900px, 140vw);
+  height: min(900px, 140vw);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle at 50% 50%,
+    rgba(201, 144, 63, 0.32) 0px,
+    rgba(201, 144, 63, 0.32) 1.5px,
+    transparent 1.5px,
+    transparent 32px
+  );
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 55%, transparent 78%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 55%, transparent 78%);
+  pointer-events: none;
+}
+
 .eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
   margin: 0 0 12px;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  transform: rotate(45deg);
+}
+
+.section-head .eyebrow {
+  justify-content: flex-start;
 }
 
 .section-note {
@@ -157,6 +205,7 @@ h1 {
   font-size: clamp(44px, 7vw, 92px);
   line-height: 0.98;
   letter-spacing: -0.01em;
+  color: var(--ink);
 }
 
 h2 {
@@ -170,12 +219,13 @@ h2 {
 h3 {
   margin-bottom: 0;
   font-size: 18px;
+  letter-spacing: 0.01em;
 }
 
 .lead {
   max-width: 620px;
   margin: 0 auto;
-  color: var(--muted);
+  color: var(--ink-dim);
   font-size: 19px;
   line-height: 1.6;
 }
@@ -202,17 +252,18 @@ h3 {
   font-weight: 600;
   font-size: 15px;
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .btn:hover {
   transform: translateY(-1px);
+  border-color: var(--accent);
 }
 
 .btn-primary {
   border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
+  background: linear-gradient(135deg, var(--gold), var(--accent-2));
+  color: #14110d;
 }
 
 .btn-ghost {
@@ -240,7 +291,7 @@ h3 {
 .desk-card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 4px;
   box-shadow: var(--shadow);
 }
 
@@ -265,12 +316,14 @@ h3 {
   font-family: var(--font-display);
   font-size: 26px;
   font-weight: 500;
+  color: var(--gold);
 }
 
 .stat-strip span {
   color: var(--muted);
-  font-size: 12px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
 .notice {
@@ -315,17 +368,17 @@ h3 {
   min-height: 188px;
   padding: 22px;
   box-shadow: none;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .app-card:hover {
-  border-color: var(--line);
+  border-color: rgba(201, 144, 63, 0.4);
   box-shadow: var(--shadow-lift);
 }
 
 .app-card-primary {
   grid-column: span 2;
-  border-color: rgba(189, 79, 28, 0.35);
+  border-color: rgba(201, 144, 63, 0.35);
 }
 
 .app-card.private {
@@ -337,19 +390,21 @@ h3 {
   flex: 0 0 50px;
   height: 50px;
   place-items: center;
-  color: #fff;
-  background: var(--blue);
-  border-radius: 10px;
+  background: linear-gradient(135deg, var(--blue), #2f3f52);
+  border-radius: 50%;
   font-family: var(--font-display);
   font-weight: 600;
+  color: #f2ead9;
 }
 
 .app-card-primary .app-icon {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--gold), var(--accent-2));
+  color: #14110d;
 }
 
 .private .app-icon {
-  background: var(--ink);
+  background: linear-gradient(135deg, #3a3229, #1e1a15);
+  color: var(--ink-dim);
 }
 
 .app-content {
@@ -388,29 +443,31 @@ h3 {
   border-radius: 999px;
   color: var(--ink);
   background: var(--soft);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .tag-live {
-  color: #fff;
-  background: var(--accent);
+  color: #14110d;
+  background: linear-gradient(135deg, var(--gold), var(--accent));
 }
 
 .tag-free {
-  color: #fff;
+  color: #10150f;
   background: var(--green);
 }
 
 .tag-lab {
-  color: #fff;
+  color: #f2ead9;
   background: var(--blue);
 }
 
 .tag-private,
 .tag-wait {
-  color: #fff;
+  color: #f2ead9;
   background: var(--accent-2);
 }
 
@@ -470,12 +527,14 @@ h3 {
 .check-list li {
   padding: 12px 14px;
   background: var(--soft);
-  border-radius: 10px;
+  border-radius: 4px;
   color: var(--ink);
+  border-left: 2px solid var(--accent);
 }
 
 .check-list.muted li {
   color: var(--muted);
+  border-left-color: var(--line);
 }
 
 .footer {
@@ -504,7 +563,7 @@ h3 {
 }
 
 .footer-legal a {
-  color: var(--ink);
+  color: var(--gold);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

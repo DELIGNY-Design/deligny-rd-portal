@@ -94,18 +94,12 @@ a {
 
 .nav {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 22px;
+  gap: 10px 22px;
   padding: 0;
   border: none;
   background: transparent;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.nav::-webkit-scrollbar {
-  display: none;
 }
 
 .nav a {

@@ -94,10 +94,18 @@ a {
 
 .nav {
   display: flex;
-  gap: 28px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 22px;
   padding: 0;
   border: none;
   background: transparent;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav::-webkit-scrollbar {
+  display: none;
 }
 
 .nav a {
@@ -105,12 +113,19 @@ a {
   color: var(--ink-dim);
   font-size: 14px;
   font-weight: 500;
+  white-space: nowrap;
   border-bottom: 1px solid transparent;
 }
 
 .nav a:hover {
   color: var(--accent);
   background: none;
+  border-bottom-color: var(--accent);
+}
+
+.nav a[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 700;
   border-bottom-color: var(--accent);
 }
 

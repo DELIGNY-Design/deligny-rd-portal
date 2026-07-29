@@ -17,7 +17,7 @@
     (ex. Cloudflare gratuit, regle de reecriture d'en-tetes) — non fait,
     geste a decider par Baptiste.
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -46,7 +46,7 @@
   <main>
     <section class="hero" id="desk">
       <p class="eyebrow">Vitrine R&D DELIGNY</p>
-      <h1>La vitrine R&D DELIGNY : conception produit, logiciel et structure informatique.</h1>
+      <h1>La vitrine R&D DELIGNY : conception produit, logiciel et <span class="grad-text">structure informatique.</span></h1>
       <p class="lead">
         DELIGNY R&D montre ici ce qui est reellement concu et construit : objets et
         produits physiques, logiciels et studios developpes en interne, infrastructure
@@ -55,7 +55,7 @@
       </p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#logiciels">Ouvrir les logiciels</a>
-        <a class="btn btn-ghost" href="#book">Voir le book</a>
+        <a class="btn-pill" href="#book">Voir le book design <span class="pill-plus">+</span></a>
       </div>
       <div class="stat-strip" aria-label="Apercu du portail">
         <div><strong>10</strong><span>lignes produit</span></div>
@@ -776,6 +776,10 @@
   </main>
 
   <footer class="footer">
+    <figure class="footer-scene">
+      <img src="img/paris-siege.jpg" alt="Illustration du quartier de la Place Vendome, Paris 1er" loading="lazy" width="1600" height="1036" />
+      <figcaption>231 Rue Saint-Honoré, 75001 Paris</figcaption>
+    </figure>
     <div class="footer-top">
       <span>DELIGNY R&D - Portail en preparation</span>
       <span>Paiement public en attente de finalisation PSP (Payplug, Iopole).</span>

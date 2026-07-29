@@ -78,6 +78,10 @@ table.pts tr.bad td{color:var(--red);}
 .swatches{display:flex;gap:8px;flex-wrap:wrap;}
 .swatch{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;}
 .swatch.on{border-color:var(--blue);box-shadow:0 0 0 2px rgba(41,151,255,.3);}
+.seed{font:600 12px var(--mono);color:var(--txt);background:var(--card2);border:1px solid var(--sep);border-radius:99px;padding:8px 12px;width:96px;text-align:center;}
+.seed:focus{outline:none;border-color:var(--blue);}
+.viewtools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--dim2);}
+.viewtools input[type=range]{accent-color:var(--blue);width:110px;}
 
 .socket-opt{display:flex;gap:10px;border:1px solid var(--sep);border-radius:14px;padding:12px 14px;margin-top:8px;cursor:pointer;background:var(--card2);}
 .socket-opt.on{border-color:var(--blue-cta);background:rgba(0,113,227,.10);}
@@ -145,30 +149,41 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
         </div>
         <canvas id="profileCanvas" width="480" height="440"></canvas>
       </div>
+      <div class="row-btn" id="presetRow"></div>
       <div class="row-btn">
-        <button class="btn" data-preset="dune">Preset « Dune »</button>
-        <button class="btn" data-preset="cloche">Preset « Cloche »</button>
-        <button class="btn" data-preset="cylindre">Preset « Cylindre facetté »</button>
+        <button class="btn pri" id="randomShape">🎲 Forme aléatoire</button>
+        <input id="seedInput" class="seed" spellcheck="false" maxlength="8"
+               title="Graine de la forme : même graine = même forme. Reportée dans le dossier de commande.">
+        <button class="btn" id="seedApply">↻ Rejouer cette graine</button>
         <button class="btn danger" id="delPoint" disabled>Supprimer le point sélectionné</button>
       </div>
       <table class="pts" id="ptsTable"><thead><tr><th>#</th><th>Hauteur (mm)</th><th>Rayon (mm)</th><th>Surplomb</th></tr></thead><tbody></tbody></table>
       <div class="warnbox" id="warnbox"></div>
-      <div class="hint">Bornes d'impression (Ender-3 S1, plateau 220×220×270 mm — vérifié atelier) : hauteur ≤ <b id="bMaxH"></b> mm,
-      rayon ≤ <b id="bMaxR"></b> mm, rayon du point du haut ≥ <b id="bMinTop"></b> mm imposé par le culot choisi (logement + paroi).</div>
+      <div class="hint">Bornes actives pour le type <b id="bType"></b> : hauteur ≤ <b id="bMaxH"></b> mm,
+      rayon ≤ <b id="bMaxR"></b> mm, rayon du point du haut ≥ <b id="bMinTop"></b> mm imposé par le culot choisi (logement + paroi).
+      Plafond machine : Ender-3 S1, plateau 220×220×270 mm (vérifié atelier) — chaque type de lampe borne plus court que la machine.</div>
     </div>
 
     <div class="card">
       <h2><span class="n">3</span>Aperçu 3D (généré depuis le même profil)</h2>
       <div class="canvas-col">
-        <div class="lbl">Révolution du profil
-          <small>Illustratif : surface extérieure seule, pas un maillage solide réellement imprimable. Glisse pour tourner.</small>
+        <div class="lbl">Coque réelle, rendue depuis le maillage exporté
+          <small>Ce sont les <b>mêmes triangles</b> que le fichier STL téléchargé : coque creuse d'épaisseur paroi, ouverte en haut et en bas. Glisse pour tourner.</small>
         </div>
         <canvas id="previewCanvas" width="480" height="440"></canvas>
+        <div class="viewtools">
+          <span>Orbite : glisse (horizontal = tourner, vertical = basculer) · molette = zoom</span>
+          <label>Hauteur de vue <input type="range" id="vElev" min="-70" max="80" step="1" value="20"></label>
+          <label>Zoom <input type="range" id="vZoom" min="60" max="260" step="1" value="100"></label>
+          <button class="btn" id="vReset">⟲ Vue par défaut</button>
+          <button class="btn" id="vTurn">▶ Tourner</button>
+        </div>
       </div>
       <div class="row-btn" style="align-items:center">
         <span style="font-size:12px;color:var(--dim2);margin-right:4px">Couleur (cosmétique — n'affecte pas la géométrie) :</span>
         <div class="swatches" id="swatches"></div>
       </div>
+      <div class="warnbox" id="checksbox"></div>
     </div>
   </div>
 
@@ -178,6 +193,17 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     <div id="socketList"></div>
     <div class="hint">La géométrie du culot (bore, épaulement, filetage) n'est <b>jamais générée</b> : ces cotes viennent de pièces mesurées
     à l'atelier ou du standard commercial publié, et servent uniquement à borner le rayon mini du point de fixation du profil.</div>
+  </div>
+
+  <!-- 4b. MODULES D'ASSEMBLAGE -->
+  <div class="card" style="margin-top:16px">
+    <h2><span class="n">4b</span>Modules d'assemblage — fabriqués par l'atelier</h2>
+    <div class="hint">Assemble ici les <b>modules standards de l'atelier</b> (liste fermée, même logique que le culot) : tu les choisis et
+    les positionnes, le configurateur vérifie l'<b>ajustement</b> dans ton profil (rayon intérieur disponible − paroi vs rayon du module
+    + jeu atelier <b>0.5 mm radial</b>). La <b>fusion géométrique</b> module↔extérieur est réalisée par l'atelier en CAO à partir du
+    dossier — le STL exporté reste le volume extérieur seul (cf. gate de sécurité).</div>
+    <div class="row-btn" id="moduleAdders"></div>
+    <div id="moduleList"></div>
   </div>
 
   <!-- 5. MATIERE -->
@@ -334,6 +360,33 @@ const SOCKETS = {
   },
 };
 
+/* ============================================================================
+ * MODULES D'ASSEMBLAGE — LISTE FERMÉE, fabriqués par l'atelier. Le client les
+ * ASSEMBLE (choix + position + contrôle d'ajustement) mais ne les dessine
+ * jamais — même logique que les culots. La FUSION géométrique module↔extérieur
+ * est réalisée par l'atelier en CAO à partir du dossier, pas par le STL exporté
+ * ici (qui reste le volume extérieur seul).
+ * ========================================================================== */
+const RADIAL_CLEARANCE_MM = 0.5; // règle atelier : jeu 0.7 + compensation FDM 0.3, au diamètre
+const MODULES = {
+  plaque_douille: { label:'Plaque porte-douille interne', pos:'top', thickMm:4,
+    fix:'trou = alésage du culot choisi, cône ≥50° auto-portant',
+    measured:'socket',
+    source:"Géométrie dérivée du culot choisi — précédent atelier : lampe facettée E14 v2.1 (interfaces validées au contrôle géométrique)." },
+  bague_e14: { label:'Bague de serrage E14 — siège vissé, démontable sans outil', pos:'top', diaMm:43, thickMm:8,
+    fix:'vissée sous le culot sur corps fileté',
+    measured:false,
+    source:"Cote bague Ø43 provisoire (non mesurée atelier) — à vérifier au pied à coulisse avant série. Précédents : lampe facettée E14 v2.1, lampe Dune." },
+  led_disc60: { label:'Module LED disque 60', pos:'inline', diaMm:59.5, thickMm:8.2,
+    fix:'4 trous Ø4 entraxe 28 mm, passage câble Ø3.3',
+    measured:true,
+    source:"Mesuré atelier : « LED LAMPE.ipt » (janv. 2026) — disque Ø59.5×8.2." },
+  base_cable: { label:'Base à poser — sortie câble latérale + encoches de pied', pos:'bottom', thickMm:12,
+    fix:'reprend le rayon du profil à h=0',
+    measured:true,
+    source:"Précédent atelier : lampe Dune (monobloc, contrôle géométrique PASS direct)." },
+};
+
 const MATERIALS = { PLA: 'PLA', PLA_T: 'PLA translucide', PETG: 'PETG' };
 const COLORS = ['#e8e2d5','#f5f5f7','#2c2c2e','#c88a52','#8fa6b2','#b23a3a'];
 
@@ -353,6 +406,7 @@ let state = {
   color: COLORS[0],
   profile: [],       // [{h,r}] trié par h croissant
   selected: -1,
+  modules: [],       // [{id, hMm}] — hMm utilisé seulement pour les modules 'inline'
 };
 
 function presetProfile(name){
@@ -458,6 +512,18 @@ function drawProfile(){
     pctx.fillStyle = i===state.selected ? '#2997ff' : '#f5f5f7';
     pctx.fill();
     pctx.strokeStyle='#000'; pctx.lineWidth=1.5; pctx.stroke();
+  });
+
+  // modules assemblés (coupe) — rectangles symétriques, vert=ajusté / rouge=conflit
+  state.modules.forEach(entry=>{
+    const g=moduleGeom(entry), fit=moduleFit(entry);
+    const halfW = g.dia ? (pMapX(g.dia/2)-axisX) : (pMapX(profileRadiusAt(0))-axisX);
+    const y1=pMapY(g.h+g.thickMm), y2=pMapY(g.h);
+    pctx.setLineDash([5,3]); pctx.lineWidth=1.5;
+    pctx.strokeStyle = fit.ok ? 'rgba(48,209,88,.9)' : 'rgba(255,69,58,.95)';
+    pctx.fillStyle   = fit.ok ? 'rgba(48,209,88,.14)' : 'rgba(255,69,58,.16)';
+    pctx.beginPath(); pctx.rect(axisX-halfW, y1, halfW*2, Math.max(2,y2-y1));
+    pctx.fill(); pctx.stroke(); pctx.setLineDash([]);
   });
 
   // labels
@@ -648,6 +714,94 @@ function renderSockets(){
   });
 }
 
+/* ── Modules d'assemblage ─────────────────────────────────────────────── */
+function profileRadiusAt(hMm){
+  const pr=state.profile;
+  if(!pr.length) return 0;
+  if(hMm<=pr[0].h) return pr[0].r;
+  for(let i=0;i<pr.length-1;i++){
+    if(hMm<=pr[i+1].h){
+      const t=(hMm-pr[i].h)/Math.max(0.001,(pr[i+1].h-pr[i].h));
+      return pr[i].r + t*(pr[i+1].r-pr[i].r);
+    }
+  }
+  return pr[pr.length-1].r;
+}
+// Géométrie effective d'un module assemblé : diamètre (dérivé du culot pour la
+// plaque porte-douille), épaisseur, hauteur de pose selon sa famille de position.
+function moduleGeom(entry){
+  const m=MODULES[entry.id];
+  const topH=state.profile.length?state.profile[state.profile.length-1].h:0;
+  const dia = entry.id==='plaque_douille' ? SOCKETS[state.socket].shoulderDiaMm : m.diaMm;
+  let h;
+  if(m.pos==='top') h=Math.max(0,topH-m.thickMm);
+  else if(m.pos==='bottom') h=0;
+  else h=Math.min(Math.max(0,entry.hMm||0), Math.max(0,topH-m.thickMm));
+  return {dia, thickMm:m.thickMm, h, pos:m.pos};
+}
+// Ajustement : sur toute l'épaisseur du module, rayon intérieur dispo (profil − paroi)
+// vs rayon module + jeu radial atelier. La base 'bottom' épouse le profil : toujours ok.
+function moduleFit(entry){
+  const g=moduleGeom(entry);
+  if(g.pos==='bottom' || !g.dia) return {ok:true, availR:profileRadiusAt(0), needR:null};
+  const wall=parseFloat(state.wall);
+  let availR=Infinity;
+  for(let hh=g.h; hh<=g.h+g.thickMm; hh+=Math.max(1,g.thickMm/4)){
+    availR=Math.min(availR, profileRadiusAt(hh)-wall);
+  }
+  const needR=g.dia/2+RADIAL_CLEARANCE_MM;
+  return {ok:availR>=needR, availR, needR};
+}
+function moduleMeasuredTag(id){
+  const m=MODULES[id];
+  const meas = m.measured==='socket' ? SOCKETS[state.socket].measured : m.measured;
+  return meas ? '<span class="tag measured">MESURÉ ATELIER</span>'
+              : '<span class="tag standard">COTE PROVISOIRE — à mesurer avant série</span>';
+}
+function renderModules(){
+  const adders=$('moduleAdders'), list=$('moduleList');
+  if(!adders||!list) return;
+  adders.innerHTML='';
+  Object.entries(MODULES).forEach(([id,m])=>{
+    const already=state.modules.some(x=>x.id===id);
+    const b=document.createElement('button');
+    b.className='btn'; b.disabled=already;
+    b.textContent=(already?'✓ ':'+ ')+m.label;
+    if(!already) b.onclick=()=>{
+      const topH=state.profile.length?state.profile[state.profile.length-1].h:0;
+      state.modules.push({id, hMm:Math.round(topH/2)});
+      renderAll();
+    };
+    adders.appendChild(b);
+  });
+  list.innerHTML='';
+  state.modules.forEach((entry,idx)=>{
+    const m=MODULES[entry.id], g=moduleGeom(entry), fit=moduleFit(entry);
+    const row=document.createElement('div');
+    row.className='socket-opt';
+    const posTxt = m.pos==='top' ? `en tête (h=${g.h.toFixed(0)} mm, sous le culot)`
+                 : m.pos==='bottom' ? 'en pied (h=0)'
+                 : `position réglable : <input type="range" min="0" max="${Math.max(0,(state.profile.length?state.profile[state.profile.length-1].h:0)-g.thickMm).toFixed(0)}" step="1" value="${g.h.toFixed(0)}" data-mod="${idx}" style="vertical-align:middle;width:140px"> <b>h=${g.h.toFixed(0)} mm</b>`;
+    const fitTxt = fit.needR===null
+      ? `<span style="color:#30d158">✓ épouse le profil (r=${fit.availR.toFixed(1)} mm à h=0)</span>`
+      : fit.ok
+        ? `<span style="color:#30d158">✓ ajustement ok — dispo ${fit.availR.toFixed(1)} mm ≥ requis ${fit.needR.toFixed(1)} mm</span>`
+        : `<span style="color:#ff453a">✗ conflit — dispo ${fit.availR.toFixed(1)} mm &lt; requis ${fit.needR.toFixed(1)} mm : élargis le profil à cette hauteur</span>`;
+    row.innerHTML=`<div style="flex:1"><div class="t">${m.label} ${moduleMeasuredTag(entry.id)}</div>
+      <div class="d">${g.dia?('Ø'+g.dia.toFixed(1)+' mm × '+g.thickMm+' mm — '):''}${m.fix}<br>
+      ${posTxt}<br>${fitTxt}<br><span style="opacity:.75">${m.source}</span></div></div>
+      <button class="btn danger" data-del="${idx}" style="align-self:flex-start">Retirer</button>`;
+    row.querySelectorAll('[data-mod]').forEach(inp=>{
+      inp.oninput=e=>{ state.modules[+e.target.dataset.mod].hMm=+e.target.value; renderAll(); };
+    });
+    row.querySelector('[data-del]').onclick=e=>{ state.modules.splice(+e.target.dataset.del,1); renderAll(); };
+    list.appendChild(row);
+  });
+  if(!state.modules.length){
+    list.innerHTML='<div class="hint">Aucun module assemblé — la lampe reste un volume extérieur + culot seul.</div>';
+  }
+}
+
 /* ── Swatches ─────────────────────────────────────────────────────────── */
 function renderSwatches(){
   const el=$('swatches'); el.innerHTML='';
@@ -695,6 +849,7 @@ function renderPrice(){
     ['Kit culot '+state.socket, s.socketCost.toFixed(2)+' €'],
     ['Visserie/câble/passe-câble', s.hardwareCost.toFixed(2)+' €'],
     ['Marge atelier ×'+PRICE_CONFIG.MARGIN_MULTIPLIER, ''],
+    ...(state.modules.length?[[`Modules d'assemblage (${state.modules.length})`, 'sur devis atelier — non inclus']]:[]),
   ].map(([k,v])=>`<div><span>${k}</span><span>${v}</span></div>`).join('');
 }
 
@@ -712,6 +867,7 @@ function renderAll(){
   renderTable();
   renderWarnings();
   renderSockets();
+  renderModules();
   renderSwatches();
   renderPrice();
   renderBounds();
@@ -745,6 +901,15 @@ function buildDossier(){
     hauteur_totale_mm: +state.profile[state.profile.length-1].h.toFixed(1),
     rayon_max_mm: +Math.max(...state.profile.map(p=>p.r)).toFixed(1),
     culot: { ref: state.socket, ...sock },
+    modules_assemblage: state.modules.map(entry=>{
+      const m=MODULES[entry.id], g=moduleGeom(entry), fit=moduleFit(entry);
+      return { ref:entry.id, label:m.label, position:m.pos, hauteur_pose_mm:+g.h.toFixed(1),
+        diametre_mm: g.dia?+g.dia.toFixed(1):null, epaisseur_mm:g.thickMm, fixation:m.fix,
+        ajustement: fit.needR===null ? {ok:true, note:'épouse le profil à h=0'}
+          : {ok:fit.ok, rayon_disponible_mm:+fit.availR.toFixed(1), rayon_requis_mm:+fit.needR.toFixed(1), jeu_radial_mm:RADIAL_CLEARANCE_MM},
+        cote_mesuree: m.measured==='socket'?SOCKETS[state.socket].measured:m.measured, source:m.source };
+    }),
+    note_fusion: "Les modules sont fabriqués par l'atelier (liste fermée). La fusion géométrique modules↔volume extérieur est réalisée par l'atelier en CAO à partir de ce dossier — le STL exporté ne contient que le volume extérieur.",
     materiau: MATERIALS[state.material],
     epaisseur_paroi_mm: +state.wall,
     couleur: state.color,
@@ -881,6 +1046,12 @@ $('exportTxt').onclick=()=>{
     `Source cotes : ${d.culot.source}`,
     `Puissance LED max : ${d.culot.maxWattageW}W`,
     '',
+    '--- Modules d\'assemblage (fabriqués atelier — fusion CAO atelier) ---',
+    ...(d.modules_assemblage.length
+      ? d.modules_assemblage.map(mm=>`  ${mm.label} — pose h=${mm.hauteur_pose_mm}mm${mm.diametre_mm?(' — Ø'+mm.diametre_mm+'×'+mm.epaisseur_mm+'mm'):''} — ajustement ${mm.ajustement.ok?'OK':'CONFLIT'}${mm.cote_mesuree?'':' — COTE PROVISOIRE à mesurer'}`)
+      : ['  aucun']),
+    d.note_fusion,
+    '',
     '--- Matière & paroi ---',
     `Matériau : ${d.materiau}`,
     `Épaisseur paroi : ${d.epaisseur_paroi_mm}mm`,
@@ -918,6 +1089,7 @@ $('prepEmail').onclick=()=>{
     `Culot : ${state.socket} (${sock.label})`,
     `Matériau : ${MATERIALS[state.material]} — paroi ${state.wall}mm`,
     `Couleur : ${state.color}`,
+    `Modules d'assemblage : ${state.modules.length?state.modules.map(m=>MODULES[m.id].label).join(' · '):'aucun'}`,
     `Volume estimé : ${s.volumeCm3.toFixed(1)} cm³ — Temps impr. estimé : ${s.printHours.toFixed(1)}h`,
     `Prix estimé : ${s.price.toFixed(0)} €`,
     '',

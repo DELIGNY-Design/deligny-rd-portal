@@ -9,6 +9,7 @@
 .fy-tag{font-size:.74rem;letter-spacing:.02em;padding:3px 9px;border-radius:999px;border:1px solid var(--line)}
 .fy-tag.print{background:var(--soft)}
 .fy-tag.file{border-color:rgba(189,79,28,.4);color:var(--accent)}
+.fy-tag.sold{background:var(--ink);color:var(--paper);border-color:var(--ink);letter-spacing:.06em;text-transform:uppercase}
 .fy-price{font-size:.85rem;color:var(--muted)}
 .fy-notice{margin-top:20px;padding:14px 18px;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;background:var(--panel);font-size:.92rem;line-height:1.5}
 .fy-notice.accent{border-left-color:var(--accent)}

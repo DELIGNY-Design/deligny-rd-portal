@@ -1,0 +1,937 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
+<meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
+<style>
+:root{
+  --bg:#000; --bg1:#0a0a0c; --card:#1c1c1e; --card2:#212123;
+  --txt:#f5f5f7; --dim:#a1a1a6; --dim2:#86868b; --sep:rgba(255,255,255,.10);
+  --blue:#2997ff; --blue-cta:#0071e3; --green:#30d158; --amber:#ff9f0a; --red:#ff453a; --cyan:#64d2ff;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;} html,body{margin:0;height:100%;}
+body{background:var(--bg);color:var(--txt);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;}
+::-webkit-scrollbar{width:6px;height:6px;} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:99px;}
+a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 22px 70px;}
+header{text-align:center;padding:26px 0 18px;}
+h1{font-size:32px;font-weight:650;letter-spacing:-.022em;margin:0 0 8px;}
+h1 .g{background:linear-gradient(90deg,#2997ff,#64d2ff 45%,#30d158);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.sub{color:var(--dim);font-size:16px;max-width:680px;margin:0 auto;}
+.free{display:inline-block;margin-top:12px;font-size:12px;font-weight:600;color:var(--green);background:rgba(48,209,88,.14);padding:4px 12px;border-radius:99px;}
+
+.safety{margin-top:20px;background:rgba(255,69,58,.10);border:1px solid rgba(255,69,58,.35);border-radius:16px;padding:16px 18px;text-align:left;display:flex;gap:12px;align-items:flex-start;}
+.safety .ic{font-size:22px;flex-shrink:0;}
+.safety b{color:var(--red);}
+.safety .d{color:var(--dim);font-size:13.5px;margin-top:4px;}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
+.grid.full{grid-template-columns:1fr;}
+@media(max-width:900px){.grid{grid-template-columns:1fr;}}
+.card{background:var(--card);border-radius:20px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.5);}
+.card h2{font-size:13px;font-weight:600;color:var(--dim2);margin:0 0 14px;letter-spacing:0;}
+.card h2 .n{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;background:var(--blue-cta);color:#fff;font-size:11px;margin-right:8px;}
+
+.seg{display:flex;gap:8px;flex-wrap:wrap;}
+.seg button{flex:1;min-width:110px;font:600 13px var(--font);padding:10px 12px;border-radius:12px;border:1px solid var(--sep);background:var(--card2);color:var(--dim);cursor:pointer;transition:.15s;}
+.seg button.on{background:var(--blue-cta);color:#fff;border-color:var(--blue-cta);}
+.seg button:hover:not(.on){border-color:var(--blue);color:var(--txt);}
+
+.hint{margin-top:10px;font-size:12.5px;color:var(--dim2);line-height:1.6;}
+.hint b{color:var(--dim);}
+
+canvas{display:block;background:#0e0e10;border-radius:14px;border:1px solid var(--sep);width:100%;height:auto;touch-action:none;cursor:crosshair;}
+.canvas-row{display:flex;gap:14px;flex-wrap:wrap;}
+.canvas-col{flex:1;min-width:240px;}
+.canvas-col .lbl{font-size:11.5px;color:var(--dim2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;}
+.canvas-col .lbl small{display:block;text-transform:none;letter-spacing:0;font-weight:400;margin-top:2px;color:var(--dim2);opacity:.85;}
+
+.row-btn{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.btn{font:600 12.5px var(--font);padding:8px 14px;border-radius:99px;border:none;cursor:pointer;background:rgba(255,255,255,.10);color:var(--txt);}
+.btn:hover{background:rgba(255,255,255,.16);}
+.btn.pri{background:var(--blue-cta);color:#fff;} .btn.pri:hover{background:#0a7cf0;}
+.btn.danger{background:rgba(255,69,58,.16);color:var(--red);} .btn.danger:hover{background:rgba(255,69,58,.26);}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+
+table.pts{width:100%;border-collapse:collapse;margin-top:10px;font:12px var(--mono);color:var(--dim);}
+table.pts th{text-align:left;color:var(--dim2);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--sep);}
+table.pts td{padding:4px 6px;border-bottom:.5px solid var(--sep);}
+table.pts tr.sel td{color:var(--txt);background:rgba(41,151,255,.08);}
+table.pts tr.warn td{color:var(--amber);}
+table.pts tr.bad td{color:var(--red);}
+
+.warnbox{margin-top:10px;font-size:12.5px;}
+.warnbox .line{padding:6px 10px;border-radius:10px;margin-top:6px;}
+.warnbox .ok{background:rgba(48,209,88,.10);color:var(--green);}
+.warnbox .warn{background:rgba(255,159,10,.12);color:var(--amber);}
+.warnbox .bad{background:rgba(255,69,58,.12);color:var(--red);}
+
+.field{margin-top:14px;}
+.field label{display:block;font-size:12.5px;color:var(--dim2);font-weight:600;margin-bottom:6px;}
+.field input[type=text],.field input[type=email],.field textarea,.field select{
+  width:100%;background:var(--card2);border:1px solid var(--sep);border-radius:10px;color:var(--txt);
+  padding:10px 12px;font:14px var(--font);
+}
+.field textarea{resize:vertical;min-height:70px;}
+.field select{cursor:pointer;}
+.swatches{display:flex;gap:8px;flex-wrap:wrap;}
+.swatch{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer;}
+.swatch.on{border-color:var(--blue);box-shadow:0 0 0 2px rgba(41,151,255,.3);}
+
+.socket-opt{display:flex;gap:10px;border:1px solid var(--sep);border-radius:14px;padding:12px 14px;margin-top:8px;cursor:pointer;background:var(--card2);}
+.socket-opt.on{border-color:var(--blue-cta);background:rgba(0,113,227,.10);}
+.socket-opt input{margin-top:3px;}
+.socket-opt .t{font-weight:600;}
+.socket-opt .d{font-size:12px;color:var(--dim2);margin-top:3px;line-height:1.5;}
+.tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:6px;vertical-align:1px;}
+.tag.measured{background:rgba(48,209,88,.16);color:var(--green);}
+.tag.standard{background:rgba(255,159,10,.16);color:var(--amber);}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.stat{background:var(--card2);border-radius:14px;padding:14px;}
+.stat .k{font-size:10.5px;color:var(--dim2);text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+.stat .v{font-size:21px;font-weight:680;letter-spacing:-.02em;margin-top:4px;line-height:1;}
+.stat .v small{font-size:12px;color:var(--dim);font-weight:500;}
+.price-big{text-align:center;margin-top:16px;padding:18px;background:linear-gradient(135deg,rgba(41,151,255,.12),rgba(48,209,88,.10));border-radius:16px;}
+.price-big .amt{font-size:38px;font-weight:700;letter-spacing:-.02em;}
+.price-big .amt small{font-size:16px;color:var(--dim);font-weight:500;}
+.price-big .note{font-size:12px;color:var(--dim2);margin-top:4px;}
+.breakdown{margin-top:12px;font:12.5px var(--mono);color:var(--dim);}
+.breakdown div{display:flex;justify-content:space-between;padding:3px 0;border-bottom:.5px solid var(--sep);}
+
+footer{text-align:center;color:var(--dim2);font-size:12px;margin-top:34px;line-height:1.7;}
+footer .disc{max-width:680px;margin:0 auto 10px;}
+.disc-small{font-size:11.5px;color:var(--dim2);margin-top:10px;line-height:1.6;background:var(--card2);border-radius:10px;padding:10px 12px;}
+</style></head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="g">Custom 3D Lamp Studio</span></h1>
+    <div class="sub">Configure une lampe imprimée 3D sur mesure — profil libre dans des bornes réalistes, culot électrique standard fermé, prix automatique, dossier de fabrication.</div>
+    <span class="free">v0 · aucun compte · rien n'est envoyé (tout se calcule dans ton navigateur)</span>
+
+    <div class="safety">
+      <div class="ic">⚠️</div>
+      <div>
+        <b>Gate de sécurité — non négociable.</b>
+        <div class="d">Ce configurateur laisse le <b>profil de la structure/abat-jour</b> libre dans des bornes d'impression réalistes.
+        Il ne permet <b>jamais</b> de dessiner librement le circuit électrique, le culot ou le câblage : le point de connexion électrique
+        est choisi parmi une <b>liste fermée de références standards du commerce</b> (E14 / E27), non modifiables.
+        L'<b>assemblage électrique final est réalisé par un professionnel / l'atelier</b>, jamais par le client — ce dossier n'est pas
+        une autorisation de câblage soi-même.</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 1. TYPE -->
+  <div class="card" style="margin-top:20px">
+    <h2><span class="n">1</span>Type de lampe</h2>
+    <div class="seg" id="type-seg">
+      <button data-v="suspension" class="on">Suspension</button>
+      <button data-v="poser">Lampe à poser</button>
+      <button data-v="applique">Applique</button>
+    </div>
+    <div class="hint" id="type-hint"></div>
+  </div>
+
+  <!-- 2/3. PROFIL + APERCU -->
+  <div class="grid" style="margin-top:16px">
+    <div class="card">
+      <h2><span class="n">2</span>Profil de révolution (structure / abat-jour)</h2>
+      <div class="canvas-col">
+        <div class="lbl">Coupe 2D cotée — axe de symétrie au centre
+          <small>Clique dans la zone vide pour ajouter un point · glisse un point pour le déplacer · sélectionne puis « Supprimer » (mini 3 points)</small>
+        </div>
+        <canvas id="profileCanvas" width="480" height="440"></canvas>
+      </div>
+      <div class="row-btn">
+        <button class="btn" data-preset="dune">Preset « Dune »</button>
+        <button class="btn" data-preset="cloche">Preset « Cloche »</button>
+        <button class="btn" data-preset="cylindre">Preset « Cylindre facetté »</button>
+        <button class="btn danger" id="delPoint" disabled>Supprimer le point sélectionné</button>
+      </div>
+      <table class="pts" id="ptsTable"><thead><tr><th>#</th><th>Hauteur (mm)</th><th>Rayon (mm)</th><th>Surplomb</th></tr></thead><tbody></tbody></table>
+      <div class="warnbox" id="warnbox"></div>
+      <div class="hint">Bornes d'impression (Ender-3 S1, plateau 220×220×270 mm — vérifié atelier) : hauteur ≤ <b id="bMaxH"></b> mm,
+      rayon ≤ <b id="bMaxR"></b> mm, rayon du point du haut ≥ <b id="bMinTop"></b> mm imposé par le culot choisi (logement + paroi).</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">3</span>Aperçu 3D (généré depuis le même profil)</h2>
+      <div class="canvas-col">
+        <div class="lbl">Révolution du profil
+          <small>Illustratif : surface extérieure seule, pas un maillage solide réellement imprimable. Glisse pour tourner.</small>
+        </div>
+        <canvas id="previewCanvas" width="480" height="440"></canvas>
+      </div>
+      <div class="row-btn" style="align-items:center">
+        <span style="font-size:12px;color:var(--dim2);margin-right:4px">Couleur (cosmétique — n'affecte pas la géométrie) :</span>
+        <div class="swatches" id="swatches"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. CULOT -->
+  <div class="card" style="margin-top:16px">
+    <h2><span class="n">4</span>Culot électrique — référence standard fermée</h2>
+    <div id="socketList"></div>
+    <div class="hint">La géométrie du culot (bore, épaulement, filetage) n'est <b>jamais générée</b> : ces cotes viennent de pièces mesurées
+    à l'atelier ou du standard commercial publié, et servent uniquement à borner le rayon mini du point de fixation du profil.</div>
+  </div>
+
+  <!-- 5. MATIERE -->
+  <div class="grid" style="margin-top:16px">
+    <div class="card">
+      <h2><span class="n">5</span>Matière &amp; paroi</h2>
+      <div class="field">
+        <label>Matériau</label>
+        <select id="material">
+          <option value="PLA">PLA — défaut, structurel froid, déco (ramollit ~55-60°C : LED uniquement)</option>
+          <option value="PLA_T">PLA translucide — paroi diffusante lumière</option>
+          <option value="PETG">PETG — pièces tièdes / usage prolongé, un peu de flex</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Épaisseur de paroi (multiple de buse 0.4mm, cf. atelier)</label>
+        <select id="wall">
+          <option value="0.8">0.8 mm — 2 périmètres, fin, non recommandé structurel</option>
+          <option value="1.2" selected>1.2 mm — 3 périmètres, diffusant recommandé (abat-jour translucide)</option>
+          <option value="1.6">1.6 mm — 4 périmètres</option>
+          <option value="2.0">2.0 mm — 5 périmètres, structurel recommandé</option>
+        </select>
+      </div>
+      <div class="disc-small">Sécurité lampe (non négociable, cf. doctrine atelier FIRST_PRINT_TEST) : LED ≤ 7 W réels, jamais halogène ni
+      incandescent dans du PLA ; paroi ≥ 12 mm de l'ampoule ; ouverture haute + sortie câble pour tirage d'air ; douille du commerce
+      marquée CE, connexions démontables donc inspectables par le professionnel qui assemble.</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">6</span>Prix estimé</h2>
+      <div class="stats">
+        <div class="stat"><div class="k">Volume matière</div><div class="v" id="s-vol">—</div></div>
+        <div class="stat"><div class="k">Temps impr. estimé</div><div class="v" id="s-time">—</div></div>
+        <div class="stat"><div class="k">Masse</div><div class="v" id="s-mass">—</div></div>
+      </div>
+      <div class="price-big">
+        <div class="amt" id="s-price">—</div>
+        <div class="note">Estimation automatique — grossière, pas un devis ferme. Base = temps d'impression × tarif horaire + matière + culot.</div>
+      </div>
+      <div class="breakdown" id="s-breakdown"></div>
+    </div>
+  </div>
+
+  <!-- 7. DOSSIER -->
+  <div class="card" style="margin-top:16px">
+    <h2><span class="n">7</span>Dossier de fabrication</h2>
+    <div class="hint">Génère un dossier <b>texte + JSON</b> qui résume la configuration (dimensions, matière, culot, couleur, prix estimé).
+    C'est un dossier de commande/specs à transmettre à l'atelier pour fabrication.</div>
+    <div class="row-btn">
+      <button class="btn pri" id="exportJson">⬇ Export JSON</button>
+      <button class="btn" id="exportTxt">⬇ Export TXT lisible</button>
+    </div>
+    <div class="hint" style="margin-top:16px">Génère un <b>vrai maillage 3D (fichier STL binaire)</b> par révolution du profil exact ci-dessus
+    (2) autour de l'axe de symétrie : surface latérale triangulée + fond et sommet fermés (cap radial), normales calculées par produit
+    vectoriel des arêtes. <b>Ce que ce STL modélise :</b> uniquement le volume plein de la structure/abat-jour en révolution.
+    <b>Ce qu'il ne modélise jamais</b> (cf. gate de sécurité) : le culot électrique, l'alésage, le filetage ou toute cavité de logement de
+    la douille — ces géométries restent la liste fermée de références standards de l'atelier, jamais générées ici. Le rayon mini du point
+    du haut est déjà borné par le culot choisi, mais le perçage/évidement réel du logement est fait par le professionnel qui assemble.
+    Plus le nombre de segments est élevé, plus la surface latérale est lisse (et le fichier plus lourd).</div>
+    <div class="row-btn" style="align-items:center">
+      <label style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">Segments angulaires
+        <select id="stlSegments" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
+          <option value="16">16 (facetté, léger)</option>
+          <option value="32">32</option>
+          <option value="48" selected>48 (défaut)</option>
+          <option value="64">64 (lisse)</option>
+        </select>
+      </label>
+      <button class="btn pri" id="exportStl">⬇ Export STL (maillage 3D imprimable)</button>
+    </div>
+    <div class="hint" id="stlInfo" style="margin-top:8px"></div>
+  </div>
+
+  <!-- 8. COMMANDE -->
+  <div class="card" style="margin-top:16px">
+    <h2><span class="n">8</span>Commande</h2>
+    <div class="hint">Prépare un email récapitulatif vers <b>contact@deligny-rd.fr</b>. <b>Aucun paiement n'est effectué ici</b> — c'est ton
+    client mail qui s'ouvre avec le message pré-rempli, à toi de l'envoyer. Joins manuellement le dossier JSON téléchargé ci-dessus si besoin
+    (un lien mailto ne peut pas joindre de fichier automatiquement).</div>
+    <div class="grid full" style="margin-top:4px">
+      <div>
+        <div class="field"><label>Nom</label><input type="text" id="cName" placeholder="Ton nom"></div>
+        <div class="field"><label>Email</label><input type="email" id="cEmail" placeholder="ton@email.fr"></div>
+        <div class="field"><label>Notes (couleur souhaitée, délai, contexte...)</label><textarea id="cNotes" placeholder="Notes libres"></textarea></div>
+      </div>
+    </div>
+    <div class="row-btn">
+      <button class="btn pri" id="prepEmail">✉ Préparer l'email de commande</button>
+    </div>
+  </div>
+
+  <footer>
+    <div class="disc">Configurateur indicatif — dimensions et prix estimés, à valider par l'atelier avant fabrication. Aucune donnée ne quitte
+    ton navigateur tant que tu n'envoies pas l'email.</div>
+    Moteur dérivé de <b>General Design Studio</b>. · Un outil DELIGNY R&D.
+  </footer>
+</div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+
+/* ============================================================================
+ * PARAMÈTRES ATELIER — À AJUSTER PAR BAPTISTE avant toute mise en prod réelle.
+ * Toutes les valeurs ci-dessous sont des variables de configuration, pas des
+ * constantes gravées : elles pilotent uniquement le calcul de prix indicatif.
+ * ========================================================================== */
+const PRICE_CONFIG = {
+  MATERIAL_COST_EUR_PER_KG: { PLA: 22, PLA_T: 26, PETG: 24 },  // prix bobine ramené au kg, par matière
+  MATERIAL_DENSITY_G_CM3:   { PLA: 1.24, PLA_T: 1.24, PETG: 1.27 },
+  PRINT_CM3_PER_HOUR: 16,          // débit volumique grossier, buse 0.4, parois seules (pas de remplissage structurel)
+  HOURLY_RATE_EUR: 9,              // machine + temps atelier (élec, usure, supervision) — à ajuster par Baptiste
+  SOCKET_KIT_EUR: { E14: 4, E27: 5 },   // prix pièce du commerce (douille + bague CE) + temps d'assemblage électrique pro
+  BASE_HARDWARE_EUR: 3,            // visserie, câble, passe-câble, gaine
+  MARGIN_MULTIPLIER: 1.35,         // marge DELIGNY R&D sur le coût atelier — à ajuster par Baptiste
+  MIN_PRICE_EUR: 25,               // prix plancher (temps de setup mini, même sur une petite pièce)
+};
+
+// Cône/base/nervures non capturés par la simple coque de révolution (cf. cône porte-douille auto-portant) — marge de matière.
+const GEOMETRY_CONFIG = { INTERNAL_STRUCTURE_FACTOR: 1.15 };
+
+/* ============================================================================
+ * BORNES D'IMPRESSION — Ender-3 S1 vérifiée dans 3D Objects/ (plateau 220×220×270,
+ * buse 0.4, Cura/Marlin). Marge de sécurité sous le plateau réel pour brim/bras.
+ * ========================================================================== */
+const PRINT_BOUNDS = { PLATE_XY_MM: 220, PLATE_Z_MM: 270, MAX_HEIGHT_MM: 250, MIN_HEIGHT_MM: 60, MAX_RADIUS_MM: 100, MIN_H_GAP_MM: 8 };
+
+// Seuils surplomb FDM (buse 0.4 / couche 0.20) — cf. doctrine atelier fab/impression-fdm §2.
+const OVERHANG = { WARN_DEG: 45, HARD_DEG: 55 };
+
+/* ============================================================================
+ * CULOTS ÉLECTRIQUES — LISTE FERMÉE. Ne JAMAIS permettre de générer/éditer ces
+ * géométries : ce sont des références standards du commerce, l'atelier ou le
+ * professionnel qui assemble s'appuie dessus, pas une pièce sortie du navigateur.
+ * ========================================================================== */
+const SOCKETS = {
+  E14: {
+    label: 'E14 — petit culot (bougie)',
+    boreDiaMm: 28.8,       // 27.8 nominal + 0.3 compensation FDM alésage vertical 10-40 (cf. atelier)
+    shoulderDiaMm: 32,     // mesuré atelier
+    housingMinRadiusMm: 20,// épaulement/2 (16) + paroi mini 2mm + jeu
+    maxWattageW: 7,
+    measured: true,
+    source: "Mesuré atelier : «Douille et ampoule frigo E14.ipt» (déc. 2022) — corps Ø27.5, épaulement Ø32, section basse Ø26. Corroboré par harvest_parts.py (parts_library).",
+  },
+  E27: {
+    label: 'E27 — gros culot (standard)',
+    boreDiaMm: 34.0,       // standard IEC 60061, corps plastique lampholder courant — NON mesuré atelier
+    shoulderDiaMm: 40,     // estimation à partir du standard commercial — NON mesuré atelier
+    housingMinRadiusMm: 24,
+    maxWattageW: 7,
+    measured: false,
+    source: "Valeurs indicatives du standard commercial (IEC 60061, culot E27) — non mesurées à l'atelier. À vérifier au pied à coulisse sur la pièce réelle avant série.",
+  },
+};
+
+const MATERIALS = { PLA: 'PLA', PLA_T: 'PLA translucide', PETG: 'PETG' };
+const COLORS = ['#e8e2d5','#f5f5f7','#2c2c2e','#c88a52','#8fa6b2','#b23a3a'];
+
+const TYPE_HINTS = {
+  suspension: "Suspension : le point du haut du profil (h max) est le point de fixation — la douille est logée en haut, le câble descend du plafond. Sortie de câble fixe en partie haute (non modifiable).",
+  poser: "Lampe à poser, imprimée en une seule pièce (précédent atelier « lampe Dune ») : le point du haut loge la douille, la base (h=0) pose sur la table, le câble sort par le côté de la base.",
+  applique: "Applique : ce MVP modélise uniquement le volume de l'abat-jour/structure en révolution. La platine de fixation murale n'est PAS modélisée ici — elle est ajoutée par l'atelier lors de l'assemblage.",
+};
+
+/* ============================================================================ */
+
+let state = {
+  type: 'suspension',
+  socket: 'E14',
+  material: 'PLA',
+  wall: 1.2,
+  color: COLORS[0],
+  profile: [],       // [{h,r}] trié par h croissant
+  selected: -1,
+};
+
+function presetProfile(name){
+  const topMin = SOCKETS[state.socket].housingMinRadiusMm;
+  if(name==='cloche') return [
+    {h:0,r:22},{h:20,r:26},{h:70,r:58},{h:150,r:66},{h:200,r:52},{h:220,r:Math.max(topMin,26)}
+  ];
+  if(name==='cylindre') return [
+    {h:0,r:50},{h:15,r:56},{h:160,r:56},{h:180,r:44},{h:200,r:Math.max(topMin,22)}
+  ];
+  // dune (défaut)
+  return [
+    {h:0,r:60},{h:30,r:72},{h:120,r:65},{h:180,r:40},{h:210,r:Math.max(topMin,20)}
+  ];
+}
+
+function clampPoint(p, isTop){
+  p.h = Math.max(0, Math.min(PRINT_BOUNDS.MAX_HEIGHT_MM, p.h));
+  const minR = isTop ? SOCKETS[state.socket].housingMinRadiusMm : 2;
+  p.r = Math.max(minR, Math.min(PRINT_BOUNDS.MAX_RADIUS_MM, p.r));
+  return p;
+}
+
+function normalizeProfile(){
+  state.profile.sort((a,b)=>a.h-b.h);
+  // enforce min gap between consecutive heights
+  for(let i=1;i<state.profile.length;i++){
+    if(state.profile[i].h - state.profile[i-1].h < PRINT_BOUNDS.MIN_H_GAP_MM){
+      state.profile[i].h = state.profile[i-1].h + PRINT_BOUNDS.MIN_H_GAP_MM;
+    }
+  }
+  if(state.profile[state.profile.length-1].h > PRINT_BOUNDS.MAX_HEIGHT_MM){
+    // rescale down if overflow after gap enforcement
+    const scale = PRINT_BOUNDS.MAX_HEIGHT_MM / state.profile[state.profile.length-1].h;
+    state.profile.forEach(p=>p.h*=scale);
+  }
+  state.profile.forEach((p,i)=>clampPoint(p, i===state.profile.length-1));
+}
+
+function setPreset(name){
+  state.profile = presetProfile(name);
+  state.selected = -1;
+  normalizeProfile();
+  renderAll();
+}
+
+/* ── Editeur de profil (coupe 2D cotée) ─────────────────────────────────── */
+const pc = $('profileCanvas'), pctx = pc.getContext('2d');
+const PAD = {l:150, r:20, t:20, b:20};
+function pMapX(r){ return PAD.l + (r/PRINT_BOUNDS.MAX_RADIUS_MM) * (pc.width-PAD.l-PAD.r); }
+function pMapY(h){ return pc.height - PAD.b - (h/PRINT_BOUNDS.MAX_HEIGHT_MM) * (pc.height-PAD.t-PAD.b); }
+function pUnmapX(x){ return Math.max(0,(x-PAD.l) / (pc.width-PAD.l-PAD.r) * PRINT_BOUNDS.MAX_RADIUS_MM); }
+function pUnmapY(y){ return Math.max(0,(pc.height-PAD.b-y) / (pc.height-PAD.t-PAD.b) * PRINT_BOUNDS.MAX_HEIGHT_MM); }
+
+function segmentAngleDeg(p1,p2){
+  const dh=p2.h-p1.h, dr=p2.r-p1.r;
+  return Math.atan2(Math.abs(dr), Math.max(0.001,dh)) * 180/Math.PI;
+}
+
+function drawProfile(){
+  const w=pc.width,h=pc.height;
+  pctx.clearRect(0,0,w,h);
+  pctx.fillStyle='#0e0e10'; pctx.fillRect(0,0,w,h);
+
+  // grid (every 20mm)
+  pctx.strokeStyle='rgba(255,255,255,.05)'; pctx.lineWidth=1;
+  for(let hh=0; hh<=PRINT_BOUNDS.MAX_HEIGHT_MM; hh+=20){
+    const y=pMapY(hh); pctx.beginPath(); pctx.moveTo(PAD.l-90,y); pctx.lineTo(w-PAD.r,y); pctx.stroke();
+  }
+  // axis of symmetry
+  const axisX = pMapX(0);
+  pctx.strokeStyle='rgba(255,255,255,.25)'; pctx.setLineDash([4,4]);
+  pctx.beginPath(); pctx.moveTo(axisX,PAD.t); pctx.lineTo(axisX,h-PAD.b); pctx.stroke();
+  pctx.setLineDash([]);
+
+  const pr = state.profile;
+  // outline right side + mirrored left side (vraie coupe symétrique)
+  function pathSide(sign){
+    pctx.beginPath();
+    pr.forEach((p,i)=>{
+      const x = axisX + sign*(pMapX(p.r)-axisX), y=pMapY(p.h);
+      if(i===0) pctx.moveTo(x,y); else pctx.lineTo(x,y);
+    });
+  }
+  pctx.lineWidth=2;
+  pctx.strokeStyle='rgba(100,210,255,.35)'; pathSide(-1); pctx.stroke();
+  pctx.strokeStyle=state.color; pathSide(1); pctx.stroke();
+
+  // segment warnings (right side)
+  for(let i=0;i<pr.length-1;i++){
+    const a=segmentAngleDeg(pr[i],pr[i+1]);
+    const col = a>OVERHANG.HARD_DEG?'#ff453a':(a>OVERHANG.WARN_DEG?'#ff9f0a':null);
+    if(col){
+      pctx.strokeStyle=col; pctx.lineWidth=4;
+      pctx.beginPath(); pctx.moveTo(pMapX(pr[i].r),pMapY(pr[i].h)); pctx.lineTo(pMapX(pr[i+1].r),pMapY(pr[i+1].h)); pctx.stroke();
+    }
+  }
+
+  // points
+  pr.forEach((p,i)=>{
+    const x=pMapX(p.r), y=pMapY(p.h);
+    pctx.beginPath(); pctx.arc(x,y, i===state.selected?7:5,0,7);
+    pctx.fillStyle = i===state.selected ? '#2997ff' : '#f5f5f7';
+    pctx.fill();
+    pctx.strokeStyle='#000'; pctx.lineWidth=1.5; pctx.stroke();
+  });
+
+  // labels
+  pctx.fillStyle='#86868b'; pctx.font='11px -apple-system,sans-serif'; pctx.textAlign='right';
+  for(let hh=0; hh<=PRINT_BOUNDS.MAX_HEIGHT_MM; hh+=40){ pctx.fillText(hh+' mm', PAD.l-96, pMapY(hh)+4); }
+  pctx.textAlign='left';
+  pctx.fillText('axe', axisX-14, h-6);
+  pctx.fillStyle='rgba(255,159,10,.9)'; pctx.fillText('■ 45-55°', PAD.l-96, 16);
+  pctx.fillStyle='rgba(255,69,58,.9)'; pctx.fillText('■ >55° (support requis)', PAD.l-96, 30);
+}
+
+let dragIdx=-1;
+function nearestPoint(x,y){
+  let best=-1,bd=14;
+  state.profile.forEach((p,i)=>{
+    const dx=pMapX(p.r)-x, dy=pMapY(p.h)-y, d=Math.sqrt(dx*dx+dy*dy);
+    if(d<bd){bd=d;best=i;}
+  });
+  return best;
+}
+function canvasPos(e){
+  const rect=pc.getBoundingClientRect();
+  const sx=pc.width/rect.width, sy=pc.height/rect.height;
+  const cx = (e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+  const cy = (e.touches?e.touches[0].clientY:e.clientY)-rect.top;
+  return {x:cx*sx, y:cy*sy};
+}
+pc.addEventListener('mousedown', e=>{
+  const {x,y}=canvasPos(e);
+  const idx = nearestPoint(x,y);
+  if(idx>=0){ state.selected=idx; dragIdx=idx; renderAll(); return; }
+  // add new point at clicked location if within drawing area
+  if(x>=PAD.l && x<=pc.width-PAD.r && y>=PAD.t && y<=pc.height-PAD.b){
+    const r = pUnmapX(x), h = pUnmapY(y);
+    const np = {h,r};
+    state.profile.push(np);
+    normalizeProfile();
+    state.selected = state.profile.findIndex(p=>p===np) ;
+    if(state.selected<0){ // np may have been mutated by sort ref stays same object though
+      state.selected = state.profile.indexOf(np);
+    }
+    renderAll();
+  }
+});
+window.addEventListener('mousemove', e=>{
+  if(dragIdx<0) return;
+  const {x,y}=canvasPos(e);
+  const p = state.profile[dragIdx];
+  p.r = pUnmapX(x); p.h = pUnmapY(y);
+  clampPoint(p, dragIdx===state.profile.length-1);
+  drawProfile(); // live drag feedback without full renumber to keep index stable
+});
+window.addEventListener('mouseup', ()=>{
+  if(dragIdx>=0){ dragIdx=-1; normalizeProfile(); renderAll(); }
+});
+pc.addEventListener('touchstart', e=>{ e.preventDefault(); pc.dispatchEvent(new MouseEvent('mousedown', {})); const {x,y}=canvasPos(e); const idx=nearestPoint(x,y); if(idx>=0){state.selected=idx; dragIdx=idx;} renderAll(); }, {passive:false});
+pc.addEventListener('touchmove', e=>{ e.preventDefault(); if(dragIdx<0) return; const {x,y}=canvasPos(e); const p=state.profile[dragIdx]; p.r=pUnmapX(x); p.h=pUnmapY(y); clampPoint(p, dragIdx===state.profile.length-1); drawProfile(); }, {passive:false});
+pc.addEventListener('touchend', ()=>{ if(dragIdx>=0){dragIdx=-1; normalizeProfile(); renderAll();} });
+
+$('delPoint').onclick=()=>{
+  if(state.selected<0 || state.profile.length<=3) return;
+  state.profile.splice(state.selected,1);
+  state.selected=-1;
+  normalizeProfile();
+  renderAll();
+};
+
+/* ── Aperçu 3D (révolution du profil, wireframe/solide ombré) ───────────── */
+const vc = $('previewCanvas'), vctx = vc.getContext('2d');
+let azimuth = 0.7, elevation = 0.35;
+function project3d(x,y,z){
+  // rotate around Y (azimuth) then tilt (elevation)
+  const cx=Math.cos(azimuth), sx=Math.sin(azimuth);
+  let X = x*cx - z*sx, Z = x*sx + z*cx;
+  const ce=Math.cos(elevation), se=Math.sin(elevation);
+  let Y = y*ce - Z*se, Zd = y*se + Z*ce;
+  return {x:X, y:Y, depth:Zd};
+}
+function drawPreview(){
+  const w=vc.width,h=vc.height;
+  vctx.clearRect(0,0,w,h); vctx.fillStyle='#0e0e10'; vctx.fillRect(0,0,w,h);
+  const pr = state.profile;
+  if(pr.length<2) return;
+  const N=28;
+  const scale = Math.min((w-60)/(2*PRINT_BOUNDS.MAX_RADIUS_MM), (h-60)/PRINT_BOUNDS.MAX_HEIGHT_MM) * 0.95;
+  const cx=w/2, cy=h*0.82;
+  const maxH = pr[pr.length-1].h;
+
+  // build vertex grid [i][j]
+  const verts = pr.map(p => {
+    const ring=[];
+    for(let j=0;j<N;j++){
+      const th = j/N*Math.PI*2;
+      const x=p.r*Math.cos(th), z=p.r*Math.sin(th), y=(p.h - maxH/2);
+      const proj = project3d(x,y,z);
+      ring.push({sx: cx+proj.x*scale, sy: cy-proj.y*scale, depth:proj.depth});
+    }
+    return ring;
+  });
+
+  const light = {x:0.4,y:0.7,z:0.6};
+  const lightLen = Math.hypot(light.x,light.y,light.z);
+  light.x/=lightLen; light.y/=lightLen; light.z/=lightLen;
+
+  const faces=[];
+  for(let i=0;i<pr.length-1;i++){
+    for(let j=0;j<N;j++){
+      const j2=(j+1)%N;
+      const a=verts[i][j], b=verts[i][j2], c=verts[i+1][j2], d=verts[i+1][j];
+      const depth=(a.depth+b.depth+c.depth+d.depth)/4;
+      // normal via cross of two edges (in projected 2D+depth pseudo-space, good enough for shading direction)
+      const e1={x:b.sx-a.sx,y:b.sy-a.sy}, e2={x:d.sx-a.sx,y:d.sy-a.sy};
+      const cross = e1.x*e2.y - e1.y*e2.x;
+      const shadeBase = 0.45 + 0.45*Math.abs(Math.cos((j/N)*Math.PI*2 - azimuth));
+      faces.push({pts:[a,b,c,d], depth, shade: Math.max(0.2,Math.min(1,shadeBase))});
+    }
+  }
+  faces.sort((f1,f2)=>f2.depth-f1.depth);
+  const col = hexToRgb(state.color);
+  faces.forEach(f=>{
+    const s=f.shade;
+    vctx.beginPath();
+    f.pts.forEach((p,idx)=>{ if(idx===0) vctx.moveTo(p.sx,p.sy); else vctx.lineTo(p.sx,p.sy); });
+    vctx.closePath();
+    vctx.fillStyle = `rgb(${col.r*s|0},${col.g*s|0},${col.b*s|0})`;
+    vctx.fill();
+    vctx.strokeStyle='rgba(0,0,0,.25)'; vctx.lineWidth=0.5; vctx.stroke();
+  });
+
+  vctx.fillStyle='#86868b'; vctx.font='11px -apple-system,sans-serif';
+  vctx.fillText('aperçu illustratif — glisse pour tourner', 12, h-12);
+}
+function hexToRgb(hex){
+  const v=parseInt(hex.slice(1),16);
+  return {r:(v>>16)&255, g:(v>>8)&255, b:v&255};
+}
+let rotDrag=false, lastX=0;
+vc.addEventListener('mousedown', e=>{ rotDrag=true; lastX=e.clientX; });
+window.addEventListener('mousemove', e=>{ if(!rotDrag) return; azimuth += (e.clientX-lastX)*0.01; lastX=e.clientX; drawPreview(); });
+window.addEventListener('mouseup', ()=>{ rotDrag=false; });
+vc.addEventListener('touchstart', e=>{ rotDrag=true; lastX=e.touches[0].clientX; }, {passive:true});
+vc.addEventListener('touchmove', e=>{ if(!rotDrag) return; azimuth += (e.touches[0].clientX-lastX)*0.01; lastX=e.touches[0].clientX; drawPreview(); }, {passive:true});
+window.addEventListener('touchend', ()=>{ rotDrag=false; });
+
+/* ── Tableau de points + warnings ────────────────────────────────────── */
+function renderTable(){
+  const tb = $('ptsTable').querySelector('tbody');
+  tb.innerHTML='';
+  state.profile.forEach((p,i)=>{
+    let cls = i===state.selected?'sel':'';
+    let angTxt='—';
+    if(i<state.profile.length-1){
+      const a=segmentAngleDeg(p,state.profile[i+1]);
+      angTxt = a.toFixed(0)+'°';
+      if(a>OVERHANG.HARD_DEG) cls+=' bad'; else if(a>OVERHANG.WARN_DEG) cls+=' warn';
+    }
+    const tr=document.createElement('tr'); tr.className=cls.trim();
+    tr.innerHTML = `<td>${i+1}${i===state.profile.length-1?' (haut)':''}</td><td>${p.h.toFixed(0)}</td><td>${p.r.toFixed(1)}</td><td>${angTxt}</td>`;
+    tb.appendChild(tr);
+  });
+  $('delPoint').disabled = !(state.selected>=0 && state.profile.length>3);
+}
+
+function renderWarnings(){
+  const box=$('warnbox'); box.innerHTML='';
+  const lines=[];
+  let hasHard=false, hasWarn=false;
+  for(let i=0;i<state.profile.length-1;i++){
+    const a=segmentAngleDeg(state.profile[i],state.profile[i+1]);
+    if(a>OVERHANG.HARD_DEG){ hasHard=true; lines.push(['bad', `Segment ${i+1}→${i+2} : surplomb ${a.toFixed(0)}° (> ${OVERHANG.HARD_DEG}°) — support d'impression nécessaire ou redesign.`]); }
+    else if(a>OVERHANG.WARN_DEG){ hasWarn=true; lines.push(['warn', `Segment ${i+1}→${i+2} : surplomb ${a.toFixed(0)}° (${OVERHANG.WARN_DEG}-${OVERHANG.HARD_DEG}°) — passe mais sous-face striée attendue.`]); }
+  }
+  if(!hasHard && !hasWarn) lines.push(['ok', 'Aucun surplomb critique détecté — profil imprimable sans support prévisible.']);
+  lines.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
+}
+
+/* ── Sockets UI ───────────────────────────────────────────────────────── */
+function renderSockets(){
+  const el=$('socketList'); el.innerHTML='';
+  Object.entries(SOCKETS).forEach(([key,s])=>{
+    const div=document.createElement('label');
+    div.className='socket-opt'+(state.socket===key?' on':'');
+    div.innerHTML = `<input type="radio" name="socket" value="${key}" ${state.socket===key?'checked':''}>
+      <div><div class="t">${s.label} <span class="tag ${s.measured?'measured':'standard'}">${s.measured?'MESURÉ ATELIER':'STANDARD PUBLIÉ'}</span></div>
+      <div class="d">Alésage ${s.boreDiaMm}mm · épaulement Ø${s.shoulderDiaMm}mm · rayon mini point de fixation ${s.housingMinRadiusMm}mm · LED ≤${s.maxWattageW}W<br>${s.source}</div></div>`;
+    div.querySelector('input').onchange=()=>{ state.socket=key; normalizeProfile(); renderAll(); };
+    el.appendChild(div);
+  });
+}
+
+/* ── Swatches ─────────────────────────────────────────────────────────── */
+function renderSwatches(){
+  const el=$('swatches'); el.innerHTML='';
+  COLORS.forEach(c=>{
+    const s=document.createElement('div'); s.className='swatch'+(state.color===c?' on':'');
+    s.style.background=c;
+    s.onclick=()=>{ state.color=c; renderAll(); };
+    el.appendChild(s);
+  });
+}
+
+/* ── Prix / specs ─────────────────────────────────────────────────────── */
+function computeSpecs(){
+  const pr = state.profile;
+  let lateralAreaMm2=0;
+  for(let i=0;i<pr.length-1;i++){
+    const rAvg=(pr[i].r+pr[i+1].r)/2;
+    const segLen=Math.hypot(pr[i+1].h-pr[i].h, pr[i+1].r-pr[i].r);
+    lateralAreaMm2 += 2*Math.PI*rAvg*segLen; // Pappus (théorème du centre de gravité)
+  }
+  const wallMm = parseFloat(state.wall);
+  let volumeMm3 = lateralAreaMm2 * wallMm * GEOMETRY_CONFIG.INTERNAL_STRUCTURE_FACTOR;
+  const volumeCm3 = volumeMm3/1000;
+  const density = PRICE_CONFIG.MATERIAL_DENSITY_G_CM3[state.material];
+  const massG = volumeCm3*density;
+  const printHours = Math.max(0.4, volumeCm3/PRICE_CONFIG.PRINT_CM3_PER_HOUR);
+  const materialCost = massG/1000*PRICE_CONFIG.MATERIAL_COST_EUR_PER_KG[state.material];
+  const machineCost = printHours*PRICE_CONFIG.HOURLY_RATE_EUR;
+  const socketCost = PRICE_CONFIG.SOCKET_KIT_EUR[state.socket];
+  const subtotal = machineCost+materialCost+socketCost+PRICE_CONFIG.BASE_HARDWARE_EUR;
+  const price = Math.max(PRICE_CONFIG.MIN_PRICE_EUR, subtotal*PRICE_CONFIG.MARGIN_MULTIPLIER);
+  return {volumeCm3, massG, printHours, materialCost, machineCost, socketCost, hardwareCost:PRICE_CONFIG.BASE_HARDWARE_EUR, price};
+}
+
+function renderPrice(){
+  const s = computeSpecs();
+  window.__lastSpecs = s;
+  $('s-vol').innerHTML = s.volumeCm3.toFixed(1)+'<small> cm³</small>';
+  $('s-time').innerHTML = s.printHours.toFixed(1)+'<small> h</small>';
+  $('s-mass').innerHTML = s.massG.toFixed(0)+'<small> g</small>';
+  $('s-price').innerHTML = s.price.toFixed(0)+'<small> €</small>';
+  $('s-breakdown').innerHTML = [
+    ['Machine/temps atelier', s.machineCost.toFixed(2)+' €'],
+    ['Matière ('+MATERIALS[state.material]+')', s.materialCost.toFixed(2)+' €'],
+    ['Kit culot '+state.socket, s.socketCost.toFixed(2)+' €'],
+    ['Visserie/câble/passe-câble', s.hardwareCost.toFixed(2)+' €'],
+    ['Marge atelier ×'+PRICE_CONFIG.MARGIN_MULTIPLIER, ''],
+  ].map(([k,v])=>`<div><span>${k}</span><span>${v}</span></div>`).join('');
+}
+
+/* ── Bornes UI ────────────────────────────────────────────────────────── */
+function renderBounds(){
+  $('bMaxH').textContent = PRINT_BOUNDS.MAX_HEIGHT_MM;
+  $('bMaxR').textContent = PRINT_BOUNDS.MAX_RADIUS_MM;
+  $('bMinTop').textContent = SOCKETS[state.socket].housingMinRadiusMm;
+}
+
+/* ── Master render ────────────────────────────────────────────────────── */
+function renderAll(){
+  drawProfile();
+  drawPreview();
+  renderTable();
+  renderWarnings();
+  renderSockets();
+  renderSwatches();
+  renderPrice();
+  renderBounds();
+  $('type-hint').textContent = TYPE_HINTS[state.type];
+}
+
+/* ── Type toggle ──────────────────────────────────────────────────────── */
+document.querySelectorAll('#type-seg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#type-seg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    state.type=b.dataset.v;
+    renderAll();
+  };
+});
+document.querySelectorAll('[data-preset]').forEach(b=> b.onclick=()=>setPreset(b.dataset.preset));
+
+/* ── material / wall ──────────────────────────────────────────────────── */
+$('material').onchange = e=>{ state.material=e.target.value; renderAll(); };
+$('wall').onchange = e=>{ state.wall=e.target.value; renderAll(); };
+
+/* ── Dossier de fabrication ───────────────────────────────────────────── */
+function buildDossier(){
+  const s = window.__lastSpecs || computeSpecs();
+  const sock = SOCKETS[state.socket];
+  return {
+    generated_at: new Date().toISOString(),
+    produit: "Custom 3D Lamp Studio — dossier de commande/specs (PAS un fichier de fabrication prêt à imprimer)",
+    type_lampe: state.type,
+    profil_mm: state.profile.map(p=>({hauteur:+p.h.toFixed(1), rayon:+p.r.toFixed(1)})),
+    hauteur_totale_mm: +state.profile[state.profile.length-1].h.toFixed(1),
+    rayon_max_mm: +Math.max(...state.profile.map(p=>p.r)).toFixed(1),
+    culot: { ref: state.socket, ...sock },
+    materiau: MATERIALS[state.material],
+    epaisseur_paroi_mm: +state.wall,
+    couleur: state.color,
+    imprimante_cible: { modele: "Creality Ender-3 S1 (vérifié atelier)", plateau_mm: `${PRINT_BOUNDS.PLATE_XY_MM}×${PRINT_BOUNDS.PLATE_XY_MM}×${PRINT_BOUNDS.PLATE_Z_MM}`, buse_mm: 0.4 },
+    estimation: { volume_cm3: +s.volumeCm3.toFixed(1), masse_g: +s.massG.toFixed(0), temps_impression_h: +s.printHours.toFixed(1), prix_eur: +s.price.toFixed(0) },
+    securite: "Assemblage électrique réalisé par un professionnel/l'atelier, jamais par le client. LED ≤7W réels, jamais halogène/incandescent. Culot standard du commerce marqué CE.",
+    avertissement: "Dossier de commande/specs indicatif, PAS un fichier STL/3D prêt à imprimer. Dimensions et prix à valider par l'atelier avant fabrication.",
+  };
+}
+function download(filename, content, mime){
+  const blob=new Blob([content],{type:mime});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ── Maillage 3D réel par révolution du profil (STL imprimable) ─────────
+ * IMPORTANT — gate de sécurité : cette fonction ne reçoit et ne manipule
+ * QUE le profil de la structure/abat-jour (state.profile, points h/r édités
+ * dans la coupe 2D du panneau 2). Elle ne génère JAMAIS la géométrie du
+ * culot/alésage/filetage — ces cotes restent dans SOCKETS (liste fermée,
+ * jamais éditable, jamais révolutionnée). Le rayon mini du point du haut
+ * est simplement borné par SOCKETS[...].housingMinRadiusMm en amont
+ * (clampPoint/normalizeProfile) ; aucun bore électrique n'est modélisé ici.
+ * ──────────────────────────────────────────────────────────────────── */
+function buildRevolutionMesh(profile, segments){
+  const N = Math.max(3, segments|0);
+  if(profile.length<2) return [];
+  // Anneaux de sommets par révolution de chaque point de contrôle autour de l'axe Z
+  // (h -> z, r -> rayon dans le plan XY). Convention Z-up, cohérente avec le format STL.
+  const rings = profile.map(p=>{
+    const ring=[];
+    for(let j=0;j<N;j++){
+      const th = j/N*Math.PI*2;
+      ring.push([p.r*Math.cos(th), p.r*Math.sin(th), p.h]);
+    }
+    return ring;
+  });
+
+  const tris=[]; // triangles bruts [[x,y,z]x3] — pas de liste indexée, le format STL n'en a pas besoin
+
+  // Surface latérale : chaque quad (anneau i / anneau i+1) -> 2 triangles.
+  // Ordre choisi (A,B,C) puis (A,C,D) donne une normale sortante (vérifié par calcul du
+  // produit vectoriel des arêtes : (B-A)x(C-A) pointe radialement vers l'extérieur quand
+  // h croît et theta croît dans ce sens).
+  for(let i=0;i<rings.length-1;i++){
+    for(let j=0;j<N;j++){
+      const j2=(j+1)%N;
+      const A=rings[i][j], B=rings[i][j2], C=rings[i+1][j2], D=rings[i+1][j];
+      tris.push([A,B,C]);
+      tris.push([A,C,D]);
+    }
+  }
+
+  // Cap radial bas (h min) : fan depuis le centre de l'axe, normale sortante -Z.
+  const hBot = profile[0].h;
+  const Obot = [0,0,hBot];
+  for(let j=0;j<N;j++){
+    const j2=(j+1)%N;
+    tris.push([Obot, rings[0][j2], rings[0][j]]);
+  }
+
+  // Cap radial haut (h max, point de fixation du culot) : fan depuis le centre, normale
+  // sortante +Z. Ferme le volume en un solide plein — le logement/l'alésage du culot n'est
+  // PAS creusé ici (liste fermée SOCKETS, jamais générée géométriquement).
+  const hTop = profile[profile.length-1].h;
+  const Otop = [0,0,hTop];
+  const last = rings.length-1;
+  for(let j=0;j<N;j++){
+    const j2=(j+1)%N;
+    tris.push([Otop, rings[last][j], rings[last][j2]]);
+  }
+
+  return tris;
+}
+
+function triangleNormal(v1,v2,v3){
+  const e1=[v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]];
+  const e2=[v3[0]-v1[0], v3[1]-v1[1], v3[2]-v1[2]];
+  let nx=e1[1]*e2[2]-e1[2]*e2[1];
+  let ny=e1[2]*e2[0]-e1[0]*e2[2];
+  let nz=e1[0]*e2[1]-e1[1]*e2[0];
+  const len=Math.hypot(nx,ny,nz)||1;
+  return [nx/len, ny/len, nz/len];
+}
+
+// Export STL binaire standard : header 80 octets + uint32 nb triangles, puis par triangle
+// normale (3×float32) + 3 sommets (3×float32 chacun) + attribut uint16 (=0) = 50 octets/triangle.
+function trianglesToSTLBinary(tris, label){
+  const n = tris.length;
+  const buf = new ArrayBuffer(84 + n*50);
+  const dv = new DataView(buf);
+  const header = ('Custom 3D Lamp Studio - '+(label||'lampe')+' - profil de revolution').slice(0,79);
+  for(let i=0;i<80;i++) dv.setUint8(i, i<header.length?header.charCodeAt(i):0);
+  dv.setUint32(80, n, true);
+  let o=84;
+  for(const [v1,v2,v3] of tris){
+    const [nx,ny,nz] = triangleNormal(v1,v2,v3);
+    dv.setFloat32(o,nx,true); dv.setFloat32(o+4,ny,true); dv.setFloat32(o+8,nz,true); o+=12;
+    dv.setFloat32(o,v1[0],true); dv.setFloat32(o+4,v1[1],true); dv.setFloat32(o+8,v1[2],true); o+=12;
+    dv.setFloat32(o,v2[0],true); dv.setFloat32(o+4,v2[1],true); dv.setFloat32(o+8,v2[2],true); o+=12;
+    dv.setFloat32(o,v3[0],true); dv.setFloat32(o+4,v3[1],true); dv.setFloat32(o+8,v3[2],true); o+=12;
+    dv.setUint16(o,0,true); o+=2;
+  }
+  return buf;
+}
+
+$('exportStl').onclick=()=>{
+  const segments = parseInt($('stlSegments').value,10) || 48;
+  const tris = buildRevolutionMesh(state.profile, segments);
+  if(!tris.length){ alert('Profil insuffisant pour générer un maillage (minimum 2 points).'); return; }
+  const buf = trianglesToSTLBinary(tris, state.type);
+  download('lampe-'+state.type+'-'+Date.now()+'.stl', buf, 'model/stl');
+  $('stlInfo').innerHTML = `Dernier export : <b>${tris.length}</b> triangles · <b>${(buf.byteLength/1024).toFixed(1)} Ko</b> · ${segments} segments angulaires.`;
+};
+
+$('exportJson').onclick=()=>{
+  download('dossier-lampe-'+Date.now()+'.json', JSON.stringify(buildDossier(),null,2), 'application/json');
+};
+$('exportTxt').onclick=()=>{
+  const d=buildDossier();
+  const txt = [
+    '=== DOSSIER DE FABRICATION — CUSTOM 3D LAMP STUDIO ===',
+    'PAS un fichier STL/3D prêt à imprimer — dossier de commande/specs.',
+    '',
+    'Généré le : '+new Date().toLocaleString('fr-FR'),
+    'Type de lampe : '+d.type_lampe,
+    '',
+    '--- Profil (hauteur mm, rayon mm), axe de révolution ---',
+    ...d.profil_mm.map((p,i)=>`  point ${i+1} : h=${p.hauteur}mm  r=${p.rayon}mm`),
+    `Hauteur totale : ${d.hauteur_totale_mm}mm — Rayon max : ${d.rayon_max_mm}mm`,
+    '',
+    '--- Culot électrique (référence standard fermée) ---',
+    `Référence : ${d.culot.ref} — ${d.culot.label}`,
+    `Source cotes : ${d.culot.source}`,
+    `Puissance LED max : ${d.culot.maxWattageW}W`,
+    '',
+    '--- Matière & paroi ---',
+    `Matériau : ${d.materiau}`,
+    `Épaisseur paroi : ${d.epaisseur_paroi_mm}mm`,
+    `Couleur : ${d.couleur}`,
+    '',
+    '--- Imprimante cible ---',
+    `${d.imprimante_cible.modele} — plateau ${d.imprimante_cible.plateau_mm} — buse ${d.imprimante_cible.buse_mm}mm`,
+    '',
+    '--- Estimation ---',
+    `Volume matière : ${d.estimation.volume_cm3} cm³`,
+    `Masse estimée : ${d.estimation.masse_g} g`,
+    `Temps d'impression estimé : ${d.estimation.temps_impression_h} h`,
+    `Prix estimé : ${d.estimation.prix_eur} €`,
+    '',
+    '--- Sécurité ---',
+    d.securite,
+    '',
+    d.avertissement,
+  ].join('\n');
+  download('dossier-lampe-'+Date.now()+'.txt', txt, 'text/plain');
+};
+
+/* ── Commande / mailto ───────────────────────────────────────────────── */
+$('prepEmail').onclick=()=>{
+  const name=$('cName').value.trim(), email=$('cEmail').value.trim(), notes=$('cNotes').value.trim();
+  const s = window.__lastSpecs || computeSpecs();
+  const sock = SOCKETS[state.socket];
+  const subject = `Commande lampe sur-mesure DELIGNY R&D — ${state.type}${name?(' — '+name):''}`;
+  const body = [
+    `Nom : ${name||'—'}`,
+    `Email : ${email||'—'}`,
+    '',
+    `Type de lampe : ${state.type}`,
+    `Hauteur totale : ${state.profile[state.profile.length-1].h.toFixed(0)}mm — Rayon max : ${Math.max(...state.profile.map(p=>p.r)).toFixed(0)}mm`,
+    `Culot : ${state.socket} (${sock.label})`,
+    `Matériau : ${MATERIALS[state.material]} — paroi ${state.wall}mm`,
+    `Couleur : ${state.color}`,
+    `Volume estimé : ${s.volumeCm3.toFixed(1)} cm³ — Temps impr. estimé : ${s.printHours.toFixed(1)}h`,
+    `Prix estimé : ${s.price.toFixed(0)} €`,
+    '',
+    `Notes : ${notes||'—'}`,
+    '',
+    '(Merci de joindre manuellement le dossier JSON/TXT téléchargé sur le configurateur à cet email avant envoi.)',
+    '',
+    'Rappel : cette commande ne vaut pas paiement — assemblage électrique réalisé par le professionnel/l\'atelier, pas par le client.',
+  ].join('\n');
+  const mailto = `mailto:contact@deligny-rd.fr?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+};
+
+/* ── Init ─────────────────────────────────────────────────────────────── */
+setPreset('dune');
+</script>
+</body></html>

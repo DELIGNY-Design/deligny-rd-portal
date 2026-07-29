@@ -5,25 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="FACTORY — la boutique d'objets imprimés en 3D et de fichiers 3D de DELIGNY R&D : luminaires cinétiques, outils d'atelier, pièces et accessoires." />
   <title>FACTORY — Objets imprimés en 3D &amp; fichiers 3D | DELIGNY R&D</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    /* FACTORY — complément local, ne redéfinit rien de styles.css */
-    .fy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px;margin-top:22px}
-    .fy-card{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow)}
-    .fy-card img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
-    .fy-body{display:flex;flex-direction:column;gap:8px;padding:14px 16px 16px;flex:1}
-    .fy-body h3{margin:0;font-family:var(--font-display);font-size:1.08rem}
-    .fy-body p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.45;flex:1}
-    .fy-tags{display:flex;flex-wrap:wrap;gap:6px}
-    .fy-tag{font-size:.74rem;letter-spacing:.02em;padding:3px 9px;border-radius:999px;border:1px solid var(--line)}
-    .fy-tag.print{background:var(--soft)}
-    .fy-tag.file{border-color:rgba(189,79,28,.4);color:var(--accent)}
-    .fy-price{font-size:.85rem;color:var(--muted)}
-    .fy-notice{margin-top:20px;padding:14px 18px;border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;background:var(--panel);font-size:.92rem;line-height:1.5}
-    .fy-service{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:22px}
-    .fy-service .desk-card{background:var(--panel)}
-    @media (max-width:720px){.fy-service{grid-template-columns:1fr}}
-  </style>
+  <link rel="stylesheet" href="factory.css" />
 </head>
 <body>
   <header class="topbar">
@@ -179,7 +164,7 @@
           <a class="btn btn-small btn-ghost" href="mailto:contact@deligny-rd.fr?subject=FACTORY%20%E2%80%94%20Objet%20%C3%A0%20la%20demande&body=Bonjour%2C%0A%0AMon%20besoin%20%3A%0A%0AMerci">Décrire mon besoin</a>
         </div>
       </div>
-      <div class="fy-notice" style="border-left-color:var(--accent)">
+      <div class="fy-notice accent">
         Fabrication à la commande en dépôt de filament (FDM), matériaux PLA/PETG.
         Les objets FACTORY sont des créations originales DELIGNY R&amp;D&nbsp;; les fichiers 3D
         vendus sont destinés à un usage personnel (licence détaillée fournie avec le devis).

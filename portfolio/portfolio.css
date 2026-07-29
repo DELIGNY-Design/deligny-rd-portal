@@ -4,6 +4,7 @@
 .pf-card:hover{transform:translateY(-3px)}
 .pf-card img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
 .pf-card figcaption{padding:10px 12px;font-size:.92rem}
+.pf-card figure{margin:0}
 .pf-gallery{display:flex;flex-direction:column;gap:14px;margin-top:18px;max-width:960px}
 .pf-gallery img{width:100%;border-radius:12px;display:block}
 .pf-back{display:inline-block;margin-bottom:10px}

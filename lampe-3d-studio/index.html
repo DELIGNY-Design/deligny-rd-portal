@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-vKZXTkX+HPT1xcjjaje8EwCrpJg29U+3r5YKdJH3YYw='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-EcM4QoWAd8CT9LC/j9u++q+laDVTfPn59VqFe2vni1U='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -1876,12 +1876,14 @@ function segFor(bi, mode){
     // Depuis que le contour est découpé sur l'iso-ligne du champ, baisser la
     // résolution de l'aperçu ne DÉPLACE plus les trous : elle ne fait qu'anguler
     // un peu leur bord. On peut donc l'alléger sans mentir sur le fichier livré.
+    if(mode==='draft')   return Math.min(seg, 40);
     return (mode==='preview') ? Math.min(seg, 100) : seg;
   }
   const chosen = parseInt(($('stlSegments')||{}).value||'14',10);
   const seg = angularSegments(surf, chosen);
   // l'aperçu est plafonné pour rester fluide (invisible à cette taille) ; l'export
   // garde la pleine résolution, et l'écart est affiché sous l'aperçu
+  if(mode==='draft')   return Math.min(seg, 44);
   return (mode==='preview') ? Math.min(seg, 76) : seg;
 }
 // Pas vertical effectif : le plus fin des trois besoins (style, torsion, ajourage).
@@ -1899,6 +1901,7 @@ function effectiveStepMm(bi, surf, mode){
   const pos = cand.filter(x=>x>0);
   let step = pos.length ? Math.min(...pos) : 0;
   if(mode==='preview' && step>0) step = Math.max(step, perf ? 2.2 : 2.0);
+  if(mode==='draft'   && step>0) step = Math.max(step, perf ? 5.5 : 3.5);
   return step;
 }
 
@@ -1982,6 +1985,19 @@ function rebuildMesh(){
   MESH.parts   = buildParts(segsExport, 'export');
   const perfExport = { ...PERF_ACC };
   MESH.preview = same ? MESH.parts : buildParts(segsPreview, 'preview');
+  /* MAILLAGE D'ÉBAUCHE — le coût de l'aperçu est dans le CALCUL par triangle
+   * (projection, normale, tri en profondeur), pas dans le remplissage : mesuré,
+   * diviser la résolution d'affichage par 4 ne gagnait que 14 %. Le seul vrai
+   * levier est donc d'avoir MOINS DE TRIANGLES pendant le geste. On prépare une
+   * ébauche, utilisée uniquement tant qu'on tourne ou qu'on règle un curseur ;
+   * dès qu'on relâche, la passe de qualité reprend le maillage complet. */
+  const trisApercu = MESH.preview.reduce((a,p)=>a+p.tris.length,0);
+  if(trisApercu > 14000){
+    const segsDraft = Array.from({length:n},(_,i)=>segFor(i,'draft'));
+    MESH.draft = buildParts(segsDraft, 'draft');
+  } else {
+    MESH.draft = MESH.preview;
+  }
   const segExport = Math.max(...segsExport), segPreview = Math.max(...segsPreview);
   const volMm3 = MESH.parts.reduce((s,p)=>s+meshVolumeMm3(p.tris), 0);
   const tris   = MESH.parts.reduce((s,p)=>s+p.tris.length, 0);
@@ -2056,11 +2072,29 @@ function smoothNormals(part, seuilDeg){
   return out;
 }
 
-function drawPreview(){
-  const w=vc.width, h=vc.height;
-  vctx.clearRect(0,0,w,h); vctx.fillStyle='#0e0e10'; vctx.fillRect(0,0,w,h);
-  const parts = MESH.preview;
-  if(!parts || !parts.length || state.profile.length<2) return;
+function drawPreview(hq){
+  const SS = hq ? 2 : 1;
+  const w=vc.width*SS, h=vc.height*SS;
+  const off = hq ? document.createElement('canvas') : null;
+  if(off){ off.width=w; off.height=h; }
+  const ctx = off ? off.getContext('2d') : vctx;
+  // la passe de qualité est dessinée deux fois plus grande puis réduite : c'est
+  // ce sur-échantillonnage qui lisse les bords en escalier, sans rien changer au modèle
+  const blit = ()=>{ if(off){ vctx.clearRect(0,0,vc.width,vc.height); vctx.drawImage(off,0,0,vc.width,vc.height); } };
+  ctx.clearRect(0,0,w,h);
+  if(hq){
+    // fond de studio : dégradé vertical + halo derrière le sujet
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,'#1a1a1e'); g.addColorStop(1,'#08080a');
+    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    const pool=ctx.createRadialGradient(w/2,h*0.36,10,w/2,h*0.36,w*0.55);
+    pool.addColorStop(0,'rgba(255,255,255,.07)'); pool.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=pool; ctx.fillRect(0,0,w,h);
+  } else {
+    ctx.fillStyle='#0e0e10'; ctx.fillRect(0,0,w,h);
+  }
+  const parts = hq ? MESH.preview : (MESH.draft || MESH.preview);
+  if(!parts || !parts.length || state.profile.length<2){ blit(); return; }
 
   const bb = MESH.stats.bbox || {minX:-50,maxX:50,minY:-50,maxY:50,minZ:0,maxZ:200};
   const gap = view.explode * 45;                       // écartement vertical des modules
@@ -2085,7 +2119,8 @@ function drawPreview(){
       const rnx = nx*rc - ny*rs, rny = nx*rs + ny*rc;
       const rn = project3d(rnx, nz, rny);
       const d = rn.x*L.x + rn.y*L.y + rn.depth*L.z;
-      return { depth: rn.depth, shade: Math.max(0.16, Math.min(1, 0.24 + 0.80*Math.max(0,d))) };
+      return { depth: rn.depth, shade: Math.max(0.16, Math.min(1, 0.24 + 0.80*Math.max(0,d))),
+               n: {x:rn.x, y:rn.y, z:rn.depth} };
     };
     part.tris.forEach((tri, ti)=>{
       const [a,b,c] = tri;
@@ -2104,53 +2139,83 @@ function drawPreview(){
         const p = project3d(wv[0], wv[2]-midZ, wv[1]);
         return {sx: cx+p.x*scale, sy: cy-p.y*scale, depth:p.depth};
       });
-      let sh = face.shade, sh3 = null;
+      let sh = face.shade, sh3 = null, nv3 = null;
       if(VN){
         const v = VN[ti];
-        const s0=ecl(v[0][0],v[0][1],v[0][2]).shade,
-              s1=ecl(v[1][0],v[1][1],v[1][2]).shade,
-              s2=ecl(v[2][0],v[2][1],v[2][2]).shade;
+        const e0=ecl(v[0][0],v[0][1],v[0][2]), e1=ecl(v[1][0],v[1][1],v[1][2]), e2=ecl(v[2][0],v[2][1],v[2][2]);
+        const s0=e0.shade, s1=e1.shade, s2=e2.shade;
+        nv3=[e0.n,e1.n,e2.n];
         sh = (s0+s1+s2)/3;
         // dégradé seulement là où l'écart se VOIT : ailleurs un aplat suffit et
         // coûte dix fois moins cher
         if(Math.max(s0,s1,s2) - Math.min(s0,s1,s2) > 0.05) sh3 = [s0,s1,s2];
       }
-      faces.push({P, depth:(P[0].depth+P[1].depth+P[2].depth)/3, shade:sh, sh3, pi,
+      faces.push({P, depth:(P[0].depth+P[1].depth+P[2].depth)/3, shade:sh, sh3, nv3, nv:face.n, pi,
                   body:part.body||0, tint:(part.body||0)+part.index});
     });
   });
   faces.sort((f1,f2)=>f2.depth-f1.depth);
 
+  if(hq && faces.length){
+    // sol + ombre de contact : c'est ce qui pose l'objet au lieu de le laisser flotter
+    let bas=0, gx=0, n=0;
+    faces.forEach(f=>f.P.forEach(P=>{ if(P.sy>bas) bas=P.sy; gx+=P.sx; n++; }));
+    const cxo=gx/n, gy=Math.min(h-6*SS, bas);
+    const fl=ctx.createLinearGradient(0,gy,0,h);
+    fl.addColorStop(0,'rgba(255,255,255,.05)'); fl.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=fl; ctx.fillRect(0,gy,w,h-gy);
+    const rr=Math.max(40*SS, (w*0.22));
+    const sh=ctx.createRadialGradient(cxo,gy,4,cxo,gy,rr);
+    sh.addColorStop(0,'rgba(0,0,0,.60)'); sh.addColorStop(0.55,'rgba(0,0,0,.20)'); sh.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.save(); ctx.translate(cxo,gy); ctx.scale(1,0.18); ctx.translate(-cxo,-gy);
+    ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(cxo,gy,rr,0,7); ctx.fill(); ctx.restore();
+  }
+
   faces.forEach(f=>{
     const col = cols[f.body] || cols[0];
     const k = (f.tint%2 ? 0.93 : 1);                   // corps et modules discernables
     const s = f.shade * k;
-    const teinte = v => `rgb(${col.r*v|0},${col.g*v|0},${col.b*v|0})`;
-    let fill = teinte(s);
+    const teinte = hq
+      ? (v,n)=> shadeFace(n || f.nv, col, FINISHES[RENDER.finish], RENDER.lit)
+      : (v)=> `rgb(${col.r*v|0},${col.g*v|0},${col.b*v|0})`;
+    let fill = teinte(s, f.nv);
     if(f.sh3){
       // Dégradé linéaire entre le sommet le plus sombre et le plus clair :
       // approximation d'un ombrage Gouraud, ce qui efface la limite entre deux
       // triangles voisins — c'est elle qui donnait l'aspect « facetté ».
       let iMin=0,iMax=0;
       for(let i=1;i<3;i++){ if(f.sh3[i]<f.sh3[iMin]) iMin=i; if(f.sh3[i]>f.sh3[iMax]) iMax=i; }
-      const g = vctx.createLinearGradient(f.P[iMin].sx, f.P[iMin].sy, f.P[iMax].sx, f.P[iMax].sy);
-      g.addColorStop(0, teinte(f.sh3[iMin]*k));
-      g.addColorStop(1, teinte(f.sh3[iMax]*k));
+      const g = ctx.createLinearGradient(f.P[iMin].sx, f.P[iMin].sy, f.P[iMax].sx, f.P[iMax].sy);
+      g.addColorStop(0, teinte(f.sh3[iMin]*k, f.nv3 && f.nv3[iMin]));
+      g.addColorStop(1, teinte(f.sh3[iMax]*k, f.nv3 && f.nv3[iMax]));
       fill = g;
     }
-    vctx.beginPath();
-    vctx.moveTo(f.P[0].sx,f.P[0].sy); vctx.lineTo(f.P[1].sx,f.P[1].sy); vctx.lineTo(f.P[2].sx,f.P[2].sy);
-    vctx.closePath();
-    vctx.fillStyle = fill; vctx.fill();
-    vctx.strokeStyle = fill; vctx.lineWidth = 1; vctx.stroke();   // supprime les coutures d'anticrénelage
+    ctx.beginPath();
+    ctx.moveTo(f.P[0].sx,f.P[0].sy); ctx.lineTo(f.P[1].sx,f.P[1].sy); ctx.lineTo(f.P[2].sx,f.P[2].sy);
+    ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = fill; ctx.lineWidth = SS; ctx.stroke();   // supprime les coutures d'anticrénelage
   });
 
-  vctx.fillStyle='#86868b'; vctx.font='11px -apple-system,sans-serif';
+  ctx.fillStyle='#86868b'; ctx.font=(11*SS)+'px -apple-system,sans-serif';
   const st = { label: styleLabel(bodySurface(state.body)) };
   const nb = MESH.stats.bodies||1;
-  vctx.fillText(`${st.label} · ${MESH.stats.segPreview||0} segments affichés (export : ${MESH.stats.segExport||0}) · `
-    + `${nb>1?nb+' corps':'1 corps'} · ${parts.length} pièce${parts.length>1?'s':''} à imprimer`, 12, h-12);
+  ctx.fillText(`${st.label} · ${MESH.stats.segPreview||0} segments affichés (export : ${MESH.stats.segExport||0}) · `
+    + `${nb>1?nb+' corps':'1 corps'} · ${parts.length} pièce${parts.length>1?'s':''} à imprimer`, 12*SS, h-12*SS);
+  blit();
 }
+/* RAFFINEMENT PROGRESSIF — pendant qu'on tourne ou qu'on règle un curseur, on
+ * dessine la passe rapide (aplats, pas de sur-échantillonnage) pour rester
+ * fluide ; 170 ms après le dernier geste, la passe de qualité repasse par-dessus
+ * avec l'éclairage 3 points, le spéculaire, le sol et le double échantillonnage.
+ * Aucun changement de géométrie : c'est le MÊME maillage, mieux éclairé. */
+let hqTimer=null;
+function apercuProgressif(){
+  drawPreview(false);
+  clearTimeout(hqTimer);
+  hqTimer = setTimeout(()=>{ if(!view.spin) drawPreview(true); }, 170);
+}
+
 function hexToRgb(hex){
   const v=parseInt(hex.slice(1),16);
   return {r:(v>>16)&255, g:(v>>8)&255, b:v&255};
@@ -2169,9 +2234,9 @@ window.addEventListener('mousemove', e=>{
   view.az += (e.clientX-lastX)*0.01;
   view.el = Math.max(-1.22, Math.min(1.40, view.el + (e.clientY-lastY)*0.008));
   lastX=e.clientX; lastY=e.clientY;
-  syncViewInputs(); drawPreview();
+  syncViewInputs(); apercuProgressif();
 });
-window.addEventListener('mouseup', ()=>{ rotDrag=false; });
+window.addEventListener('mouseup', ()=>{ if(rotDrag){ rotDrag=false; apercuProgressif(); } });
 // Le zoom se règle UNIQUEMENT au curseur (#vZoom) : pas de molette, pas de
 // pincement à deux doigts — sur trackpad le pincement déclenchait un zoom
 // parasite pendant qu'on essayait simplement de faire défiler la page.
@@ -2181,7 +2246,7 @@ vc.addEventListener('touchmove', e=>{
   view.az += (e.touches[0].clientX-lastX)*0.01;
   view.el = Math.max(-1.22, Math.min(1.40, view.el + (e.touches[0].clientY-lastY)*0.008));
   lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
-  syncViewInputs(); drawPreview();
+  syncViewInputs(); apercuProgressif();
 }, {passive:true});
 window.addEventListener('touchend', ()=>{ rotDrag=false; });
 
@@ -3057,7 +3122,7 @@ function renderAll(){
   syncBodies();
   rebuildMesh();
   drawProfile();
-  drawPreview();
+  apercuProgressif();
   renderTable();
   renderWarnings();
   renderSockets();
@@ -3107,14 +3172,14 @@ $('seedApply').onclick   = ()=> randomShape($('seedInput').value.trim() || undef
 $('seedInput').onkeydown = e=>{ if(e.key==='Enter') $('seedApply').onclick(); };
 
 /* ── Contrôles de vue ─────────────────────────────────────────────────── */
-$('vElev').oninput  = e=>{ view.el = parseFloat(e.target.value)*Math.PI/180; drawPreview(); };
-$('vZoom').oninput  = e=>{ view.zoom = parseFloat(e.target.value)/100; drawPreview(); };
-$('vExplode').oninput = e=>{ view.explode = parseFloat(e.target.value)/100; drawPreview(); };
-$('vReset').onclick = ()=>{ view.az=0.7; view.el=0.35; view.zoom=1; syncViewInputs(); drawPreview(); };
+$('vElev').oninput  = e=>{ view.el = parseFloat(e.target.value)*Math.PI/180; apercuProgressif(); };
+$('vZoom').oninput  = e=>{ view.zoom = parseFloat(e.target.value)/100; apercuProgressif(); };
+$('vExplode').oninput = e=>{ view.explode = parseFloat(e.target.value)/100; apercuProgressif(); };
+$('vReset').onclick = ()=>{ view.az=0.7; view.el=0.35; view.zoom=1; syncViewInputs(); apercuProgressif(); };
 $('vTurn').onclick  = e=>{
-  if(view.spin){ cancelAnimationFrame(view.spin); view.spin=0; e.target.textContent='▶ Tourner'; return; }
+  if(view.spin){ cancelAnimationFrame(view.spin); view.spin=0; e.target.textContent='▶ Tourner'; apercuProgressif(); return; }
   e.target.textContent='⏸ Arrêter';
-  const step=()=>{ view.az+=0.003; drawPreview(); view.spin=requestAnimationFrame(step); };  // 4× plus lent
+  const step=()=>{ view.az+=0.003; drawPreview(false); view.spin=requestAnimationFrame(step); };  // 4× plus lent
   view.spin=requestAnimationFrame(step);
 };
 

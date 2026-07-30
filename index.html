@@ -8,14 +8,17 @@
   <!--
     Profil STATIC_FORTRESS (deploy/STATIC_FORTRESS_CHECKLIST.md) — adapte a
     l'hebergement reel (GitHub Pages, pas le VPS/nginx prevu initialement).
-    GitHub Pages ne permet aucun en-tete HTTP personnalise : HSTS,
-    X-Content-Type-Options et Permissions-Policy sont donc IMPOSSIBLES ici
-    (ils exigent un vrai en-tete serveur, pas une balise meta) — limite
-    de la plateforme, pas un oubli. Seuls CSP et Referrer-Policy sont
-    reellement appliques via balises meta ci-dessous. Pour une parite
-    complete avec Atlas Fortress, il faudrait un proxy devant GitHub Pages
-    (ex. Cloudflare gratuit, regle de reecriture d'en-tetes) — non fait,
-    geste a decider par Baptiste.
+    GitHub Pages n'autorise aucun en-tete HTTP personnalise. Verifie le
+    30/07 : HSTS est en realite deja envoye par GitHub automatiquement
+    pour les domaines custom en HTTPS force (pas besoin de proxy pour ca).
+    Restent reellement IMPOSSIBLES sans proxy devant GitHub Pages :
+    X-Content-Type-Options, Permissions-Policy, et un vrai en-tete CSP.
+    Consequence concrete : frame-ancestors et form-action dans la balise
+    CSP ci-dessous sont INERTES (ces directives ne sont respectees par
+    aucun navigateur quand elles viennent d'une <meta>, seulement d'un
+    en-tete) — la protection anti-clickjacking n'est donc pas active tant
+    que ce proxy n'existe pas. Decision actee le 23/07 : NO GO Cloudflare
+    pour l'instant, geste a decider par Baptiste.
   -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />

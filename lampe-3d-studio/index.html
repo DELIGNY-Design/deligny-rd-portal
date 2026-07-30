@@ -1,4 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-xSzNiX/Yj1eoGVa8EwgRRQez607GkEs88GKp2Yf4rbk='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -330,6 +331,11 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
       <div class="field" id="splitCountField" style="display:none">
         <label>Nombre de modules (bas = base, haut = abat-jour) : <b id="splitCountVal"></b></label>
         <input type="range" id="splitCount" min="2" max="4" step="1" value="2" style="width:100%;accent-color:var(--blue)">
+        <label style="margin-top:12px">Liaison entre modules</label>
+        <div class="seg" id="joint-seg">
+          <button data-mode="visse" class="on">🔩 Vissé (filetage imprimé)</button>
+          <button data-mode="emboite">Emboîté (friction)</button>
+        </div>
       </div>
       <div class="warnbox" id="splitBox"></div>
     </div>
@@ -452,7 +458,11 @@ const $=id=>document.getElementById(id);
 const PRICE_CONFIG = {
   MATERIAL_COST_EUR_PER_KG: { PLA: 22, PLA_T: 26, PETG: 24 },  // prix bobine ramené au kg, par matière
   MATERIAL_DENSITY_G_CM3:   { PLA: 1.24, PLA_T: 1.24, PETG: 1.27 },
-  PRINT_CM3_PER_HOUR: 16,          // débit volumique grossier, buse 0.4, parois seules (pas de remplissage structurel)
+  // MESURÉ le 30/07 sur PrusaSlicer 2.9.6 (buse 0.4, couche 0.20, 3 périmètres,
+  // remplissage 15 %) : 119,3 cm³ de filament en 11 h 22 sur les deux modules
+  // d'une lampe Dune coupée en deux → 10,5 cm³/h. La valeur précédente (16)
+  // sous-estimait le temps d'impression de 36 %.
+  PRINT_CM3_PER_HOUR: 10.5,
   HOURLY_RATE_EUR: 9,              // machine + temps atelier (élec, usure, supervision) — à ajuster par Baptiste
   SOCKET_KIT_EUR: { E14: 4, E27: 5 },   // prix pièce du commerce (douille + bague CE) + temps d'assemblage électrique pro
   BASE_HARDWARE_EUR: 3,            // visserie, câble, passe-câble, gaine
@@ -462,8 +472,14 @@ const PRICE_CONFIG = {
   MIN_PRICE_EUR: 25,               // prix plancher (temps de setup mini, même sur une petite pièce)
 };
 
-// Cône/base/nervures non capturés par la simple coque de révolution (cf. cône porte-douille auto-portant) — marge de matière.
-const GEOMETRY_CONFIG = { INTERNAL_STRUCTURE_FACTOR: 1.15 };
+/* Marge de matière pour ce que le maillage ne décrirait pas. Elle valait 1,15 du
+ * temps où le STL n'était qu'une coque nue : le cône porte-douille, les manchons
+ * et les nervures n'existaient pas dans le fichier. Ils y sont désormais tous.
+ * MESURÉ le 30/07 : le maillage annonce 123,4 cm³, PrusaSlicer consomme 119,3 cm³
+ * — le maillage est déjà 3,4 % AU-DESSUS du filament réellement extrudé. Garder
+ * 1,15 gonflait donc le devis de 19 %. On laisse 1,0 : le léger excédent du
+ * maillage couvre la jupe et la purge. */
+const GEOMETRY_CONFIG = { INTERNAL_STRUCTURE_FACTOR: 1.0 };
 
 /* ============================================================================
  * BORNES D'IMPRESSION — Ender-3 S1 vérifiée dans 3D Objects/ (plateau 220×220×270,
@@ -565,11 +581,23 @@ const SILHOUETTES = {
  * rayon). Plus cher : chaque module coûte un lancement machine de plus.
  * ========================================================================== */
 const JOINT = {
-  collarHeightMm: 12,      // hauteur du collier qui dépasse au-dessus du plan de coupe
-  collarWallMm: 1.2,       // épaisseur du collier
-  clearanceMm: 0.3,        // jeu au rayon (précédent atelier : emboîtement Ø44 jeu 0,3)
-  overlapMm: 3,            // le collier plonge sous le plan de coupe pour se souder à la paroi
+  mode: 'visse',           // 'visse' (filetage imprimé) ou 'emboite' (friction)
+  collarHeightMm: 12,      // hauteur du collier/filetage au-dessus du plan de coupe
+  collarWallMm: 1.6,       // épaisseur des manchons
+  clearanceMm: 0.3,        // jeu au rayon d'un emboîtement à friction
+  flangeMm: 2.0,           // hauteur de la collerette qui relie le manchon à la paroi
+  biteMm: 0.4,             // pénétration de la collerette DANS la paroi (soudure au tranchage)
   maxModules: 4,
+  // Pas et profondeur choisis pour que les FLANCS du filet soient imprimables :
+  // le flanc montant est un porte-à-faux pour le mâle, le flanc descendant en est
+  // un pour la femelle — les deux doivent donc rester doux. atan(0.8/1.5) = 28°
+  // par rapport à la verticale. Avec 4 mm de pas et 0,9 mm de profondeur on était
+  // à 42°, et PrusaSlicer signalait « Loose extrusions » sur chaque couche du filet.
+  thread: {
+    pitchMm: 6.0,          // pas — 2 tours sur 12 mm, vissage rapide
+    depthMm: 0.8,          // profondeur du filet au rayon
+    clearanceMm: 0.35,     // jeu radial mâle/femelle (FDM, buse 0.4)
+  },
 };
 
 /* ============================================================================ */
@@ -1261,27 +1289,136 @@ function buildShellMesh(profile, wallMm, segments, surf, sculpt, hRef){
   return tris;
 }
 
-/* Collier d'emboîtement (option multi-pièces) : tube fermé posé au sommet du
- * module bas, qui plonge dans le module du dessus. Corps distinct qui chevauche
- * la paroi — l'union est faite par le slicer, pratique atelier standard. */
-function buildCollarMesh(rInnerAtCut, hCut, segments, joint, sculpt, hRef){
-  const rOut = Math.max(3, rInnerAtCut - joint.clearanceMm);
-  const rIn  = Math.max(1.5, rOut - joint.collarWallMm);
-  const h0 = hCut - joint.overlapMm, h1 = hCut + joint.collarHeightMm;
-  const N = Math.max(3, segments|0);
-  // le collier subit la même sculpture que le corps, sinon il sortirait de la paroi
-  const flat = (r,h)=>{ const ring=[]; for(let j=0;j<N;j++){ const th=j/N*Math.PI*2;
-    const [x,y]=sculptXY(r*Math.cos(th), r*Math.sin(th), h, sculpt, hRef); ring.push([x,y,h]); } return ring; };
-  const oL=flat(rOut,h0), oU=flat(rOut,h1), iL=flat(rIn,h0), iU=flat(rIn,h1);
+/* ── LIAISON ENTRE MODULES ────────────────────────────────────────────────
+ * Manchon générique : tube fermé dont les rayons intérieur ET extérieur sont des
+ * FONCTIONS de (θ, z). C'est ce qui permet de décrire d'un seul tenant — donc
+ * étanche, sans aucune union — un filetage hélicoïdal ET la collerette qui
+ * raccorde le manchon à la paroi de la coque.
+ * ──────────────────────────────────────────────────────────────────────── */
+function buildTube(z0, z1, rInFn, rOutFn, segments, stepMm, sculpt, hRef){
+  const N = Math.max(8, segments|0);
+  const n = Math.max(2, Math.ceil((z1-z0)/Math.max(0.2, stepMm)));
+  const zs = Array.from({length:n+1},(_,i)=> z0 + (z1-z0)*i/n);
+  const ring = (z, fn)=>{
+    const out=[];
+    for(let j=0;j<N;j++){
+      const th = j/N*Math.PI*2;
+      const r = Math.max(0.4, fn(th, z));
+      const [x,y] = sculptXY(r*Math.cos(th), r*Math.sin(th), z, sculpt, hRef);
+      out.push([x,y,z]);
+    }
+    return out;
+  };
+  const O = zs.map(z=>ring(z, rOutFn)), I = zs.map(z=>ring(z, rInFn));
   const tris=[];
+  for(let i=0;i<zs.length-1;i++) for(let j=0;j<N;j++){
+    const j2=(j+1)%N;
+    tris.push([O[i][j],O[i][j2],O[i+1][j2]]); tris.push([O[i][j],O[i+1][j2],O[i+1][j]]);
+    tris.push([I[i][j],I[i+1][j2],I[i][j2]]); tris.push([I[i][j],I[i+1][j],I[i+1][j2]]);
+  }
+  const last=zs.length-1;
   for(let j=0;j<N;j++){
     const j2=(j+1)%N;
-    tris.push([oL[j],oL[j2],oU[j2]]); tris.push([oL[j],oU[j2],oU[j]]);        // extérieur
-    tris.push([iL[j],iU[j2],iL[j2]]); tris.push([iL[j],iU[j],iU[j2]]);        // intérieur
-    tris.push([oL[j],iL[j],oL[j2]]);  tris.push([iL[j],iL[j2],oL[j2]]);        // couronne basse
-    tris.push([oU[j],oU[j2],iU[j]]);  tris.push([iU[j],oU[j2],iU[j2]]);        // couronne haute
+    tris.push([O[0][j],I[0][j],O[0][j2]]);          tris.push([I[0][j],I[0][j2],O[0][j2]]);
+    tris.push([O[last][j],O[last][j2],I[last][j]]); tris.push([I[last][j],O[last][j2],I[last][j2]]);
   }
-  return { tris, rOut, rIn, h0, h1 };
+  return tris;
+}
+
+// Profil de filet trapézoïdal : montée / crête / descente / creux sur un pas.
+// Flancs à 45° : imprimable axe vertical, sans support.
+function threadRise(phase){
+  const p = phase - Math.floor(phase);
+  if(p < 0.25) return p*4;
+  if(p < 0.50) return 1;
+  if(p < 0.75) return (0.75-p)*4;
+  return 0;
+}
+
+/* Génère la liaison entre deux modules.
+ *  · mode « visse » : filetage hélicoïdal imprimé — manchon MÂLE sur le module
+ *    du bas, manchon FEMELLE taraudé sur celui du haut, même hélice décalée du
+ *    jeu radial. Aucune visserie, aucun insert : les corps se vissent l'un dans
+ *    l'autre.
+ *  · mode « emboite » : manchon lisse à friction (l'ancien collier).
+ * Dans les deux cas une COLLERETTE relie le manchon à la paroi en y pénétrant de
+ * `biteMm` : c'est ce qui garantit la soudure au tranchage. L'ancien collier
+ * n'avait que ce chevauchement en HAUTEUR — si la paroi s'écartait, il ne
+ * touchait rien et flottait dans le vide.
+ * `rJoint` = rayon intérieur DISPONIBLE le plus faible sur toute la hauteur de
+ * la liaison : le manchon femelle ne peut donc jamais percer la coque. */
+function buildJointMeshes(rJoint, hCut, segments, joint, sculpt, hRef, shellWallMm, rShellOuterAt){
+  const wall = joint.collarWallMm, H = joint.collarHeightMm, F = joint.flangeMm;
+  // Le gousset doit traverser TOUTE l'épaisseur de la coque, pas l'effleurer :
+  // avec 0,4 mm de pénétration PrusaSlicer voyait encore « Floating object part »
+  // sur l'assemblage (chaque pièce prise isolément passait, preuve que c'était
+  // bien l'ancrage qui manquait). En allant jusqu'à la surface extérieure, les
+  // deux volumes partagent une vraie matière commune.
+  const rWall = rJoint + Math.max(joint.biteMm, shellWallMm || joint.biteMm);
+  const t = joint.thread;
+  const seg = Math.max(48, Math.min(160, segments|0));
+  const visse = joint.mode === 'visse' && rJoint > 8;
+
+  /* Le manchon mâle est suspendu à la paroi : il n'a RIEN sous lui. Une simple
+   * collerette plate crée donc une face horizontale qui pend dans le vide —
+   * PrusaSlicer l'a signalée en clair sur le premier tranchage réel :
+   * « Floating object part, Floating bridge anchors, Long bridging extrusions ».
+   * On la remplace par un CÔNE À 45° qui part de la paroi et remonte vers le
+   * manchon : chaque couche repose sur celle du dessous, plus rien ne pend. */
+  /* Le cône doit ATTERRIR SUR LA PAROI, pas s'arrêter à côté. Or le manchon est
+   * dimensionné sur le rayon intérieur MINIMAL de toute la liaison — un minimum
+   * qui se produit en haut, là où la coque est la plus étroite — alors que le
+   * cône, lui, vit en bas, où la paroi est plus large. Sans cette correction il
+   * s'arrêtait à 0,1 mm d'elle et PrusaSlicer voyait « Floating object part ».
+   * On cherche donc la hauteur où un cône à 45° issu de l'âme du filet rencontre
+   * la surface EXTÉRIEURE de la coque (quelques itérations suffisent). */
+  const cone = (rTop)=>{
+    let z0 = hCut - Math.max(0.5, rWall - rTop);
+    for(let k=0;k<12;k++){
+      const cible = (rShellOuterAt ? rShellOuterAt(z0) : rWall);
+      z0 = hCut - Math.max(0.5, cible - rTop);
+    }
+    const rBas = rTop + (hCut - z0);
+    return { z0, taper: hCut - z0, rAt:(z)=> rBas - (z - z0) };
+  };
+
+  if(!visse){
+    const rOutC = Math.max(3, rJoint - joint.clearanceMm);
+    const rInC  = Math.max(1.5, rOutC - wall);
+    const K = cone(rOutC);
+    const male = buildTube(K.z0, hCut+H,
+      (th,z)=> Math.max(1.5, (z < hCut ? K.rAt(z) : rOutC) - wall),
+      (th,z)=> z < hCut ? K.rAt(z) : rOutC,
+      seg, 1.0, sculpt, hRef);
+    return { male, female:[], info:{
+      type: (joint.mode==='visse' ? 'emboîtement à friction (rayon trop faible pour un filetage)' : 'emboîtement à friction'),
+      diaMm:+(rOutC*2).toFixed(1), jeuMm:joint.clearanceMm, hauteurMm:H,
+      raccord:'cône 45° auto-portant' } };
+  }
+
+  const Rc   = rJoint - wall - t.depthMm - t.clearanceMm;   // âme du filet mâle
+  const rInM = Math.max(1.5, Rc - wall);
+  const phase = (th,z)=> (z - hCut)/t.pitchMm - th/(2*Math.PI);
+  const step  = Math.max(0.35, t.pitchMm/10);               // 10 anneaux par pas d'hélice
+
+  // MÂLE : cône 45° depuis la paroi, puis filet — rien ne pend dans le vide
+  const K = cone(Rc);
+  const male = buildTube(K.z0, hCut+H,
+    (th,z)=> Math.max(1.5, (z < hCut ? K.rAt(z) : Rc) - wall),
+    (th,z)=> z < hCut ? K.rAt(z) : Rc + t.depthMm*threadRise(phase(th,z)),
+    seg, Math.min(step, 0.5), sculpt, hRef);
+
+  // FEMELLE : même hélice, décalée du jeu radial ; collerette au-dessus du plan
+  const female = buildTube(hCut, hCut+H+1,
+    (th,z)=> Rc + t.clearanceMm + t.depthMm*threadRise(phase(th,z)),
+    (th,z)=> z < hCut+F ? rWall : Rc + t.clearanceMm + t.depthMm + wall,
+    seg, step, sculpt, hRef);
+
+  return { male, female, info:{
+    type:'filetage imprimé — les corps se vissent l\'un dans l\'autre',
+    diaMm:+((Rc + t.depthMm)*2).toFixed(1), pasMm:t.pitchMm,
+    tours:+(H/t.pitchMm).toFixed(1), jeuMm:t.clearanceMm, hauteurMm:H,
+    profondeurFiletMm:t.depthMm, raccord:'cône 45° auto-portant' } };
 }
 
 /* ── Mesures sur le maillage (théorème de la divergence) ─────────────────── */
@@ -1621,19 +1758,43 @@ function buildParts(segList, mode){
     const base = resampleMeridian(prof, surf, effectiveStepMm(bi, surf, mode));
     const cuts = cutPlanesFor(prof);
     const n = cuts.length-1;
-    for(let i=0;i<n;i++){
-      const sp = (n===1) ? base : sliceProfile(base, cuts[i], cuts[i+1]);
-      let tris = buildShellMesh(sp, wall, segments, surf, body.sculpt, hRef);
-      let collar = null;
-      if(i < n-1){
-        const { inner } = offsetMeridianInward(sp, wall);
-        collar = buildCollarMesh(inner[inner.length-1].r, cuts[i+1], segments, JOINT, body.sculpt, hRef);
-        tris = tris.concat(collar.tris);
+    const slices = Array.from({length:n},(_,i)=> (n===1) ? base : sliceProfile(base, cuts[i], cuts[i+1]));
+    const inners = slices.map(sp=>offsetMeridianInward(sp, wall).inner);
+    const rAt = (poly, z)=>{
+      if(z <= poly[0].h) return poly[0].r;
+      for(let k=0;k<poly.length-1;k++){
+        if(z <= poly[k+1].h){
+          const t=(z-poly[k].h)/Math.max(1e-6, poly[k+1].h-poly[k].h);
+          return poly[k].r + t*(poly[k+1].r-poly[k].r);
+        }
       }
+      return poly[poly.length-1].r;
+    };
+    // Liaisons : le manchon est dimensionné sur le rayon intérieur MINI rencontré
+    // sur toute sa hauteur, de part et d'autre du plan de coupe — il ne peut donc
+    // jamais percer la coque, même si la paroi se resserre juste au-dessus.
+    const joints = [];
+    for(let i=0;i<n-1;i++){
+      const hCut = cuts[i+1];
+      let rMin = Infinity;
+      for(let z=hCut-12; z<=hCut+JOINT.collarHeightMm+1; z+=1){
+        rMin = Math.min(rMin, rAt(z<hCut ? inners[i] : inners[i+1], z));
+      }
+      // rayon EXTÉRIEUR de la coque à une hauteur donnée, sous le plan de coupe :
+      // c'est là que le gousset du manchon doit venir mordre.
+      const rOutAt = (z)=> rAt(inners[i], z) + wall;
+      joints.push(buildJointMeshes(rMin, hCut, segments, JOINT, body.sculpt, hRef, wall, rOutAt));
+    }
+    const meshes = slices.map(sp=>buildShellMesh(sp, wall, segments, surf, body.sculpt, hRef));
+    joints.forEach((J,i)=>{
+      meshes[i]   = meshes[i].concat(J.male);
+      meshes[i+1] = meshes[i+1].concat(J.female);
+    });
+    for(let i=0;i<n;i++){
       const lbl = (places.length>1 ? pl.role : '') + (n>1 ? (places.length>1?' · ':'')+partLabel(i,n) : '');
-      parts.push({ tris, h0:cuts[i], h1:cuts[i+1], collar, index:i, nslice:n,
-                   body:bi, xf:pl, style:surf.style, refVolMm3:pappusShellVolMm3(sp, wall),
-                   label: lbl || 'monobloc' });
+      parts.push({ tris:meshes[i], h0:cuts[i], h1:cuts[i+1], index:i, nslice:n,
+                   joint: joints[i]||null, body:bi, xf:pl, style:surf.style,
+                   refVolMm3:pappusShellVolMm3(slices[i], wall), label: lbl || 'monobloc' });
     }
   });
   return parts;
@@ -2485,6 +2646,7 @@ function renderSplit(){
   on.checked = state.split.on;
   $('splitToggleRow').className = 'socket-opt'+(state.split.on?' on':'');
   cf.style.display = state.split.on ? '' : 'none';
+  document.querySelectorAll('#joint-seg button').forEach(b=>b.classList.toggle('on', b.dataset.mode===JOINT.mode));
   $('splitCount').value = state.split.count;
   $('splitCountVal').textContent = state.split.count;
   box.innerHTML='';
@@ -2493,13 +2655,16 @@ function renderSplit(){
     lines.push(['ok', `Pièce monobloc : 1 seule impression, hauteur ${profileTopH().toFixed(0)} mm (course Z de l'Ender-3 S1 : ${PRINT_BOUNDS.PLATE_Z_MM} mm).`]);
   } else {
     MESH.parts.forEach((p,i)=>{
-      const collar = p.collar
-        ? ` · collier d'emboîtement Ø${(p.collar.rOut*2).toFixed(1)} mm sur ${JOINT.collarHeightMm} mm`
+      const collar = p.joint
+        ? ` · ${p.joint.info.type} Ø${p.joint.info.diaMm} mm sur ${p.joint.info.hauteurMm} mm`
+          + (p.joint.info.pasMm ? ` (pas ${p.joint.info.pasMm} mm, ${p.joint.info.tours} tours)` : '')
         : '';
       lines.push(['ok', `Module ${i+1} — ${p.label} : h ${p.h0.toFixed(0)}→${p.h1.toFixed(0)} mm (${(p.h1-p.h0).toFixed(0)} mm)${collar}`]);
     });
     lines.push(['warn', `Surcoût : ${MESH.parts.length-1} lancement(s) machine supplémentaire(s) + visserie de liaison — visible dans le détail du prix.`]);
-    lines.push(['warn', `Le collier est un corps distinct qui chevauche la paroi de ${JOINT.overlapMm} mm : la fusion est faite par le trancheur (pratique atelier standard), elle n'est pas booléenne dans le STL.`]);
+    lines.push(['warn', `Le manchon est un corps distinct dont la collerette pénètre de ${JOINT.biteMm} mm dans la paroi : c'est cette pénétration qui garantit la soudure au tranchage. L'union est faite par le trancheur, elle n'est pas booléenne dans le STL.`]);
+    if(JOINT.mode==='visse')
+      lines.push(['ok', `Filetage imprimé : pas ${JOINT.thread.pitchMm} mm, ${(JOINT.collarHeightMm/JOINT.thread.pitchMm).toFixed(1)} tours, jeu ${JOINT.thread.clearanceMm} mm au rayon, flancs à 45° (auto-portants). Aucune visserie ni insert : les modules se vissent l'un dans l'autre.`]);
   }
   lines.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
 }
@@ -2519,6 +2684,20 @@ function renderChecks(){
   }
   const r = TYPES[state.type].rules||{};
   const body = state.bodies[state.body];
+  /* Le tableau du panneau 2 analyse les POINTS DE CONTRÔLE. Quand la silhouette
+   * est lissée, la courbe réellement exportée peut s'évaser plus fort entre deux
+   * points que les points ne le laissent croire — vérifié au tranchage : un
+   * segment annoncé à 22° partait en réalité à 56° près de la base. On mesure
+   * donc aussi le surplomb sur le profil RÉELLEMENT maillé. */
+  const surfCur = bodySurface(state.body);
+  const maillee = resampleMeridian(pr, surfCur, effectiveStepMm(state.body, surfCur, 'export'));
+  let maxReel = 0, maxCtrl = 0;
+  for(let i=0;i<maillee.length-1;i++) maxReel = Math.max(maxReel, overhangDeg(maillee[i], maillee[i+1]));
+  for(let i=0;i<pr.length-1;i++) maxCtrl = Math.max(maxCtrl, overhangDeg(pr[i], pr[i+1]));
+  if(maxReel > OVERHANG.WARN_DEG && maxReel > maxCtrl + 3){
+    lines.push([maxReel>OVERHANG.HARD_DEG?'bad':'warn',
+      `Surplomb réel du maillage : ${maxReel.toFixed(0)}° alors que les points de contrôle n'annoncent que ${maxCtrl.toFixed(0)}° — c'est le lissage qui creuse l'évasement entre deux points. C'est ce chiffre-là que verra le trancheur.`]);
+  }
   const rOpen = openEndR(body), rMax = Math.max(...pr.map(p=>p.r));
   const where = body.flipped ? 'haute' : 'basse';
   if(body.flipped)
@@ -2689,6 +2868,9 @@ $('linkOn').onchange   = e=>{
 /* ── Découpe en modules ───────────────────────────────────────────────── */
 $('splitOn').onchange    = e=>{ state.split.on = e.target.checked; renderAll(); };
 $('splitCount').oninput  = e=>{ state.split.count = parseInt(e.target.value,10); renderSoon(); };
+document.querySelectorAll('#joint-seg button').forEach(b=>{
+  b.onclick = ()=>{ JOINT.mode = b.dataset.mode; renderAll(); };
+});
 
 /* ── material / wall ──────────────────────────────────────────────────── */
 $('material').onchange = e=>{ state.material=e.target.value; renderAll(); };
@@ -2764,11 +2946,12 @@ function buildDossier(){
     modules_imprimes: {
       multi_pieces: state.split.on,
       nombre: MESH.parts.length,
-      liaison: state.split.on ? `collier d'emboîtement solidaire du module inférieur, hauteur ${JOINT.collarHeightMm} mm, jeu ${JOINT.clearanceMm} mm au rayon` : null,
+      liaison: state.split.on ? (MESH.parts.find(p=>p.joint) ? MESH.parts.find(p=>p.joint).info_liaison || MESH.parts.find(p=>p.joint).joint.info.type : null) : null,
+      sens_de_montage: (state.split.on && JOINT.mode==='visse') ? "visser le module du haut sur celui du bas (filet à droite)" : null,
       decoupe: MESH.parts.map((p,i)=>({
         module: i+1, role: p.label,
         h_de_mm: +p.h0.toFixed(1), h_a_mm: +p.h1.toFixed(1),
-        collier_diametre_mm: p.collar ? +(p.collar.rOut*2).toFixed(1) : null,
+        liaison: p.joint ? p.joint.info : null,
         fichier_stl: MESH.parts.length===1 ? 'fichier unique' : `${i+1} sur ${MESH.parts.length}`,
       })),
     },
@@ -2895,7 +3078,7 @@ $('exportTxt').onclick=()=>{
     '--- Modules imprimés (découpe multi-pièces) ---',
     ...(d.modules_imprimes.multi_pieces
       ? [`  ${d.modules_imprimes.nombre} modules — ${d.modules_imprimes.liaison}`,
-         ...d.modules_imprimes.decoupe.map(m=>`  module ${m.module} (${m.role}) : h ${m.h_de_mm}→${m.h_a_mm}mm${m.collier_diametre_mm?` — collier Ø${m.collier_diametre_mm}mm`:''}`)]
+         ...d.modules_imprimes.decoupe.map(m=>`  module ${m.module} (${m.role}) : h ${m.h_de_mm}→${m.h_a_mm}mm${m.liaison?` — ${m.liaison.type}, Ø${m.liaison.diaMm}mm${m.liaison.pasMm?`, pas ${m.liaison.pasMm}mm / ${m.liaison.tours} tours`:''}`:''}`)]
       : ['  pièce monobloc']),
     '',
     '--- Maillage STL livré ---',

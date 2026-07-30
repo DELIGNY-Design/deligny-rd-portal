@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-Ai++nVD9Otr03LlPaH32gepsizEe64flvzkUVgh4isQ='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-LCyQSwyylFDhfY9DUaVuWgHCD8MR16f4DBBx4GPsc0M='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -646,8 +646,11 @@ let state = {
   bodies: [newBody('cloche')],
   body: 0,           // corps en cours d'édition dans la coupe 2D
   compo: { count:1, layout:'vertical', symmetric:true, spacingMm:120, ringRadiusMm:90 },
-  surface: { style:'lowpoly', segments:48, strieCount:18, strieDepthMm:1.6, cross:false, pitchMm:34,
-             voroCells:26, voroStrutMm:3.2, voroBandMm:14, voroVariant:1, smoothing:45 },
+  // couches combinables : une base + des reliefs additifs + un ajourage
+  surface: { base:'facette', smoothing:45,
+             stries:false, strieCount:18, strieDepthMm:1.6, cross:false, pitchMm:34,
+             organique:false, orgAmpMm:2.4, orgPitchMm:40,
+             ajour:false, voroCells:26, voroStrutMm:3.2, voroBandMm:14, voroVariant:1 },
   split: { on:false, count:2 },   // découpe horizontale d'un corps en modules empilables
   expert: false,
   linkBodies: true,   // true = profil/style/sculpture communs ; false = chaque corps est réglé à part
@@ -870,29 +873,65 @@ function randomShape(seed, scope){
  * les styles lisses doivent au contraire en avoir beaucoup, et la jauge de
  * lissage pousse encore plus loin : plus de segments sur le tour ET des anneaux
  * plus rapprochés sur la hauteur. */
-const SURFACE_STYLES = {
-  lowpoly: { label:'Facetté (low poly)', smooth:false, segFactor:0 },
-  smooth:  { label:'Lisse',              smooth:true,  segMin:110, segMax:260, stepMax:5.0, stepMin:1.3 },
-  stries:  { label:'Strié / losanges',   smooth:true,  segMin:110, segMax:260, stepMax:3.2, stepMin:1.1 },
-  organic: { label:'Organique',          smooth:true,  segMin:110, segMax:260, stepMax:4.2, stepMin:1.2 },
-  voronoi: { label:'Voronoï ajouré',     smooth:true,  perforated:true },
+/* ── STYLE DE SURFACE : DES COUCHES, PAS UN CHOIX UNIQUE ──────────────────
+ * Les « styles » ne sont pas de même nature, il n'y a donc aucune raison qu'ils
+ * s'excluent :
+ *   · la BASE est une tessellation      → facetté ou lisse (l'un OU l'autre) ;
+ *   · les RELIEFS sont des déplacements radiaux → ils s'ADDITIONNENT ;
+ *   · l'AJOURAGE est une opération topologique  → il se superpose à tout.
+ * On peut donc demander « lisse + stries croisées + ajouré », ou « facetté +
+ * organique », etc. La résolution du maillage est alors le plus exigeant des
+ * besoins actifs.
+ * ──────────────────────────────────────────────────────────────────────── */
+const SURFACE_BASES = {
+  facette: { label:'Facetté (low poly)', smooth:false },
+  lisse:   { label:'Lisse',              smooth:true, segMin:96,  segMax:200, stepMax:5.0, stepMin:1.6 },
 };
-// Pas vertical entre anneaux, piloté par la jauge de lissage (0 = pas de resample).
+const RELIEF_STEP = {
+  stries:    { stepMax:3.2, stepMin:1.1 },
+  organique: { stepMax:4.2, stepMin:1.2 },
+};
+const hasRelief    = s => !!(s.stries || s.organique);
+const isPerforated = s => !!s.ajour;
+const isSmoothMesh = s => (s.base==='lisse') || hasRelief(s) || isPerforated(s);
+
+function styleLabel(s){
+  const parts = [SURFACE_BASES[s.base||'facette'].label];
+  if(s.stries)    parts.push(s.cross ? 'stries croisées (losanges)' : 'stries');
+  if(s.organique) parts.push('organique');
+  if(s.ajour)     parts.push('ajouré Voronoï');
+  return parts.join(' + ');
+}
+
+// Pas vertical entre anneaux : le plus fin des besoins actifs (0 = pas de resample).
 function styleStepMm(surf){
-  const st = SURFACE_STYLES[surf.style] || SURFACE_STYLES.lowpoly;
-  if(!st.smooth || st.perforated) return 0;
   const t = Math.max(0, Math.min(1, (surf.smoothing==null?45:surf.smoothing)/100));
-  return st.stepMax + (st.stepMin - st.stepMax)*t;
+  const lerp = c => c.stepMax + (c.stepMin - c.stepMax)*t;
+  const besoins = [];
+  if(surf.base==='lisse') besoins.push(lerp(SURFACE_BASES.lisse));
+  if(surf.stries)         besoins.push(lerp(RELIEF_STEP.stries));
+  if(surf.organique)      besoins.push(lerp(RELIEF_STEP.organique));
+  return besoins.length ? Math.min(...besoins) : 0;
 }
 
 // Résolution angulaire réellement utilisée : les stries fines et les surfaces
 // lisses exigent plus de segments que le réglage « facetté » du client.
 function angularSegments(surf, chosen){
-  const st = SURFACE_STYLES[surf.style] || SURFACE_STYLES.lowpoly;
-  if(!st.smooth) return Math.max(3, chosen|0);          // facetté : c'est le client qui choisit
+  // aucune couche active : la finesse est le choix assumé du client
+  if(!isSmoothMesh(surf)) return Math.max(3, chosen|0);
   const t = Math.max(0, Math.min(1, (surf.smoothing==null?45:surf.smoothing)/100));
-  let seg = Math.round(st.segMin + (st.segMax - st.segMin)*t);
-  if(surf.style === 'stries') seg = Math.max(seg, surf.strieCount*6);   // résoudre chaque strie
+  const L = SURFACE_BASES.lisse;
+  // une base facettée garde SES facettes même sous un relief : on ne monte la
+  // résolution angulaire que si la base est lisse
+  if(surf.base !== 'lisse'){
+    // Base facettée : le nombre de facettes est un CHOIX esthétique, on n'y
+    // touche pas — l'arrondir à un multiple de 4 transformait un hexagone
+    // demandé en octogone. On ne le relève que si une strie ne serait pas
+    // résolue, et on le dit alors dans l'interface.
+    return Math.max(3, Math.max(chosen|0, surf.stries ? surf.strieCount*6 : 0));
+  }
+  let seg = Math.round(L.segMin + (L.segMax - L.segMin)*t);
+  if(surf.stries) seg = Math.max(seg, surf.strieCount*6);   // résoudre chaque strie
   return Math.min(320, Math.ceil(seg/4)*4);
 }
 
@@ -990,8 +1029,10 @@ function voroResolution(surf, rMean, H){
   // (un segment ne doit pas dépasser ~1,7 mm d'arc, sinon les facettes verticales
   // se voient — c'était le cas à 96 segments sur un Ø130).
   const parMotif = W/(cell/3.2);
-  const parSilhouette = W/1.7;
-  const segments = Math.max(160, Math.min(340, Math.ceil(Math.max(parMotif, parSilhouette)/4)*4));
+  // 2,2 mm d'arc suffisent maintenant que l'ombrage est lissé : seule la
+  // SILHOUETTE (le contour contre le fond) trahit encore la tessellation.
+  const parSilhouette = W/2.2;
+  const segments = Math.max(128, Math.min(280, Math.ceil(Math.max(parMotif, parSilhouette)/4)*4));
   return {stepMm, segments, cellMm:cell};
 }
 
@@ -1013,7 +1054,7 @@ function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
   const outerP = profile.map(p=>({h:p.h, r:p.r}));
   const { inner } = offsetMeridianInward(outerP, wallMm);
   const N = Math.max(12, segments|0), M = outerP.length;
-  if(M < 3) return buildShellMesh(profile, wallMm, segments, {...surf, style:'smooth'}, sculpt, hRef);
+  if(M < 3) return buildShellMesh(profile, wallMm, segments, {...surf, ajour:false}, sculpt, hRef);
   const H = outerP[M-1].h - outerP[0].h;
   const band = Math.max(2, Math.min(H/2 - 2, surf.voroBandMm||12));
   const rMean = outerP.reduce((s,p)=>s+p.r,0)/M;
@@ -1166,10 +1207,11 @@ function twistStepMm(sculpt){
 }
 
 function resampleMeridian(profile, surf, stepOverrideMm){
-  const st = SURFACE_STYLES[surf.style] || SURFACE_STYLES.lowpoly;
+  const lisse = (surf.base === 'lisse');
   const step0 = stepOverrideMm > 0 ? stepOverrideMm : styleStepMm(surf);
-  // densification linéaire : garde la silhouette facettée, ajoute juste des anneaux
-  if(!st.smooth && step0 > 0 && profile.length >= 2){
+  // Base facettée : on densifie LINÉAIREMENT. Les anneaux se rapprochent (pour
+  // résoudre un relief ou un ajourage) mais la silhouette garde ses arêtes vives.
+  if(!lisse && step0 > 0 && profile.length >= 2){
     const out=[];
     for(let i=0;i<profile.length-1;i++){
       const n=Math.max(1, Math.ceil(Math.abs(profile[i+1].h-profile[i].h)/step0));
@@ -1182,7 +1224,7 @@ function resampleMeridian(profile, surf, stepOverrideMm){
     out.push({h:profile[profile.length-1].h, r:profile[profile.length-1].r});
     return out;
   }
-  if(!st.smooth || profile.length < 3 || step0 <= 0) return profile.map(p=>({h:p.h, r:p.r}));
+  if(!lisse || profile.length < 3 || step0 <= 0) return profile.map(p=>({h:p.h, r:p.r}));
   const step = step0;
   const P = profile;
   const at = i => P[Math.max(0, Math.min(P.length-1, i))];
@@ -1206,25 +1248,31 @@ function resampleMeridian(profile, surf, stepOverrideMm){
 // Déplacement radial du style de surface, appliqué IDENTIQUEMENT aux surfaces
 // intérieure et extérieure : l'épaisseur de paroi reste constante, donc la
 // pièce reste imprimable et la masse annoncée reste juste.
+/* Les reliefs s'ADDITIONNENT : c'est ce qui permet de strier ET d'onduler la
+ * même paroi. Le déplacement est appliqué à l'identique aux surfaces intérieure
+ * et extérieure, donc l'épaisseur reste constante quelle que soit la combinaison. */
 function surfaceDisplacement(surf, theta, h){
-  const a = (surf.strieDepthMm||0)/2;
-  if(surf.style === 'stries'){
+  let d = 0;
+  if(surf.stries){
+    const a = (surf.strieDepthMm||0)/2;
     const n = Math.max(2, surf.strieCount|0);
     if(surf.cross){
       // deux réseaux de stries croisés = losanges en volume (cos nθ · cos kh)
       const k = 2*Math.PI/Math.max(8, surf.pitchMm);
-      return a*Math.cos(n*theta)*Math.cos(k*h);
+      d += a*Math.cos(n*theta)*Math.cos(k*h);
+    } else {
+      d += a*Math.cos(n*theta);
     }
-    return a*Math.cos(n*theta);
   }
-  if(surf.style === 'organic'){
+  if(surf.organique){
     // 3 harmoniques non commensurables : ondulation douce qui ne se répète jamais
-    const k = 2*Math.PI/Math.max(20, surf.pitchMm);
-    return a*(0.60*Math.sin(3*theta + 1.7*k*h)
-            + 0.30*Math.sin(5*theta - 1.1*k*h + 1.2)
-            + 0.25*Math.sin(2*theta + 0.6*k*h + 2.4));
+    const a = (surf.orgAmpMm||0)/2;
+    const k = 2*Math.PI/Math.max(20, surf.orgPitchMm||40);
+    d += a*(0.60*Math.sin(3*theta + 1.7*k*h)
+          + 0.30*Math.sin(5*theta - 1.1*k*h + 1.2)
+          + 0.25*Math.sin(2*theta + 0.6*k*h + 2.4));
   }
-  return 0;
+  return d;
 }
 
 // Décale la méridienne vers l'INTÉRIEUR de la matière (offset de droites +
@@ -1334,8 +1382,7 @@ function ringAt(r, h, segments, surf, sign, sculpt, hRef){
  * Renvoie des triangles bruts [[x,y,z]×3], normales sortantes (volume > 0). */
 function buildShellMesh(profile, wallMm, segments, surf, sculpt, hRef){
   if(profile.length < 2) return [];
-  const stl = SURFACE_STYLES[surf.style];
-  if(stl && stl.perforated) return buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef);
+  if(isPerforated(surf)) return buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef);
   const outerP = profile.map(p=>({h:p.h, r:p.r}));
   const { inner } = offsetMeridianInward(outerP, wallMm);
   const N = Math.max(3, segments|0);
@@ -1794,7 +1841,7 @@ function bodyMetrics(bi){
 }
 function segFor(bi, mode){
   const surf = bodySurface(bi);
-  const perf = !!(SURFACE_STYLES[surf.style]||{}).perforated;
+  const perf = isPerforated(surf);
   if(perf){
     const {rMean,H} = bodyMetrics(bi);
     const seg = voroResolution(surf, rMean, H).segments;
@@ -1815,7 +1862,7 @@ function segFor(bi, mode){
 // n'est jamais dégradé : ses cellules tomberaient ailleurs.
 function effectiveStepMm(bi, surf, mode){
   const b = state.bodies[bi];
-  const perf = !!(SURFACE_STYLES[surf.style]||{}).perforated;
+  const perf = isPerforated(surf);
   const cand = [styleStepMm(surf), twistStepMm(b && b.sculpt)];
   if(perf){
     const {rMean,H} = bodyMetrics(bi);
@@ -1883,7 +1930,7 @@ function buildParts(segList, mode){
     for(let i=0;i<n;i++){
       const lbl = (places.length>1 ? pl.role : '') + (n>1 ? (places.length>1?' · ':'')+partLabel(i,n) : '');
       parts.push({ tris:meshes[i], h0:cuts[i], h1:cuts[i+1], index:i, nslice:n,
-                   joint: joints[i]||null, body:bi, xf:pl, style:surf.style,
+                   joint: joints[i]||null, body:bi, xf:pl, perfore:isPerforated(surf),
                    refVolMm3:pappusShellVolMm3(slices[i], wall), label: lbl || 'monobloc' });
     }
   });
@@ -1926,7 +1973,7 @@ function rebuildMesh(){
   if(bb.maxX<bb.minX) bb={minX:0,maxX:1,minY:0,maxY:1,minZ:0,maxZ:1};
   // économie de matière de l'ajourage : volume réel vs coque pleine équivalente
   const refVol = MESH.parts.reduce((s,p)=>s+(p.refVolMm3||0), 0);
-  const perfParts = MESH.parts.filter(p=>(SURFACE_STYLES[p.style]||{}).perforated);
+  const perfParts = MESH.parts.filter(p=>p.perfore);
   const perf = perfParts.length ? {
     cells: perfExport.cells, kept: perfExport.kept, cellMm: perfExport.cellMm||0,
     refVolMm3: refVol,
@@ -1935,6 +1982,52 @@ function rebuildMesh(){
   MESH.stats = { volMm3, tris, segExport, segPreview, tip, bodies:bodyPlacements().length,
                  bbox:bb, perf, openEdges:null };
 }
+/* ── OMBRAGE LISSE (normales aux sommets) ─────────────────────────────────
+ * Le modèle est paramétrique : profil + révolution + champs de déplacement. La
+ * triangulation n'est qu'un moyen de l'AFFICHER et de l'exporter — elle ne doit
+ * pas se voir. Or en ombrage plat chaque triangle prend le ton de son propre
+ * plan : les deux triangles d'un même quad reçoivent deux tons différents, ce qui
+ * dessine un damier sur toute la surface, quelle que soit la finesse du maillage.
+ * On calcule donc une normale par SOMMET (moyenne des faces qui s'y rejoignent),
+ * exactement comme un CAO affiche une surface analytique. Un seuil d'angle
+ * préserve les arêtes vives : bords de trous, facettes assumées du mode low poly,
+ * parois de manchon.
+ * ──────────────────────────────────────────────────────────────────────── */
+function faceNormal(t){
+  const [a,b,c]=t;
+  const e1=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], e2=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];
+  let nx=e1[1]*e2[2]-e1[2]*e2[1], ny=e1[2]*e2[0]-e1[0]*e2[2], nz=e1[0]*e2[1]-e1[1]*e2[0];
+  const l=Math.hypot(nx,ny,nz)||1;
+  return [nx/l,ny/l,nz/l];
+}
+function smoothNormals(part, seuilDeg){
+  if(part.__vn) return part.__vn;
+  const K = v => (Math.round(v[0]*50))+','+(Math.round(v[1]*50))+','+(Math.round(v[2]*50));
+  const acc = new Map(), faces = new Array(part.tris.length);
+  part.tris.forEach((t,i)=>{
+    const n = faceNormal(t); faces[i]=n;
+    for(const v of t){
+      const k=K(v), a=acc.get(k);
+      if(a){ a[0]+=n[0]; a[1]+=n[1]; a[2]+=n[2]; } else acc.set(k,[n[0],n[1],n[2]]);
+    }
+  });
+  acc.forEach(a=>{ const l=Math.hypot(a[0],a[1],a[2])||1; a[0]/=l; a[1]/=l; a[2]/=l; });
+  const cosMin = Math.cos(seuilDeg*Math.PI/180);
+  // une normale PAR SOMMET (et non une par triangle) : c'est ce qui permet de
+  // faire varier la lumière À L'INTÉRIEUR du triangle, comme un rendu Gouraud
+  const out = part.tris.map((t,i)=>{
+    const f=faces[i];
+    return t.map(v=>{
+      const a=acc.get(K(v));
+      // trop loin du plan de la face = arête vive : on garde la normale de face
+      return (a[0]*f[0]+a[1]*f[1]+a[2]*f[2]) < cosMin ? f : a;
+    });
+  });
+  part.__vn = out;
+  part.__fn = faces;
+  return out;
+}
+
 function drawPreview(){
   const w=vc.width, h=vc.height;
   vctx.clearRect(0,0,w,h); vctx.fillStyle='#0e0e10'; vctx.fillRect(0,0,w,h);
@@ -1955,33 +2048,68 @@ function drawPreview(){
   parts.forEach((part,pi)=>{
     const dz = gap*pi;
     const rotA = (part.xf.rot||0)*Math.PI/180, rc=Math.cos(rotA), rs=Math.sin(rotA);
-    for(const [a,b,c] of part.tris){
-      const e1=[b[0]-a[0], b[1]-a[1], b[2]-a[2]];
-      const e2=[c[0]-a[0], c[1]-a[1], c[2]-a[2]];
-      let nx=e1[1]*e2[2]-e1[2]*e2[1], ny=e1[2]*e2[0]-e1[0]*e2[2], nz=e1[0]*e2[1]-e1[1]*e2[0];
-      const nl=Math.hypot(nx,ny,nz)||1; nx/=nl; ny/=nl; nz/=nl;
-      // la normale subit la rotation d'assemblage du corps
+    // low poly assumé = ombrage plat ; tout le reste = normales lissées
+    const lisse = isSmoothMesh(bodySurface(part.body||0));
+    const VN = lisse ? smoothNormals(part, 42) : null;
+    const FN = VN ? part.__fn : null;
+    // éclairement d'une normale, dans le repère de la vue
+    const ecl = (nx,ny,nz)=>{
       const rnx = nx*rc - ny*rs, rny = nx*rs + ny*rc;
-      // maillage Z-up → vue Y-up : (x, z, y)
       const rn = project3d(rnx, nz, rny);
-      if(rn.depth >= 0) continue;                      // face de dos : jamais dessinée
+      const d = rn.x*L.x + rn.y*L.y + rn.depth*L.z;
+      return { depth: rn.depth, shade: Math.max(0.16, Math.min(1, 0.24 + 0.80*Math.max(0,d))) };
+    };
+    part.tris.forEach((tri, ti)=>{
+      const [a,b,c] = tri;
+      let fn;
+      if(FN){ fn = FN[ti]; }
+      else {
+        const e1=[b[0]-a[0], b[1]-a[1], b[2]-a[2]];
+        const e2=[c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+        let nx=e1[1]*e2[2]-e1[2]*e2[1], ny=e1[2]*e2[0]-e1[0]*e2[2], nz=e1[0]*e2[1]-e1[1]*e2[0];
+        const nl=Math.hypot(nx,ny,nz)||1; fn=[nx/nl,ny/nl,nz/nl];
+      }
+      const face = ecl(fn[0],fn[1],fn[2]);
+      if(face.depth >= 0) return;                      // face de dos : jamais dessinée
       const P = [a,b,c].map(v=>{
         const wv = placeVertex(v, part.xf, dz);
         const p = project3d(wv[0], wv[2]-midZ, wv[1]);
         return {sx: cx+p.x*scale, sy: cy-p.y*scale, depth:p.depth};
       });
-      const dot = rn.x*L.x + rn.y*L.y + rn.depth*L.z;
-      const shade = Math.max(0.16, Math.min(1, 0.24 + 0.80*Math.max(0,dot)));
-      faces.push({P, depth:(P[0].depth+P[1].depth+P[2].depth)/3, shade, pi,
+      let sh = face.shade, sh3 = null;
+      if(VN){
+        const v = VN[ti];
+        const s0=ecl(v[0][0],v[0][1],v[0][2]).shade,
+              s1=ecl(v[1][0],v[1][1],v[1][2]).shade,
+              s2=ecl(v[2][0],v[2][1],v[2][2]).shade;
+        sh = (s0+s1+s2)/3;
+        // dégradé seulement là où l'écart se VOIT : ailleurs un aplat suffit et
+        // coûte dix fois moins cher
+        if(Math.max(s0,s1,s2) - Math.min(s0,s1,s2) > 0.05) sh3 = [s0,s1,s2];
+      }
+      faces.push({P, depth:(P[0].depth+P[1].depth+P[2].depth)/3, shade:sh, sh3, pi,
                   body:part.body||0, tint:(part.body||0)+part.index});
-    }
+    });
   });
   faces.sort((f1,f2)=>f2.depth-f1.depth);
 
   faces.forEach(f=>{
     const col = cols[f.body] || cols[0];
-    const s = f.shade * (f.tint%2 ? 0.93 : 1);         // corps et modules discernables
-    const fill = `rgb(${col.r*s|0},${col.g*s|0},${col.b*s|0})`;
+    const k = (f.tint%2 ? 0.93 : 1);                   // corps et modules discernables
+    const s = f.shade * k;
+    const teinte = v => `rgb(${col.r*v|0},${col.g*v|0},${col.b*v|0})`;
+    let fill = teinte(s);
+    if(f.sh3){
+      // Dégradé linéaire entre le sommet le plus sombre et le plus clair :
+      // approximation d'un ombrage Gouraud, ce qui efface la limite entre deux
+      // triangles voisins — c'est elle qui donnait l'aspect « facetté ».
+      let iMin=0,iMax=0;
+      for(let i=1;i<3;i++){ if(f.sh3[i]<f.sh3[iMin]) iMin=i; if(f.sh3[i]>f.sh3[iMax]) iMax=i; }
+      const g = vctx.createLinearGradient(f.P[iMin].sx, f.P[iMin].sy, f.P[iMax].sx, f.P[iMax].sy);
+      g.addColorStop(0, teinte(f.sh3[iMin]*k));
+      g.addColorStop(1, teinte(f.sh3[iMax]*k));
+      fill = g;
+    }
     vctx.beginPath();
     vctx.moveTo(f.P[0].sx,f.P[0].sy); vctx.lineTo(f.P[1].sx,f.P[1].sy); vctx.lineTo(f.P[2].sx,f.P[2].sy);
     vctx.closePath();
@@ -1990,7 +2118,7 @@ function drawPreview(){
   });
 
   vctx.fillStyle='#86868b'; vctx.font='11px -apple-system,sans-serif';
-  const st = SURFACE_STYLES[bodySurface(state.body).style];
+  const st = { label: styleLabel(bodySurface(state.body)) };
   const nb = MESH.stats.bodies||1;
   vctx.fillText(`${st.label} · ${MESH.stats.segPreview||0} segments affichés (export : ${MESH.stats.segExport||0}) · `
     + `${nb>1?nb+' corps':'1 corps'} · ${parts.length} pièce${parts.length>1?'s':''} à imprimer`, 12, h-12);
@@ -2192,17 +2320,25 @@ function aiPrompt(){
   const b=state.bodies[state.body];
   const surf=bodySurface(state.body);
   const mat={PLA:'matte PLA',PLA_T:'translucent diffusing PLA',PETG:'satin PETG'}[state.material];
-  const texture={lowpoly:'faceted low-poly surface',smooth:'smooth continuous surface',
-    stries:(surf.cross?'crossed diamond fluting in relief':'vertical fluting'),
-    organic:'organic rippled surface',voronoi:'voronoi perforated lattice shell'}[surf.style];
+  const tex=[];
+  tex.push(surf.base==='lisse' ? 'smooth continuous surface' : 'faceted low-poly surface');
+  if(surf.stries)    tex.push(surf.cross?'crossed diamond fluting in relief':'vertical fluting');
+  if(surf.organique) tex.push('organic rippled surface');
+  if(surf.ajour)     tex.push('voronoi perforated lattice shell');
+  const texture=tex.join(', ');
   const kind={suspension:'pendant lamp',poser:'table lamp',applique:'wall sconce'}[state.type];
   return `professional product photography of a 3D printed ${kind}, ${mat}, ${texture}, `
     + `${state.compo.count>1?state.compo.count+' stacked bodies, ':''}warm LED glow from inside, `
     + `seamless studio backdrop, soft key light and rim light, subtle floor reflection, `
-    + `50mm lens, sharp focus, high detail, no text, no watermark`;
+    + `50mm lens, sharp focus, high detail, `
+    + `clean empty background, absolutely no text, no lettering, no logo, no watermark, no caption`;
 }
 
 async function detectAI(){
+  // Une page servie en HTTPS ne peut PAS appeler http://127.0.0.1 : le navigateur
+  // bloque le contenu mixte. Inutile d'essayer et de laisser croire à une panne —
+  // sur le site public le rendu AI est structurellement indisponible.
+  if(location.protocol === 'https:'){ AI.ok=false; AI.mixed=true; renderAIBlock(); return; }
   try{
     const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),1200);
     const r=await fetch(AI.base+'/api/status',{signal:ctl.signal});
@@ -2215,6 +2351,15 @@ async function detectAI(){
 function renderAIBlock(){
   const box=$('aiBlock'); if(!box) return;
   if(AI.ok===null){ box.innerHTML='<div class="hint">Recherche du moteur AI local…</div>'; return; }
+  if(AI.mixed){
+    box.innerHTML = `<div class="disc-small"><b>Rendu AI — indisponible depuis le site public.</b><br>
+      Cette page est servie en <b>HTTPS</b> ; le navigateur interdit d'appeler le moteur local
+      (<code>http://127.0.0.1:4555</code>) depuis une page sécurisée. Ce n'est pas une panne, c'est une règle
+      du navigateur. Ouvre la même page <b>en local</b> (le cockpit, sur <code>127.0.0.1:4567</code>) avec le
+      moteur General Design Studio lancé, et le rendu AI apparaîtra. Le <b>rendu studio ci-dessus fonctionne
+      partout et hors ligne</b> — c'est lui qui montre la géométrie exacte.</div>`;
+    return;
+  }
   if(!AI.ok){
     box.innerHTML = `<div class="disc-small"><b>Rendu AI (type KeyShot) — moteur local non détecté.</b><br>
       Ce configurateur est une page statique : <b>aucune clé d'API n'y est stockée</b>, il ne peut donc pas appeler
@@ -2250,8 +2395,10 @@ async function aiRender(){
     const j=await r.json();
     if(!j.ok){ info.innerHTML=`<div class="line bad">Rendu AI indisponible : ${j.note||'réponse inattendue'}</div>`; }
     else{
-      info.innerHTML=`<div class="line ok">Rendu AI reçu de ${j.provider} en ${(j.ms/1000).toFixed(1)} s — image seulement, géométrie inchangée.</div>`;
+      info.innerHTML=`<div class="line ok">Rendu AI reçu de ${j.provider} en ${(j.ms/1000).toFixed(1)} s — image seulement, géométrie inchangée.</div>
+        <div class="line warn">Ce que l'AI peut inventer : reflets, arrière-plan, et parfois du faux texte en bas d'image. La pièce qui sera imprimée est celle du STL, pas celle-ci.</div>`;
       out.innerHTML=`<img src="${j.image}" style="width:100%;border-radius:14px;margin-top:10px" alt="Rendu AI de la lampe configurée">
+        <div class="row-btn"><a class="btn pri" href="${j.image}" target="_blank" rel="noopener" download="rendu-ai-lampe.jpg">⬇ Ouvrir / télécharger l'image</a></div>
         <div class="hint">Prompt envoyé : <i>${aiPrompt()}</i></div>`;
     }
   }catch(e){
@@ -2420,13 +2567,6 @@ function renderPresets(){
 }
 
 /* ── Style de surface ─────────────────────────────────────────────────── */
-const SURFACE_HINTS = {
-  lowpoly: "Facettes franches : la surface est la révolution brute du profil, le nombre de segments angulaires (carte 7) est visible et assumé. Le plus léger en fichier et le plus rapide à imprimer.",
-  smooth:  "Silhouette lissée par une courbe de Catmull-Rom qui PASSE par tes points de contrôle (elle ne les déplace pas), et 96 segments angulaires : plus de facettes visibles.",
-  stries:  "Stries verticales creusées/saillies dans la paroi. « Croiser » ajoute un second réseau incliné : les deux se multiplient et donnent un vrai relief en LOSANGES. Le creux est appliqué à l'identique sur les faces intérieure et extérieure, donc l'épaisseur de paroi reste constante et la pièce reste imprimable.",
-  organic: "Trois ondulations de fréquences non commensurables se superposent : le relief ne se répète jamais exactement sur le tour ni sur la hauteur. Effet galet/coquillage.",
-  voronoi: "VRAIS TROUS TRAVERSANTS : la paroi ne garde que les nervures du diagramme de Voronoï, chaque bord de trou est refermé pour que le maillage reste étanche et imprimable. Une bande pleine est imposée en haut (elle porte le culot) et en bas (l'appui) ; en approchant de ces bandes les nervures s'épaississent progressivement, donc le motif se densifie et FOND dans la bande au lieu d'être coupé net. C'est le style qui économise le plus de matière.",
-};
 function renderSurface(){
   const seg = $('surface-seg'); if(!seg) return;
   const s = bodySurfaceForEdit();
@@ -2442,12 +2582,13 @@ function renderSurface(){
       : `Corps indépendants — tout ce qui suit ne touche QUE le corps ${state.body+1} (change de corps dans la carte 2 ou 5).`;
   }
 
+  // BASE : facetté ou lisse — l'un ou l'autre
   seg.innerHTML='';
-  Object.entries(SURFACE_STYLES).forEach(([k,v])=>{
+  Object.entries(SURFACE_BASES).forEach(([k,v])=>{
     const b=document.createElement('button');
     b.textContent = v.label;
-    if(s.style===k) b.className='on';
-    b.onclick = ()=>{ bodySurfaceForEdit().style=k; renderAll(); };
+    if((s.base||'facette')===k) b.className='on';
+    b.onclick = ()=>{ bodySurfaceForEdit().base=k; renderAll(); };
     seg.appendChild(b);
   });
 
@@ -2459,67 +2600,90 @@ function renderSurface(){
     f.querySelector('input').oninput = e=>{ s[key] = parseFloat(e.target.value); renderSoon(); };
     box.appendChild(f);
   };
-  if(s.style==='voronoi'){
-    // échelle logarithmique : réglage fin de 8 à 2000 cellules sur une seule course
-    const toCells = t => Math.round(8*Math.pow(2000/8, t/100));
-    const toSlider = c => Math.round(100*Math.log(Math.max(8,c)/8)/Math.log(2000/8));
-    const f=document.createElement('div'); f.className='field';
-    f.innerHTML = `<label>Densité : <b>${s.voroCells} cellules</b> <span class="dim" id="voroCellSize"></span></label>
-      <input type="range" min="0" max="100" step="1" value="${toSlider(s.voroCells)}" style="width:100%;accent-color:var(--blue)">`;
-    f.querySelector('input').oninput = e=>{ s.voroCells = toCells(parseFloat(e.target.value)); renderSoon(); };
-    box.appendChild(f);
-    addSlider('Largeur des nervures','voroStrutMm',0.6,7,0.1,v=>v.toFixed(1)+' mm');
-    addSlider('Bande pleine aux extrémités','voroBandMm',3,40,1,v=>v.toFixed(0)+' mm');
-    const row=document.createElement('div'); row.className='row-btn';
-    const b=document.createElement('button');
-    b.className='btn pri'; b.textContent='🎲 Autre motif';
-    b.onclick=()=>{ s.voroVariant=(s.voroVariant||1)+1; renderAll(); };
-    row.appendChild(b);
-    const tag=document.createElement('span');
-    tag.className='seed'; tag.style.width='auto'; tag.textContent='motif n°'+(s.voroVariant||1);
-    row.appendChild(tag);
-    box.appendChild(row);
-    const p=MESH.stats.perf;
-    if(p){
-      const cs=$('voroCellSize');
-      if(cs) cs.textContent = `— cellules d'environ ${p.cellMm.toFixed(1)} mm`;
-      const info=document.createElement('div'); info.className='warnbox';
-      const d=document.createElement('div'); d.className='line ok';
-      d.textContent = `Matière économisée : ${p.savedPct.toFixed(0)} % — ${(MESH.stats.volMm3/1000).toFixed(1)} cm³ au lieu de ${(p.refVolMm3/1000).toFixed(1)} cm³ pour la même coque pleine. Le prix suit.`;
-      info.appendChild(d);
-      const add=(cl,t)=>{ const w=document.createElement('div'); w.className='line '+cl; w.textContent=t; info.appendChild(w); };
-      if(s.voroStrutMm < 1.6)
-        add('warn', `Nervures de ${s.voroStrutMm.toFixed(1)} mm : très fines pour une buse 0,4 mm (2 périmètres = 0,8 mm). En dessous de 1,6 mm la pièce devient fragile et le trancheur peut sauter des parois.`);
-      if(p.cellMm < s.voroStrutMm*2.2)
-        add('warn', `Cellules de ${p.cellMm.toFixed(1)} mm pour des nervures de ${s.voroStrutMm.toFixed(1)} mm : le motif se referme (${(100*p.kept/Math.max(1,p.cells)).toFixed(0)} % de paroi conservée). Affine les nervures ou baisse la densité.`);
-      if(MESH.stats.tris > 120000)
-        add('warn', `${(MESH.stats.tris/1000).toFixed(0)}k triangles : fichier lourd et aperçu ralenti. C'est le prix d'un motif très fin.`);
-      box.appendChild(info);
-    }
-  }
-  // jauge de lissage : commune aux styles continus
-  if(SURFACE_STYLES[s.style].smooth && !SURFACE_STYLES[s.style].perforated){
+  // COUCHE : case à cocher + ses réglages, dépliés seulement si elle est active
+  const addCouche = (cle, titre, desc, params)=>{
+    const l=document.createElement('label'); l.className='socket-opt'+(s[cle]?' on':'');
+    l.style.marginTop='10px';
+    l.innerHTML = `<input type="checkbox" ${s[cle]?'checked':''}>
+      <div><div class="t">${titre}</div><div class="d">${desc}</div></div>`;
+    l.querySelector('input').onchange = e=>{ bodySurfaceForEdit()[cle]=e.target.checked; renderAll(); };
+    box.appendChild(l);
+    if(s[cle]) params();
+  };
+
+  if(s.base==='lisse'){
     addSlider('Lissage — densité du maillage','smoothing',0,100,1,v=>{
-      const seg=angularSegments(s,14), st=styleStepMm(s);
-      return `${v.toFixed(0)} % · ${seg} segments, anneaux tous les ${st.toFixed(1)} mm`;
+      const sg=angularSegments(s,14), st=styleStepMm(s);
+      return `${v.toFixed(0)} % · ${sg} segments, anneaux tous les ${st.toFixed(1)} mm`;
     });
   }
-  if(s.style==='stries'){
-    addSlider('Nombre de stries sur le tour','strieCount',6,48,1,v=>v);
-    addSlider('Profondeur du relief','strieDepthMm',0.4,4,0.1,v=>v.toFixed(1)+' mm');
-    const f=document.createElement('label'); f.className='socket-opt'+(s.cross?' on':'');
-    f.innerHTML = `<input type="checkbox" ${s.cross?'checked':''}>
-      <div><div class="t">Croiser deux réseaux de stries → losanges en volume</div>
-      <div class="d">Le relief devient un damier de losanges bombés (cos nθ · cos kh), pas de simples rainures.</div></div>`;
-    f.querySelector('input').onchange = e=>{ bodySurfaceForEdit().cross = e.target.checked; renderAll(); };
-    box.appendChild(f);
-    if(s.cross) addSlider('Pas des losanges en hauteur','pitchMm',10,90,1,v=>v.toFixed(0)+' mm');
-  }
-  if(s.style==='organic'){
-    addSlider("Amplitude de l'ondulation",'strieDepthMm',0.4,6,0.1,v=>v.toFixed(1)+' mm');
-    addSlider("Échelle du relief",'pitchMm',20,120,1,v=>v.toFixed(0)+' mm');
-  }
-  $('surfaceHint').textContent = SURFACE_HINTS[s.style];
+
+  addCouche('stries', 'Stries en relief',
+    "Cannelures creusées dans la paroi, à l'identique dedans et dehors : l'épaisseur ne change pas.",
+    ()=>{
+      addSlider('Nombre de stries sur le tour','strieCount',6,48,1,v=>v);
+      addSlider('Profondeur du relief','strieDepthMm',0.4,4,0.1,v=>v.toFixed(1)+' mm');
+      const f=document.createElement('label'); f.className='socket-opt'+(s.cross?' on':'');
+      f.innerHTML = `<input type="checkbox" ${s.cross?'checked':''}>
+        <div><div class="t">Croiser deux réseaux → losanges en volume</div>
+        <div class="d">Le relief devient un damier de losanges bombés (cos nθ · cos kh), pas de simples rainures.</div></div>`;
+      f.querySelector('input').onchange = e=>{ bodySurfaceForEdit().cross = e.target.checked; renderAll(); };
+      box.appendChild(f);
+      if(s.cross) addSlider('Pas des losanges en hauteur','pitchMm',10,90,1,v=>v.toFixed(0)+' mm');
+    });
+
+  addCouche('organique', 'Ondulation organique',
+    "Trois ondulations de fréquences non commensurables : le relief ne se répète jamais exactement. Effet galet.",
+    ()=>{
+      addSlider("Amplitude de l'ondulation",'orgAmpMm',0.4,6,0.1,v=>v.toFixed(1)+' mm');
+      addSlider("Échelle du relief",'orgPitchMm',20,120,1,v=>v.toFixed(0)+' mm');
+    });
+
+  addCouche('ajour', 'Ajourage Voronoï — vrais trous traversants',
+    "La paroi ne garde que les nervures du diagramme de Voronoï. Bandes pleines imposées en haut (culot) et en bas (appui), avec un fondu progressif. C'est ce qui économise le plus de matière.",
+    ()=>{
+      // échelle logarithmique : réglage fin de 8 à 2000 cellules sur une seule course
+      const toCells = t => Math.round(8*Math.pow(2000/8, t/100));
+      const toSlider = c => Math.round(100*Math.log(Math.max(8,c)/8)/Math.log(2000/8));
+      const f=document.createElement('div'); f.className='field';
+      f.innerHTML = `<label>Densité : <b>${s.voroCells} cellules</b> <span class="dim" id="voroCellSize"></span></label>
+        <input type="range" min="0" max="100" step="1" value="${toSlider(s.voroCells)}" style="width:100%;accent-color:var(--blue)">`;
+      f.querySelector('input').oninput = e=>{ s.voroCells = toCells(parseFloat(e.target.value)); renderSoon(); };
+      box.appendChild(f);
+      addSlider('Largeur des nervures','voroStrutMm',0.6,7,0.1,v=>v.toFixed(1)+' mm');
+      addSlider('Bande pleine aux extrémités','voroBandMm',3,40,1,v=>v.toFixed(0)+' mm');
+      const row=document.createElement('div'); row.className='row-btn';
+      const b=document.createElement('button');
+      b.className='btn pri'; b.textContent='🎲 Autre motif';
+      b.onclick=()=>{ s.voroVariant=(s.voroVariant||1)+1; renderAll(); };
+      row.appendChild(b);
+      const tag=document.createElement('span');
+      tag.className='seed'; tag.style.width='auto'; tag.textContent='motif n°'+(s.voroVariant||1);
+      row.appendChild(tag);
+      box.appendChild(row);
+      const pf=MESH.stats.perf;
+      if(pf){
+        const cs=$('voroCellSize');
+        if(cs) cs.textContent = `— cellules d'environ ${pf.cellMm.toFixed(1)} mm`;
+        const info=document.createElement('div'); info.className='warnbox';
+        const d=document.createElement('div'); d.className='line ok';
+        d.textContent = `Matière économisée : ${pf.savedPct.toFixed(0)} % — ${(MESH.stats.volMm3/1000).toFixed(1)} cm³ au lieu de ${(pf.refVolMm3/1000).toFixed(1)} cm³ pour la même coque pleine. Le prix suit.`;
+        info.appendChild(d);
+        const add=(cl,t)=>{ const w=document.createElement('div'); w.className='line '+cl; w.textContent=t; info.appendChild(w); };
+        if(s.voroStrutMm < 1.6)
+          add('warn', `Nervures de ${s.voroStrutMm.toFixed(1)} mm : très fines pour une buse 0,4 mm (2 périmètres = 0,8 mm). En dessous de 1,6 mm la pièce devient fragile et le trancheur peut sauter des parois.`);
+        if(pf.cellMm < s.voroStrutMm*2.2)
+          add('warn', `Cellules de ${pf.cellMm.toFixed(1)} mm pour des nervures de ${s.voroStrutMm.toFixed(1)} mm : le motif se referme (${(100*pf.kept/Math.max(1,pf.cells)).toFixed(0)} % de paroi conservée). Affine les nervures ou baisse la densité.`);
+        if(MESH.stats.tris > 120000)
+          add('warn', `${(MESH.stats.tris/1000).toFixed(0)}k triangles : fichier lourd et aperçu ralenti. C'est le prix d'un motif très fin.`);
+        box.appendChild(info);
+      }
+    });
+
+  $('surfaceHint').textContent = styleLabel(s) + ' — ' + (isSmoothMesh(s)
+    ? `maillage ${angularSegments(s,14)} segments` + (styleStepMm(s)>0?`, anneaux tous les ${styleStepMm(s).toFixed(1)} mm`:'')
+    : 'facettes brutes, le plus léger en fichier et le plus rapide à imprimer')
+    + '. Les couches se combinent : les reliefs s\'additionnent, l\'ajourage se superpose.';
   renderSculpt();
 }
 
@@ -2799,7 +2963,7 @@ function renderChecks(){
   if(r.minTipAngleDeg){
     const t=s.tip.deg;
     const cl = t>=r.minTipAngleDeg ? 'ok' : (t>=r.minTipAngleDeg-8 ? 'warn' : 'bad');
-    lines.push([cl, `Assise : basculement à ${t.toFixed(0)}° (centre de gravité à ${s.tip.cgHeightMm.toFixed(0)} mm, appui Ø${(rBottom*2).toFixed(0)} mm) — mini conseillé ${r.minTipAngleDeg}°. Calculé sur la coque seule : douille, câble et lest éventuel ne sont pas comptés.`]);
+    lines.push([cl, `Assise : basculement à ${t.toFixed(0)}° (centre de gravité à ${s.tip.cgHeightMm.toFixed(0)} mm, appui Ø${(pr[0].r*2).toFixed(0)} mm) — mini conseillé ${r.minTipAngleDeg}°. Calculé sur la coque seule : douille, câble et lest éventuel ne sont pas comptés.`]);
   }
   if(r.maxDepthMm)
     lines.push(['ok', `Saillie au mur : ${profileTopH().toFixed(0)} mm (plafond ${r.maxDepthMm} mm pour une applique).`]);
@@ -2992,14 +3156,17 @@ function buildDossier(){
       note: "Les bandes pleines des extrémités sont imposées (culot en haut, appui en bas) ; les nervures s'épaississent progressivement en approchant des bandes pour s'y fondre. Même n° de motif = même ajourage.",
     } : null,
     style_surface: {
-      style: state.surface.style,
-      label: SURFACE_STYLES[state.surface.style].label,
+      couches: { base: state.surface.base, stries: !!state.surface.stries,
+                 organique: !!state.surface.organique, ajoure: !!state.surface.ajour },
+      label: styleLabel(state.surface),
       styles_par_corps: state.linkBodies ? null : state.bodies.slice(0,state.compo.count).map((b,i)=>({
-        corps:i+1, style: bodySurface(i).style, label: SURFACE_STYLES[bodySurface(i).style].label })),
-      stries_sur_le_tour: state.surface.style==='stries' ? state.surface.strieCount : null,
-      profondeur_relief_mm: (state.surface.style==='stries'||state.surface.style==='organic') ? state.surface.strieDepthMm : null,
-      croise_losanges: state.surface.style==='stries' ? state.surface.cross : null,
-      pas_mm: (state.surface.style==='stries'&&state.surface.cross)||state.surface.style==='organic' ? state.surface.pitchMm : null,
+        corps:i+1, label: styleLabel(bodySurface(i)) })),
+      stries_sur_le_tour: state.surface.stries ? state.surface.strieCount : null,
+      profondeur_stries_mm: state.surface.stries ? state.surface.strieDepthMm : null,
+      croise_losanges: state.surface.stries ? state.surface.cross : null,
+      pas_losanges_mm: (state.surface.stries && state.surface.cross) ? state.surface.pitchMm : null,
+      organique_amplitude_mm: state.surface.organique ? state.surface.orgAmpMm : null,
+      organique_echelle_mm: state.surface.organique ? state.surface.orgPitchMm : null,
       segments_angulaires: MESH.stats.segExport,
       note: "Le relief est appliqué à l'identique sur les faces intérieure et extérieure : l'épaisseur de paroi reste constante.",
     },
@@ -3125,14 +3292,14 @@ $('exportStl').onclick=()=>{
   MESH.parts.forEach((p,i)=>{
     const buf = trianglesToSTLBinary(p.tris, `${state.type}-${p.label}`);
     const name = n===1
-      ? `lampe-${state.type}-${state.surface.style}-${stamp}.stl`
+      ? `lampe-${state.type}-${stamp}.stl`
       : `lampe-${state.type}-${String(i+1).padStart(2,'0')}sur${n}-${slug(p.label)}-${stamp}.stl`;
     download(name, buf, 'model/stl');
     totalTris += p.tris.length; totalKo += buf.byteLength/1024;
   });
   const s = MESH.stats;
   $('stlInfo').innerHTML = `Dernier export : <b>${n} fichier${n>1?'s':''}</b> · <b>${totalTris}</b> triangles · <b>${totalKo.toFixed(1)} Ko</b> · `
-    + `${s.segExport} segments angulaires · style « ${SURFACE_STYLES[state.surface.style].label} » · `
+    + `${s.segExport} segments angulaires · style « ${styleLabel(state.surface)} » · `
     + `coque creuse paroi ${state.wall} mm, <b>${(s.volMm3/1000).toFixed(1)} cm³</b> de matière — c'est ce volume qui est facturé.`;
 };
 
@@ -3149,8 +3316,8 @@ $('exportTxt').onclick=()=>{
     'Type de lampe : '+d.type_lampe,
     `Silhouette : ${d.forme.silhouette_label}${d.forme.graine_aleatoire?` — graine ${d.forme.graine_aleatoire} (rejouable à l'identique)`:''}`,
     `Style de surface : ${d.style_surface.label}`
-      + (d.style_surface.stries_sur_le_tour?` — ${d.style_surface.stries_sur_le_tour} stries sur le tour, relief ${d.style_surface.profondeur_relief_mm}mm${d.style_surface.croise_losanges?`, croisées en losanges au pas de ${d.style_surface.pas_mm}mm`:''}`:'')
-      + (d.style_surface.style==='organic'?` — amplitude ${d.style_surface.profondeur_relief_mm}mm, échelle ${d.style_surface.pas_mm}mm`:'')
+      + (d.style_surface.stries_sur_le_tour?` — ${d.style_surface.stries_sur_le_tour} stries, relief ${d.style_surface.profondeur_stries_mm}mm${d.style_surface.croise_losanges?`, croisées au pas de ${d.style_surface.pas_losanges_mm}mm`:''}`:'')
+      + (d.style_surface.organique_amplitude_mm?` — ondulation ${d.style_surface.organique_amplitude_mm}mm / ${d.style_surface.organique_echelle_mm}mm`:'')
       + ` — ${d.style_surface.segments_angulaires} segments angulaires`,
     '',
     '--- Composition ---',
@@ -3221,9 +3388,7 @@ $('prepEmail').onclick=()=>{
     '',
     `Type de lampe : ${state.type}`,
     `Silhouette : ${(SILHOUETTES[state.shape]||{}).label||state.shape}${state.seed?` — graine ${state.seed}`:''}`,
-    `Style de surface : ${SURFACE_STYLES[state.surface.style].label}`
-      + (state.surface.style==='stries'?` (${state.surface.strieCount} stries, ${state.surface.strieDepthMm}mm${state.surface.cross?`, croisées losanges pas ${state.surface.pitchMm}mm`:''})`:'')
-      + (state.surface.style==='organic'?` (amplitude ${state.surface.strieDepthMm}mm, échelle ${state.surface.pitchMm}mm)`:''),
+    `Style de surface : ${styleLabel(state.surface)}`,
     `Composition : ${state.compo.count} corps — ${LAYOUT_LABELS[state.compo.layout]} — ${state.compo.symmetric?'symétrique':'organique'}`,
     `Pièces à imprimer : ${MESH.parts.length>1?`${MESH.parts.length} (${MESH.parts.map(p=>p.label).join(' + ')})`:'1 (monobloc)'}`,
     `Hauteur totale : ${state.profile[state.profile.length-1].h.toFixed(0)}mm — Rayon max : ${Math.max(...state.profile.map(p=>p.r)).toFixed(0)}mm`,

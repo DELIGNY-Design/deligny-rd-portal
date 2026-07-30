@@ -14,17 +14,20 @@
 body{background:var(--bg);color:var(--txt);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;}
 ::-webkit-scrollbar{width:6px;height:6px;} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:99px;}
 a{color:var(--blue);text-decoration:none;} a:hover{text-decoration:underline;}
-.wrap{max-width:1180px;margin:0 auto;padding:26px 22px 70px;}
-header{text-align:center;padding:26px 0 18px;}
-h1{font-size:32px;font-weight:650;letter-spacing:-.022em;margin:0 0 8px;}
+.wrap{max-width:1560px;margin:0 auto;padding:14px 20px 60px;}
+header{text-align:center;padding:6px 0 10px;}
+h1{font-size:24px;font-weight:650;letter-spacing:-.022em;margin:0 0 4px;}
 h1 .g{background:linear-gradient(90deg,#2997ff,#64d2ff 45%,#30d158);-webkit-background-clip:text;background-clip:text;color:transparent;}
-.sub{color:var(--dim);font-size:16px;max-width:680px;margin:0 auto;}
-.free{display:inline-block;margin-top:12px;font-size:12px;font-weight:600;color:var(--green);background:rgba(48,209,88,.14);padding:4px 12px;border-radius:99px;}
+.sub{color:var(--dim);font-size:13.5px;max-width:760px;margin:0 auto;}
+.free{display:inline-block;margin-left:8px;font-size:11.5px;font-weight:600;color:var(--green);background:rgba(48,209,88,.14);padding:3px 10px;border-radius:99px;}
 
-.safety{margin-top:20px;background:rgba(255,69,58,.10);border:1px solid rgba(255,69,58,.35);border-radius:16px;padding:16px 18px;text-align:left;display:flex;gap:12px;align-items:flex-start;}
-.safety .ic{font-size:22px;flex-shrink:0;}
-.safety b{color:var(--red);}
-.safety .d{color:var(--dim);font-size:13.5px;margin-top:4px;}
+.safety{margin-top:10px;background:rgba(255,69,58,.10);border:1px solid rgba(255,69,58,.35);border-radius:14px;padding:10px 14px;text-align:left;}
+.safety summary{cursor:pointer;font-size:13px;color:var(--txt);list-style:none;}
+.safety summary::-webkit-details-marker{display:none;}
+.safety summary b{color:var(--red);}
+.safety summary::after{content:' — détails ▸';color:var(--dim2);font-size:12px;}
+.safety[open] summary::after{content:' — replier ▾';}
+.safety .d{color:var(--dim);font-size:13px;margin-top:8px;}
 
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
 .grid.full{grid-template-columns:1fr;}
@@ -83,6 +86,30 @@ table.pts tr.bad td{color:var(--red);}
 .viewtools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--dim2);}
 .viewtools input[type=range]{accent-color:var(--blue);width:110px;}
 
+/* ── App-shell : les visuels restent à l'écran, les réglages défilent ───── */
+.app{display:grid;grid-template-columns:minmax(0,1.32fr) minmax(360px,.88fr);gap:16px;align-items:start;margin-top:12px;}
+.viewer{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto;min-width:0;}
+.controls{min-width:0;display:flex;flex-direction:column;gap:16px;}
+.controls .card{margin-top:0 !important;}
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:1240px){.vgrid{grid-template-columns:1fr;}}
+@media(max-width:1000px){
+  .app{grid-template-columns:1fr;}
+  .viewer{position:static;max-height:none;overflow:visible;}
+}
+.vtabs{display:flex;gap:8px;margin-bottom:12px;}
+.vtabs button{flex:1;font:600 13px var(--font);padding:9px 12px;border-radius:12px;border:1px solid var(--sep);
+  background:var(--card2);color:var(--dim);cursor:pointer;transition:.15s;}
+.vtabs button.on{background:var(--blue-cta);color:#fff;border-color:var(--blue-cta);}
+.vpane[hidden]{display:none;}
+#hud{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;}
+#hud div{background:var(--card2);border-radius:12px;padding:9px 10px;}
+#hud .k{font-size:10px;color:var(--dim2);text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+#hud .v{font-size:16px;font-weight:680;letter-spacing:-.02em;margin-top:2px;line-height:1.15;}
+#hud .v small{font-size:11px;color:var(--dim);font-weight:500;}
+#hud .v.ok{color:var(--green);} #hud .v.bad{color:var(--red);} #hud .v.warn{color:var(--amber);}
+@media(max-width:560px){#hud{grid-template-columns:repeat(2,1fr);}}
+
 .socket-opt{display:flex;gap:10px;border:1px solid var(--sep);border-radius:14px;padding:12px 14px;margin-top:8px;cursor:pointer;background:var(--card2);}
 .socket-opt.on{border-color:var(--blue-cta);background:rgba(0,113,227,.10);}
 .socket-opt input{margin-top:3px;}
@@ -112,21 +139,62 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
 <div class="wrap">
   <header>
     <h1><span class="g">Custom 3D Lamp Studio</span></h1>
-    <div class="sub">Configure une lampe imprimée 3D sur mesure — profil libre dans des bornes réalistes, culot électrique standard fermé, prix automatique, dossier de fabrication.</div>
-    <span class="free">v0 · aucun compte · rien n'est envoyé (tout se calcule dans ton navigateur)</span>
+    <div class="sub">Lampe imprimée 3D sur mesure — profil libre dans des bornes réalistes, culot standard fermé, prix automatique, dossier de fabrication.
+    <span class="free">aucun compte · tout se calcule dans ton navigateur</span></div>
 
-    <div class="safety">
-      <div class="ic">⚠️</div>
-      <div>
-        <b>Gate de sécurité — non négociable.</b>
-        <div class="d">Ce configurateur laisse le <b>profil de la structure/abat-jour</b> libre dans des bornes d'impression réalistes.
-        Il ne permet <b>jamais</b> de dessiner librement le circuit électrique, le culot ou le câblage : le point de connexion électrique
-        est choisi parmi une <b>liste fermée de références standards du commerce</b> (E14 / E27), non modifiables.
-        L'<b>assemblage électrique final est réalisé par un professionnel / l'atelier</b>, jamais par le client — ce dossier n'est pas
-        une autorisation de câblage soi-même.</div>
-      </div>
-    </div>
+    <details class="safety">
+      <summary>⚠️ <b>Gate de sécurité — non négociable.</b> Culot en liste fermée, assemblage électrique par un professionnel</summary>
+      <div class="d">Ce configurateur laisse le <b>profil de la structure/abat-jour</b> libre dans des bornes d'impression réalistes.
+      Il ne permet <b>jamais</b> de dessiner librement le circuit électrique, le culot ou le câblage : le point de connexion électrique
+      est choisi parmi une <b>liste fermée de références standards du commerce</b> (E14 / E27), non modifiables.
+      L'<b>assemblage électrique final est réalisé par un professionnel / l'atelier</b>, jamais par le client — ce dossier n'est pas
+      une autorisation de câblage soi-même.</div>
+    </details>
   </header>
+
+  <div class="app">
+  <div class="viewer">
+    <div class="card">
+      <div class="vtabs">
+        <button data-pane="geo" class="on">Coupe 2D &amp; aperçu 3D</button>
+        <button data-pane="render">Rendu studio</button>
+      </div>
+
+      <div class="vpane" id="pane-geo">
+        <div class="vgrid">
+          <div class="canvas-col">
+            <div class="lbl">Coupe 2D cotée — axe de symétrie au centre
+              <small>Clique dans le vide pour ajouter un point · glisse un point pour le déplacer</small>
+            </div>
+            <canvas id="profileCanvas" width="480" height="440"></canvas>
+          </div>
+          <div class="canvas-col">
+            <div class="lbl">Coque réelle — mêmes triangles que le STL
+              <small>Coque creuse d'épaisseur paroi, ouverte en haut et en bas. Glisse pour tourner.</small>
+            </div>
+            <canvas id="previewCanvas" width="480" height="440"></canvas>
+          </div>
+        </div>
+        <div class="viewtools">
+          <span>Orbite : glisse dans l'aperçu (horizontal = tourner, vertical = basculer). Zoom au curseur.</span>
+          <label>Hauteur de vue <input type="range" id="vElev" min="-70" max="80" step="1" value="20"></label>
+          <label>Zoom <input type="range" id="vZoom" min="40" max="400" step="1" value="100"></label>
+          <label id="vExplodeWrap" style="display:none">Vue éclatée <input type="range" id="vExplode" min="0" max="100" step="1" value="0"></label>
+          <button class="btn" id="vReset">⟲ Vue par défaut</button>
+          <button class="btn" id="vTurn">▶ Tourner</button>
+        </div>
+      </div>
+
+      <div class="vpane" id="pane-render" hidden>
+        <canvas id="renderCanvas" width="1280" height="960"></canvas>
+        <div class="warnbox" id="renderInfo"></div>
+      </div>
+
+      <div id="hud"></div>
+    </div>
+  </div>
+
+  <div class="controls">
 
   <!-- 1. TYPE -->
   <div class="card" style="margin-top:20px">
@@ -139,23 +207,22 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     <div class="hint" id="type-hint"></div>
   </div>
 
-  <!-- 2/3. PROFIL + APERCU -->
-  <div class="grid" style="margin-top:16px">
+  <!-- 2. PROFIL -->
     <div class="card">
       <h2><span class="n">2</span>Profil de révolution (structure / abat-jour)</h2>
-      <div class="canvas-col">
-        <div class="lbl">Coupe 2D cotée — axe de symétrie au centre
-          <small>Clique dans la zone vide pour ajouter un point · glisse un point pour le déplacer · sélectionne puis « Supprimer » (mini 3 points)</small>
-        </div>
-        <canvas id="profileCanvas" width="480" height="440"></canvas>
-      </div>
+      <div class="row-btn" id="bodyTabsTop" style="margin-bottom:10px"></div>
       <div class="row-btn" id="presetRow"></div>
       <div class="row-btn">
         <button class="btn pri" id="randomShape">🎲 Forme aléatoire</button>
+        <button class="btn" id="randomAll" style="display:none" title="Un tirage différent pour chaque corps, dérivé de la même graine">🎲 Tous les corps</button>
         <input id="seedInput" class="seed" spellcheck="false" maxlength="8"
                title="Graine de la forme : même graine = même forme. Reportée dans le dossier de commande.">
         <button class="btn" id="seedApply">↻ Rejouer cette graine</button>
         <button class="btn danger" id="delPoint" disabled>Supprimer le point sélectionné</button>
+      </div>
+      <div class="row-btn">
+        <button class="btn" id="flipShape">⇅ Retourner (tête en bas)</button>
+        <span id="flipInfo" style="font-size:12px;color:var(--dim2);align-self:center"></span>
       </div>
       <table class="pts" id="ptsTable"><thead><tr><th>#</th><th>Hauteur (mm)</th><th>Rayon (mm)</th><th>Surplomb</th></tr></thead><tbody></tbody></table>
       <div class="warnbox" id="warnbox"></div>
@@ -165,51 +232,113 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     </div>
 
     <div class="card">
-      <h2><span class="n">3</span>Aperçu 3D (généré depuis le même profil)</h2>
-      <div class="canvas-col">
-        <div class="lbl">Coque réelle, rendue depuis le maillage exporté
-          <small>Ce sont les <b>mêmes triangles</b> que le fichier STL téléchargé : coque creuse d'épaisseur paroi, ouverte en haut et en bas. Glisse pour tourner.</small>
-        </div>
-        <canvas id="previewCanvas" width="480" height="440"></canvas>
-        <div class="viewtools">
-          <span>Orbite : glisse (horizontal = tourner, vertical = basculer) · molette = zoom</span>
-          <label>Hauteur de vue <input type="range" id="vElev" min="-70" max="80" step="1" value="20"></label>
-          <label>Zoom <input type="range" id="vZoom" min="60" max="260" step="1" value="100"></label>
-          <button class="btn" id="vReset">⟲ Vue par défaut</button>
-          <button class="btn" id="vTurn">▶ Tourner</button>
-        </div>
+        <h2><span class="n">3</span>Style de surface &amp; sculpture</h2>
+        <label class="socket-opt" id="linkRow" style="display:none;margin-bottom:12px">
+          <input type="checkbox" id="linkOn" checked>
+          <div><div class="t">Lier les corps</div>
+          <div class="d" id="linkText"></div></div>
+        </label>
+        <div class="seg" id="surface-seg"></div>
+        <div id="surfaceParams"></div>
+        <div class="hint" id="surfaceHint"></div>
+        <div id="sculptParams" style="margin-top:6px"></div>
       </div>
-      <div class="row-btn" style="align-items:center">
-        <span style="font-size:12px;color:var(--dim2);margin-right:4px">Couleur (cosmétique — n'affecte pas la géométrie) :</span>
-        <div class="swatches" id="swatches"></div>
+
+      <div class="card">
+        <h2><span class="n">4</span>Apparence de l'aperçu</h2>
+        <div class="row-btn" style="align-items:center">
+          <span style="font-size:12px;color:var(--dim2);margin-right:4px">Couleur (cosmétique — n'affecte pas la géométrie) :</span>
+          <div class="swatches" id="swatches"></div>
+          <span id="colorScope" style="font-size:12px;color:var(--dim2);flex-basis:100%"></span>
+        </div>
+        <div class="warnbox" id="checksbox"></div>
       </div>
-      <div class="warnbox" id="checksbox"></div>
+
+  <!-- 5. RENDU STUDIO -->
+  <div class="card" style="margin-top:16px">
+    <h2><span class="n">5</span>Rendu studio</h2>
+    <div class="hint">Rendu « photo produit » calculé <b>dans ton navigateur</b> à partir du <b>même maillage</b> que le STL :
+    éclairage 3 points (principale + déboucheuse + contre-jour), spéculaire et Fresnel selon la finition, ombre de contact,
+    reflet au sol. C'est une <b>mise en valeur</b>, pas une simulation photométrique — la géométrie, elle, est exacte.</div>
+    <div class="row-btn" style="align-items:center;gap:14px">
+      <label style="font-size:12.5px;color:var(--dim2)">Finition
+        <select id="rFinish" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)"></select>
+      </label>
+      <label style="font-size:12.5px;color:var(--dim2)">Décor
+        <select id="rBg" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)"></select>
+      </label>
+      <label style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">
+        <input type="checkbox" id="rLit" checked> Lampe allumée
+      </label>
+      <button class="btn pri" id="rRender">📸 Calculer le rendu</button>
+      <button class="btn" id="rDownload" disabled>⬇ Télécharger le PNG</button>
     </div>
+
+    <div id="aiBlock" style="margin-top:14px"></div>
   </div>
 
-  <!-- 4. CULOT -->
+  <!-- 6. COMPOSITION MULTI-CORPS -->
   <div class="card" style="margin-top:16px">
-    <h2><span class="n">4</span>Culot électrique — référence standard fermée</h2>
+    <h2><span class="n">6</span>Composition — nombre de corps &amp; agencement</h2>
+    <div class="hint" id="compoHint"></div>
+    <div class="field">
+      <label>Nombre de corps : <b id="bodyCountVal"></b> <span class="dim" id="bodyCountMax"></span></label>
+      <input type="range" id="bodyCount" min="1" max="7" step="1" value="1" style="width:100%;accent-color:var(--blue)">
+    </div>
+    <div class="field" id="layoutField">
+      <label>Agencement</label>
+      <div class="seg" id="layout-seg"></div>
+    </div>
+    <div class="field" id="compoParams"></div>
+    <div class="row-btn" id="bodyTabs"></div>
+    <div class="warnbox" id="compoBox"></div>
+  </div>
+
+  <!-- 6. CULOT -->
+  <div class="card" style="margin-top:16px">
+    <h2><span class="n">7</span>Culot électrique — référence standard fermée</h2>
     <div id="socketList"></div>
     <div class="hint">La géométrie du culot (bore, épaulement, filetage) n'est <b>jamais générée</b> : ces cotes viennent de pièces mesurées
     à l'atelier ou du standard commercial publié, et servent uniquement à borner le rayon mini du point de fixation du profil.</div>
   </div>
 
-  <!-- 4b. MODULES D'ASSEMBLAGE -->
-  <div class="card" style="margin-top:16px">
-    <h2><span class="n">4b</span>Modules d'assemblage — fabriqués par l'atelier</h2>
-    <div class="hint">Assemble ici les <b>modules standards de l'atelier</b> (liste fermée, même logique que le culot) : tu les choisis et
-    les positionnes, le configurateur vérifie l'<b>ajustement</b> dans ton profil (rayon intérieur disponible − paroi vs rayon du module
-    + jeu atelier <b>0.5 mm radial</b>). La <b>fusion géométrique</b> module↔extérieur est réalisée par l'atelier en CAO à partir du
-    dossier — le STL exporté reste le volume extérieur seul (cf. gate de sécurité).</div>
-    <div class="row-btn" id="moduleAdders"></div>
-    <div id="moduleList"></div>
-  </div>
-
-  <!-- 5. MATIERE -->
+  <!-- 7/8. EXPERT + DECOUPE EN MODULES -->
   <div class="grid" style="margin-top:16px">
     <div class="card">
-      <h2><span class="n">5</span>Matière &amp; paroi</h2>
+      <h2><span class="n">8</span>Option expert — paramètres par corps</h2>
+      <label class="socket-opt" id="expertRow">
+        <input type="checkbox" id="expertOn">
+        <div><div class="t">Mode expert</div>
+        <div class="d">Ouvre les réglages paramétriques <b>corps par corps</b> : hauteur, rayon, échelle, torsion, courbure, rotation et
+        décalage propres à chaque corps, au lieu des réglages communs. Le rayon mini du culot reste imposé ; l'échelle s'appliquant
+        <b>après</b> les bornes du profil, un corps agrandi peut sortir du gabarit du type ou du plateau — c'est alors signalé en clair
+        dans la carte Composition, jamais silencieusement.</div></div>
+      </label>
+      <div id="expertParams"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">9</span>Découpe en modules imprimés (option multi-pièces)</h2>
+      <label class="socket-opt" id="splitToggleRow">
+        <input type="checkbox" id="splitOn">
+        <div><div class="t">Lampe séparable en modules empilables <span class="tag standard">PLUS CHER</span></div>
+        <div class="d">La lampe est tranchée horizontalement en plusieurs modules imprimés séparément, réunis par un
+        <b>collier d'emboîtement</b> (Ø repris du rayon intérieur au plan de coupe, jeu 0,3 mm au rayon — cote du précédent
+        atelier). Intérêt : pièce plus haute que le plateau, transport, remplacement d'un seul module abîmé, mélange de
+        couleurs. Coût : <b>un lancement machine par module</b> + la visserie de liaison.</div></div>
+      </label>
+      <div class="field" id="splitCountField" style="display:none">
+        <label>Nombre de modules (bas = base, haut = abat-jour) : <b id="splitCountVal"></b></label>
+        <input type="range" id="splitCount" min="2" max="4" step="1" value="2" style="width:100%;accent-color:var(--blue)">
+      </div>
+      <div class="warnbox" id="splitBox"></div>
+    </div>
+  </div>
+
+  <!-- 9. MATIERE -->
+  <div class="grid" style="margin-top:16px">
+    <div class="card">
+      <h2><span class="n">10</span>Matière &amp; paroi</h2>
       <div class="field">
         <label>Matériau</label>
         <select id="material">
@@ -233,7 +362,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     </div>
 
     <div class="card">
-      <h2><span class="n">6</span>Prix estimé</h2>
+      <h2><span class="n">11</span>Prix estimé</h2>
       <div class="stats">
         <div class="stat"><div class="k">Volume matière</div><div class="v" id="s-vol">—</div></div>
         <div class="stat"><div class="k">Temps impr. estimé</div><div class="v" id="s-time">—</div></div>
@@ -247,29 +376,35 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     </div>
   </div>
 
-  <!-- 7. DOSSIER -->
+  <!-- 11. DOSSIER -->
   <div class="card" style="margin-top:16px">
-    <h2><span class="n">7</span>Dossier de fabrication</h2>
+    <h2><span class="n">12</span>Dossier de fabrication</h2>
     <div class="hint">Génère un dossier <b>texte + JSON</b> qui résume la configuration (dimensions, matière, culot, couleur, prix estimé).
     C'est un dossier de commande/specs à transmettre à l'atelier pour fabrication.</div>
     <div class="row-btn">
       <button class="btn pri" id="exportJson">⬇ Export JSON</button>
       <button class="btn" id="exportTxt">⬇ Export TXT lisible</button>
     </div>
-    <div class="hint" style="margin-top:16px">Génère un <b>vrai maillage 3D (fichier STL binaire)</b> par révolution du profil exact ci-dessus
-    (2) autour de l'axe de symétrie : surface latérale triangulée + fond et sommet fermés (cap radial), normales calculées par produit
-    vectoriel des arêtes. <b>Ce que ce STL modélise :</b> uniquement le volume plein de la structure/abat-jour en révolution.
+    <div class="hint" style="margin-top:16px">Génère un <b>vrai maillage 3D (fichier STL binaire)</b> : une <b>coque creuse</b> d'épaisseur
+    égale à la paroi choisie, obtenue par révolution du profil ci-dessus (2) <b>et</b> de son décalé intérieur, fermée par deux couronnes
+    plates. Elle est <b>ouverte en bas</b> (sortie de lumière) et <b>ouverte en haut</b> (passage du culot) : c'est un abat-jour, pas un
+    bloc plein. C'est ce maillage exact qui est affiché dans l'aperçu (3) et dont le volume sert au prix (6) — l'étanchéité (chaque arête
+    portant exactement deux faces) est vérifiée et affichée sous l'aperçu.
     <b>Ce qu'il ne modélise jamais</b> (cf. gate de sécurité) : le culot électrique, l'alésage, le filetage ou toute cavité de logement de
     la douille — ces géométries restent la liste fermée de références standards de l'atelier, jamais générées ici. Le rayon mini du point
     du haut est déjà borné par le culot choisi, mais le perçage/évidement réel du logement est fait par le professionnel qui assemble.
-    Plus le nombre de segments est élevé, plus la surface latérale est lisse (et le fichier plus lourd).</div>
+    En <b>option multi-pièces</b> (4d), un fichier est exporté <b>par module</b>, collier d'emboîtement compris.</div>
     <div class="row-btn" style="align-items:center">
-      <label style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">Segments angulaires
+      <label style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">Facettes (style « Facetté » uniquement)
         <select id="stlSegments" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
-          <option value="16">16 (facetté, léger)</option>
-          <option value="32">32</option>
-          <option value="48" selected>48 (défaut)</option>
-          <option value="64">64 (lisse)</option>
+          <option value="5">5 — très anguleux</option>
+          <option value="6">6 — hexagonal</option>
+          <option value="8">8 — octogonal</option>
+          <option value="10">10</option>
+          <option value="14" selected>14 (défaut)</option>
+          <option value="20">20</option>
+          <option value="28">28 — facettes fines</option>
+          <option value="40">40 — presque lisse</option>
         </select>
       </label>
       <button class="btn pri" id="exportStl">⬇ Export STL (maillage 3D imprimable)</button>
@@ -277,9 +412,9 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     <div class="hint" id="stlInfo" style="margin-top:8px"></div>
   </div>
 
-  <!-- 8. COMMANDE -->
+  <!-- 12. COMMANDE -->
   <div class="card" style="margin-top:16px">
-    <h2><span class="n">8</span>Commande</h2>
+    <h2><span class="n">13</span>Commande</h2>
     <div class="hint">Prépare un email récapitulatif vers <b>contact@deligny-rd.fr</b>. <b>Aucun paiement n'est effectué ici</b> — c'est ton
     client mail qui s'ouvre avec le message pré-rempli, à toi de l'envoyer. Joins manuellement le dossier JSON téléchargé ci-dessus si besoin
     (un lien mailto ne peut pas joindre de fichier automatiquement).</div>
@@ -293,6 +428,9 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     <div class="row-btn">
       <button class="btn pri" id="prepEmail">✉ Préparer l'email de commande</button>
     </div>
+  </div>
+
+  </div>
   </div>
 
   <footer>
@@ -318,6 +456,8 @@ const PRICE_CONFIG = {
   HOURLY_RATE_EUR: 9,              // machine + temps atelier (élec, usure, supervision) — à ajuster par Baptiste
   SOCKET_KIT_EUR: { E14: 4, E27: 5 },   // prix pièce du commerce (douille + bague CE) + temps d'assemblage électrique pro
   BASE_HARDWARE_EUR: 3,            // visserie, câble, passe-câble, gaine
+  PART_SETUP_EUR: 6,               // lancement machine supplémentaire par module imprimé en plus
+  JOINT_HARDWARE_EUR: 2.5,         // visserie de liaison par plan de coupe (option multi-pièces)
   MARGIN_MULTIPLIER: 1.35,         // marge DELIGNY R&D sur le coût atelier — à ajuster par Baptiste
   MIN_PRICE_EUR: 25,               // prix plancher (temps de setup mini, même sur une petite pièce)
 };
@@ -360,43 +500,112 @@ const SOCKETS = {
   },
 };
 
-/* ============================================================================
- * MODULES D'ASSEMBLAGE — LISTE FERMÉE, fabriqués par l'atelier. Le client les
- * ASSEMBLE (choix + position + contrôle d'ajustement) mais ne les dessine
- * jamais — même logique que les culots. La FUSION géométrique module↔extérieur
- * est réalisée par l'atelier en CAO à partir du dossier, pas par le STL exporté
- * ici (qui reste le volume extérieur seul).
- * ========================================================================== */
-const RADIAL_CLEARANCE_MM = 0.5; // règle atelier : jeu 0.7 + compensation FDM 0.3, au diamètre
-const MODULES = {
-  plaque_douille: { label:'Plaque porte-douille interne', pos:'top', thickMm:4,
-    fix:'trou = alésage du culot choisi, cône ≥50° auto-portant',
-    measured:'socket',
-    source:"Géométrie dérivée du culot choisi — précédent atelier : lampe facettée E14 v2.1 (interfaces validées au contrôle géométrique)." },
-  bague_e14: { label:'Bague de serrage E14 — siège vissé, démontable sans outil', pos:'top', diaMm:43, thickMm:8,
-    fix:'vissée sous le culot sur corps fileté',
-    measured:false,
-    source:"Cote bague Ø43 provisoire (non mesurée atelier) — à vérifier au pied à coulisse avant série. Précédents : lampe facettée E14 v2.1, lampe Dune." },
-  led_disc60: { label:'Module LED disque 60', pos:'inline', diaMm:59.5, thickMm:8.2,
-    fix:'4 trous Ø4 entraxe 28 mm, passage câble Ø3.3',
-    measured:true,
-    source:"Mesuré atelier : « LED LAMPE.ipt » (janv. 2026) — disque Ø59.5×8.2." },
-  base_cable: { label:'Base à poser — sortie câble latérale + encoches de pied', pos:'bottom', thickMm:12,
-    fix:'reprend le rayon du profil à h=0',
-    measured:true,
-    source:"Précédent atelier : lampe Dune (monobloc, contrôle géométrique PASS direct)." },
-};
-
 const MATERIALS = { PLA: 'PLA', PLA_T: 'PLA translucide', PETG: 'PETG' };
 const COLORS = ['#e8e2d5','#f5f5f7','#2c2c2e','#c88a52','#8fa6b2','#b23a3a'];
 
-const TYPE_HINTS = {
-  suspension: "Suspension : le point du haut du profil (h max) est le point de fixation — la douille est logée en haut, le câble descend du plafond. Sortie de câble fixe en partie haute (non modifiable).",
-  poser: "Lampe à poser, imprimée en une seule pièce (précédent atelier « lampe Dune ») : le point du haut loge la douille, la base (h=0) pose sur la table, le câble sort par le côté de la base.",
-  applique: "Applique : ce MVP modélise uniquement le volume de l'abat-jour/structure en révolution. La platine de fixation murale n'est PAS modélisée ici — elle est ajoutée par l'atelier lors de l'assemblage.",
+/* ============================================================================
+ * TYPES DE LAMPE — le type n'est PAS qu'un texte d'aide : il borne le profil
+ * (hauteur mini/maxi propres au type, sous le plafond machine), choisit la
+ * famille de silhouettes proposées, et déclenche ses propres vérifications
+ * (ouverture de sortie de lumière, assise réelle, saillie murale).
+ * ========================================================================== */
+const TYPES = {
+  suspension: {
+    label: 'Suspension',
+    hint: "Suspension : le point du HAUT (h max) est le point de fixation — la douille y est logée, le câble descend du plafond. Le BAS du profil est l'ouverture de sortie de lumière : c'est lui qui doit être le plus large, sinon la lampe éclaire surtout le plafond.",
+    minHeightMm: 90, maxHeightMm: 220, maxRadiusMm: 100,
+    silhouettes: ['cloche','cone','ogive','diabolo'],
+    rules: { bottomWidest: true, minBottomRadiusMm: 40 },
+    // composition : une suspension peut être une grappe de plusieurs corps
+    compo: { maxBodies: 5, layouts: ['vertical','ligne','circulaire'], baseFirst: false,
+             note: "Une suspension se compose de 1 à 5 corps : empilés sur le même câble (vertical), alignés côte à côte (ligne) ou en couronne (circulaire). Chaque corps est un abat-jour imprimé séparément." },
+  },
+  poser: {
+    label: 'Lampe à poser',
+    hint: "Lampe à poser (précédent atelier « lampe Dune ») : le point du haut loge la douille, la base (h=0) pose sur la table, le câble sort par le côté de la base. L'assise est vérifiée pour de vrai — angle de basculement calculé sur le centre de gravité du maillage exporté.",
+    minHeightMm: 90, maxHeightMm: 250, maxRadiusMm: 100,
+    silhouettes: ['dune','galet','colonne','gradins'],
+    rules: { minTipAngleDeg: 25 },
+    // le 1er corps sert de BASE en ligne/couronne : les autres se posent dessus
+    compo: { maxBodies: 7, layouts: ['vertical','ligne','circulaire'], baseFirst: true,
+             note: "Une lampe à poser va de 1 à 7 corps : empilés (vertical), ou une BASE (corps 1) portant les autres alignés ou en couronne — réguliers si « symétrique », dispersés si « organique »." },
+  },
+  applique: {
+    label: 'Applique',
+    hint: "Applique : le volume en révolution devient la SAILLIE au mur, donc il est bridé court. La platine de fixation murale n'est PAS modélisée ici — elle est ajoutée par l'atelier lors de l'assemblage.",
+    minHeightMm: 50, maxHeightMm: 140, maxRadiusMm: 100,
+    silhouettes: ['demiDome','ecope','disque'],
+    rules: { maxDepthMm: 140 },
+    compo: { maxBodies: 7, layouts: ['ligne','circulaire','vertical'], baseFirst: false,
+             note: "Une applique va de 1 à 7 corps, répétés le long du mur (ligne), en couronne, ou empilés. « Symétrique » = répétition régulière ; « organique » = espacements, échelles et rotations dispersés." },
+  },
+};
+
+// Silhouettes = points de contrôle normalisés [t = h/hauteur, k = rayon/rayon max].
+// Servent aux presets ET au tirage aléatoire (jitter appliqué sur k).
+const SILHOUETTES = {
+  cloche:   { label:'Cloche',     pts:[[0,1.00],[0.14,0.97],[0.45,0.85],[0.76,0.60],[1,0.30]] },
+  cone:     { label:'Cône évasé', pts:[[0,1.00],[0.34,0.76],[0.70,0.50],[1,0.26]] },
+  ogive:    { label:'Ogive',      pts:[[0,0.90],[0.20,1.00],[0.55,0.87],[0.80,0.60],[1,0.28]] },
+  diabolo:  { label:'Diabolo',    pts:[[0,1.00],[0.30,0.58],[0.55,0.50],[0.80,0.62],[1,0.32]] },
+  dune:     { label:'Dune',       pts:[[0,0.83],[0.15,1.00],[0.55,0.90],[0.82,0.55],[1,0.28]] },
+  galet:    { label:'Galet',      pts:[[0,0.66],[0.25,1.00],[0.60,0.93],[0.85,0.60],[1,0.30]] },
+  colonne:  { label:'Colonne',    pts:[[0,0.88],[0.10,0.96],[0.74,0.93],[0.90,0.68],[1,0.34]] },
+  gradins:  { label:'Gradins',    pts:[[0,1.00],[0.22,0.97],[0.29,0.85],[0.50,0.82],[0.57,0.69],[0.78,0.65],[0.85,0.50],[1,0.30]] },
+  demiDome: { label:'Demi-dôme',  pts:[[0,1.00],[0.30,0.95],[0.60,0.81],[0.85,0.57],[1,0.30]] },
+  ecope:    { label:'Écope',      pts:[[0,1.00],[0.25,0.87],[0.52,0.79],[0.76,0.64],[1,0.34]] },
+  disque:   { label:'Disque',     pts:[[0,1.00],[0.35,0.98],[0.70,0.90],[1,0.36]] },
+};
+
+/* ============================================================================
+ * DÉCOUPE EN MODULES IMPRIMÉS (option multi-pièces) — la lampe est tranchée en
+ * N modules empilables, chacun imprimé séparément. La liaison est un COLLIER
+ * cylindrique solidaire du module bas, qui rentre dans le module du dessus :
+ * cotes reprises du précédent atelier (emboîtement Ø collier, jeu 0,3 mm au
+ * rayon). Plus cher : chaque module coûte un lancement machine de plus.
+ * ========================================================================== */
+const JOINT = {
+  collarHeightMm: 12,      // hauteur du collier qui dépasse au-dessus du plan de coupe
+  collarWallMm: 1.2,       // épaisseur du collier
+  clearanceMm: 0.3,        // jeu au rayon (précédent atelier : emboîtement Ø44 jeu 0,3)
+  overlapMm: 3,            // le collier plonge sous le plan de coupe pour se souder à la paroi
+  maxModules: 4,
 };
 
 /* ============================================================================ */
+
+/* Un CORPS = un volume de révolution imprimé séparément, avec son propre profil,
+ * sa propre sculpture (torsion/courbure) et son échelle. Une lampe est une
+ * composition de 1 à 7 corps selon le type. */
+function newBody(shape){
+  return {
+    shape: shape || 'cloche',
+    profile: [],                              // [{h,r}] trié par h croissant
+    sculpt: { twistDegPerMm:0, bendDeg:0 },    // torsion (°/mm) et courbure (° au sommet)
+    scale: 1,                                  // échelle propre (cuite dans la géométrie)
+    rotDeg: 0, offsetXMm: 0, offsetZMm: 0,     // placement fin (mode expert)
+    surface: null,                             // style de surface propre (null = celui commun)
+    color: null,                               // couleur propre (null = celle commune)
+    flipped: false,                            // true = tête en bas : le culot est en BAS (h=0)
+  };
+}
+
+/* ── Retournement « tête en bas » ─────────────────────────────────────────
+ * Le profil stocké EST l'orientation d'impression (h=0 = plateau). Retourner
+ * n'est donc pas un effet visuel : ça déplace l'extrémité qui porte le culot,
+ * et ça change les surplombs réellement imprimables (une forme qui évase vers
+ * le haut demande des supports ; la même retournée est auto-portante — c'est le
+ * précédent atelier « abat-jour sommet en bas »).
+ * ──────────────────────────────────────────────────────────────────────── */
+function mirrorProfile(prof){
+  const H = prof[prof.length-1].h;
+  return prof.slice().reverse().map(p=>({ h: H - p.h, r: p.r }));
+}
+// Extrémité qui porte le culot (rayon mini imposé) et extrémité ouverte (lumière).
+function socketEndIdx(b){ const bd=b||state.bodies[state.body]; return bd.flipped ? 0 : bd.profile.length-1; }
+function openEndIdx(b){ const bd=b||state.bodies[state.body]; return bd.flipped ? bd.profile.length-1 : 0; }
+function socketEndR(b){ const bd=b||state.bodies[state.body]; return bd.profile[socketEndIdx(bd)].r; }
+function openEndR(b){ const bd=b||state.bodies[state.body]; return bd.profile[openEndIdx(bd)].r; }
 
 let state = {
   type: 'suspension',
@@ -404,66 +613,743 @@ let state = {
   material: 'PLA',
   wall: 1.2,
   color: COLORS[0],
-  profile: [],       // [{h,r}] trié par h croissant
   selected: -1,
-  modules: [],       // [{id, hMm}] — hMm utilisé seulement pour les modules 'inline'
+  seed: null,        // graine du dernier tirage aléatoire (null si preset/édition manuelle)
+  bodies: [newBody('cloche')],
+  body: 0,           // corps en cours d'édition dans la coupe 2D
+  compo: { count:1, layout:'vertical', symmetric:true, spacingMm:120, ringRadiusMm:90 },
+  surface: { style:'lowpoly', segments:48, strieCount:18, strieDepthMm:1.6, cross:false, pitchMm:34,
+             voroCells:26, voroStrutMm:3.2, voroBandMm:14, voroVariant:1, smoothing:45 },
+  split: { on:false, count:2 },   // découpe horizontale d'un corps en modules empilables
+  expert: false,
+  linkBodies: true,   // true = profil/style/sculpture communs ; false = chaque corps est réglé à part
 };
+// `state.profile` et `state.shape` = ceux du corps en cours d'édition : tout
+// l'éditeur 2D existant continue de fonctionner sans le savoir.
+Object.defineProperty(state,'profile',{ enumerable:false,
+  get(){ return state.bodies[state.body].profile; },
+  set(v){ state.bodies[state.body].profile = v; } });
+Object.defineProperty(state,'shape',{ enumerable:false,
+  get(){ return state.bodies[state.body].shape; },
+  set(v){ state.bodies[state.body].shape = v; } });
+/* LIEN ENTRE CORPS — c'est `state.linkBodies` qui décide, pas l'agencement :
+ *  · lié   : profil, style de surface et sculpture sont communs à tous les corps ;
+ *  · délié : chaque corps garde SON profil, SON style et SA sculpture, et les
+ *            réglages ne touchent que le corps sélectionné.
+ * (« Symétrique » ne concerne que la régularité de l'AGENCEMENT, pas les formes.) */
+function sculptTargets(){ return (state.linkBodies && !state.expert) ? state.bodies : [state.bodies[state.body]]; }
+// Style de surface effectif d'un corps (pour mailler).
+function bodySurface(i){
+  const b = state.bodies[i];
+  return (!state.linkBodies && b && b.surface) ? b.surface : state.surface;
+}
+// Style de surface à MODIFIER quand on touche aux réglages.
+function bodySurfaceForEdit(){
+  if(state.linkBodies) return state.surface;
+  const b = state.bodies[state.body];
+  if(!b.surface) b.surface = {...state.surface};
+  return b.surface;
+}
+/* Couleur : même logique. Chaque corps étant imprimé séparément, une lampe
+ * multicolore ne demande AUCUNE imprimante multi-matière — juste une bobine
+ * différente par corps. C'est gratuit ici, contrairement à un objet monobloc. */
+function bodyColor(i){
+  const b = state.bodies[i];
+  return (!state.linkBodies && b && b.color) ? b.color : state.color;
+}
+function setBodyColor(c){
+  if(state.linkBodies || state.compo.count<2){
+    state.color = c;
+    state.bodies.forEach(b=>{ b.color = null; });
+  } else {
+    state.bodies[state.body].color = c;
+  }
+}
+function activeBodies(){ return state.bodies.slice(0, state.compo.count); }
 
-function presetProfile(name){
-  const topMin = SOCKETS[state.socket].housingMinRadiusMm;
-  if(name==='cloche') return [
-    {h:0,r:22},{h:20,r:26},{h:70,r:58},{h:150,r:66},{h:200,r:52},{h:220,r:Math.max(topMin,26)}
-  ];
-  if(name==='cylindre') return [
-    {h:0,r:50},{h:15,r:56},{h:160,r:56},{h:180,r:44},{h:200,r:Math.max(topMin,22)}
-  ];
-  // dune (défaut)
-  return [
-    {h:0,r:60},{h:30,r:72},{h:120,r:65},{h:180,r:40},{h:210,r:Math.max(topMin,20)}
-  ];
+// Bornes ACTIVES = le plus contraignant entre le type de lampe et la machine.
+function bounds(){
+  const t = TYPES[state.type];
+  return {
+    maxH: Math.min(t.maxHeightMm, PRINT_BOUNDS.MAX_HEIGHT_MM),
+    minH: t.minHeightMm,
+    maxR: Math.min(t.maxRadiusMm, PRINT_BOUNDS.MAX_RADIUS_MM),
+  };
 }
 
-function clampPoint(p, isTop){
-  p.h = Math.max(0, Math.min(PRINT_BOUNDS.MAX_HEIGHT_MM, p.h));
-  const minR = isTop ? SOCKETS[state.socket].housingMinRadiusMm : 2;
-  p.r = Math.max(minR, Math.min(PRINT_BOUNDS.MAX_RADIUS_MM, p.r));
+// Construit un profil concret depuis une silhouette normalisée.
+function profileFromSilhouette(name, H, Rmax, rng, jitter){
+  const S = SILHOUETTES[name] || SILHOUETTES.cloche;
+  const topMin = SOCKETS[state.socket].housingMinRadiusMm;
+  const pts = S.pts.map(([t,k])=>{
+    const j = (rng && jitter) ? 1 + (rng()*2-1)*jitter : 1;
+    return { h: t*H, r: Math.max(2, k*Rmax*j) };
+  });
+  pts[pts.length-1].r = Math.max(topMin, pts[pts.length-1].r); // le haut porte le culot
+  return pts;
+}
+
+function clampPoint(p, isSocketEnd){
+  const b = bounds();
+  p.h = Math.max(0, Math.min(b.maxH, p.h));
+  const minR = isSocketEnd ? SOCKETS[state.socket].housingMinRadiusMm : 2;
+  p.r = Math.max(minR, Math.min(b.maxR, p.r));
   return p;
 }
 
 function normalizeProfile(){
-  state.profile.sort((a,b)=>a.h-b.h);
+  const b = bounds();
+  state.profile.sort((a,b2)=>a.h-b2.h);
   // enforce min gap between consecutive heights
   for(let i=1;i<state.profile.length;i++){
     if(state.profile[i].h - state.profile[i-1].h < PRINT_BOUNDS.MIN_H_GAP_MM){
       state.profile[i].h = state.profile[i-1].h + PRINT_BOUNDS.MIN_H_GAP_MM;
     }
   }
-  if(state.profile[state.profile.length-1].h > PRINT_BOUNDS.MAX_HEIGHT_MM){
-    // rescale down if overflow after gap enforcement
-    const scale = PRINT_BOUNDS.MAX_HEIGHT_MM / state.profile[state.profile.length-1].h;
+  // rescale si dépassement (édition, ou changement de type plus bas de plafond)
+  if(state.profile[state.profile.length-1].h > b.maxH){
+    const scale = b.maxH / state.profile[state.profile.length-1].h;
     state.profile.forEach(p=>p.h*=scale);
   }
-  state.profile.forEach((p,i)=>clampPoint(p, i===state.profile.length-1));
+  const se = socketEndIdx();
+  state.profile.forEach((p,i)=>clampPoint(p, i===se));
+}
+
+// Corps LIÉS : un preset ou un tirage s'applique à tous les corps.
+// Corps DÉLIÉS (ou mode expert) : seul le corps en cours de dessin change.
+function propagateProfile(){
+  if(!state.linkBodies || state.expert) return;
+  const src = state.bodies[state.body];
+  state.bodies.forEach((b,i)=>{ if(i!==state.body){
+    b.profile = src.profile.map(p=>({h:p.h, r:p.r}));
+    b.shape = src.shape;
+  }});
 }
 
 function setPreset(name){
-  state.profile = presetProfile(name);
+  const b = bounds();
+  const cur = state.bodies[state.body];
+  state.shape = name;
+  state.seed = null;
+  // les silhouettes sont définies culot EN HAUT : si le corps est retourné, on
+  // mire le résultat pour rester dans son orientation
+  let prof = profileFromSilhouette(name, (b.minH+b.maxH)/2, b.maxR*0.72);
+  if(cur.flipped) prof = mirrorProfile(prof);
+  state.profile = prof;
+  state.selected = -1;
+  normalizeProfile();
+  propagateProfile();
+  renderAll();
+}
+
+/* ── Tirage aléatoire de forme ────────────────────────────────────────────
+ * PRNG déterministe (mulberry32) : la même graine redonne EXACTEMENT la même
+ * forme — la graine part dans le dossier de commande, donc l'atelier peut
+ * régénérer la pièce commandée. Le tirage est borné par le type de lampe et
+ * re-tiré tant qu'il viole une règle dure (surplomb > 55°, règles de type) ;
+ * si aucun candidat ne passe en 40 essais, on garde le moins mauvais et les
+ * avertissements restent affichés (jamais de silence).
+ * ────────────────────────────────────────────────────────────────────────── */
+function newSeed(){
+  return Math.floor(Math.random()*0xFFFFF).toString(16).toUpperCase().padStart(5,'0');
+}
+
+// Score de violation d'un candidat (0 = conforme). Sert à choisir le moins
+// mauvais quand aucun tirage ne passe toutes les règles.
+function candidateViolations(profile){
+  const r = TYPES[state.type].rules || {};
+  let v = 0;
+  for(let i=0;i<profile.length-1;i++){
+    const a = overhangDeg(profile[i], profile[i+1]);
+    if(a > OVERHANG.HARD_DEG) v += 3;
+    else if(a > OVERHANG.WARN_DEG) v += 1;
+  }
+  const rBottom = profile[0].r, rMax = Math.max(...profile.map(p=>p.r));
+  if(r.bottomWidest && rBottom < rMax - 0.5) v += 2;
+  if(r.minBottomRadiusMm && rBottom < r.minBottomRadiusMm) v += 2;
+  if(r.minTipAngleDeg){
+    // proxy géométrique rapide — l'angle réel est recalculé sur le maillage ensuite
+    const H = profile[profile.length-1].h;
+    if(Math.atan2(rBottom, H*0.62)*180/Math.PI < r.minTipAngleDeg) v += 2;
+  }
+  return v;
+}
+
+// Un tirage borné, pour UNE graine donnée. Ne touche à rien : renvoie la forme.
+function drawShape(seedStr){
+  const b = bounds();
+  const rng = mulberry32(hashSeed(seedStr));
+  const fams = TYPES[state.type].silhouettes;
+  let best = null;
+  for(let attempt=0; attempt<40; attempt++){
+    const fam = fams[Math.min(fams.length-1, Math.floor(rng()*fams.length))];
+    const H = b.minH + rng()*(b.maxH - b.minH);
+    const Rmax = b.maxR*(0.45 + rng()*0.5);
+    const cand = profileFromSilhouette(fam, H, Rmax, rng, 0.09);
+    const v = candidateViolations(cand);
+    if(!best || v < best.v) best = {cand, fam, v};
+    if(v === 0) break;
+  }
+  return best;
+}
+
+/* Tirage aléatoire.
+ *  · scope 'body' (défaut) : ne redessine QUE le corps en cours. Si les corps
+ *    étaient liés, on les délie — sinon « liés » serait un mensonge, les formes
+ *    venant de diverger. La case « Lier les corps » se décoche donc sous tes yeux.
+ *  · scope 'all' : chaque corps reçoit SON propre tirage, dérivé de la même
+ *    graine (graine-1, graine-2, …) donc l'ensemble reste reproductible. */
+function randomShape(seed, scope){
+  const base = String(seed || newSeed()).toUpperCase().replace(/[^0-9A-F]/g,'') || newSeed();
+  state.seed = base;
+  const n = state.compo.count;
+
+  if(scope === 'all' && n > 1){
+    state.linkBodies = false;
+    for(let i=0;i<n;i++){
+      const b = state.bodies[i];
+      const best = drawShape(base+'-'+i);
+      b.shape = best.fam;
+      b.profile = b.flipped ? mirrorProfile(best.cand) : best.cand;
+    }
+  } else {
+    if(state.linkBodies && n > 1 && !state.expert) state.linkBodies = false;
+    const cur = state.bodies[state.body];
+    const best = drawShape(n > 1 ? base+'-'+state.body : base);
+    cur.shape = best.fam;
+    cur.profile = cur.flipped ? mirrorProfile(best.cand) : best.cand;
+  }
   state.selected = -1;
   normalizeProfile();
   renderAll();
 }
 
+/* ============================================================================
+ * ==GEOM-CORE-START==  (fonctions PURES, sans DOM — extraites telles quelles
+ * par le test node de l'atelier : test-geom.mjs)
+ *
+ * Le maillage exporté est une COQUE CREUSE réelle : surface extérieure +
+ * surface intérieure décalée de l'épaisseur de paroi, fermées par deux
+ * couronnes plates (bas et haut). Elle est ouverte en bas (sortie de lumière)
+ * et en haut (passage du culot) — donc c'est bien un abat-jour, pas un bloc
+ * plein, et son volume est CELUI QUI SERT AU PRIX.
+ *
+ * Gate de sécurité inchangé : cette fonction ne voit QUE le profil de la
+ * structure. Aucun alésage, filetage ou logement de douille n'est généré ici.
+ * ========================================================================== */
+
+/* Résolution par style. Le facetté doit VOIR ses facettes (peu de segments) ;
+ * les styles lisses doivent au contraire en avoir beaucoup, et la jauge de
+ * lissage pousse encore plus loin : plus de segments sur le tour ET des anneaux
+ * plus rapprochés sur la hauteur. */
+const SURFACE_STYLES = {
+  lowpoly: { label:'Facetté (low poly)', smooth:false, segFactor:0 },
+  smooth:  { label:'Lisse',              smooth:true,  segMin:110, segMax:260, stepMax:5.0, stepMin:1.3 },
+  stries:  { label:'Strié / losanges',   smooth:true,  segMin:110, segMax:260, stepMax:3.2, stepMin:1.1 },
+  organic: { label:'Organique',          smooth:true,  segMin:110, segMax:260, stepMax:4.2, stepMin:1.2 },
+  voronoi: { label:'Voronoï ajouré',     smooth:true,  perforated:true },
+};
+// Pas vertical entre anneaux, piloté par la jauge de lissage (0 = pas de resample).
+function styleStepMm(surf){
+  const st = SURFACE_STYLES[surf.style] || SURFACE_STYLES.lowpoly;
+  if(!st.smooth || st.perforated) return 0;
+  const t = Math.max(0, Math.min(1, (surf.smoothing==null?45:surf.smoothing)/100));
+  return st.stepMax + (st.stepMin - st.stepMax)*t;
+}
+
+// Résolution angulaire réellement utilisée : les stries fines et les surfaces
+// lisses exigent plus de segments que le réglage « facetté » du client.
+function angularSegments(surf, chosen){
+  const st = SURFACE_STYLES[surf.style] || SURFACE_STYLES.lowpoly;
+  if(!st.smooth) return Math.max(3, chosen|0);          // facetté : c'est le client qui choisit
+  const t = Math.max(0, Math.min(1, (surf.smoothing==null?45:surf.smoothing)/100));
+  let seg = Math.round(st.segMin + (st.segMax - st.segMin)*t);
+  if(surf.style === 'stries') seg = Math.max(seg, surf.strieCount*6);   // résoudre chaque strie
+  return Math.min(320, Math.ceil(seg/4)*4);
+}
+
+/* ── AJOURAGE VORONOÏ ─────────────────────────────────────────────────────
+ * De vrais TROUS TRAVERSANTS, pas un relief : on découpe la coque cellule par
+ * cellule sur la grille (anneaux × segments), et chaque bord de trou est refermé
+ * par une paroi qui relie la face extérieure à la face intérieure — le maillage
+ * reste donc étanche et imprimable.
+ *   · les nervures sont les ARÊTES du diagramme de Voronoï (on garde la matière
+ *     là où deux graines sont à peu près à égale distance) ;
+ *   · aux deux extrémités une BANDE PLEINE est imposée (elle porte le culot en
+ *     haut et l'appui en bas) ;
+ *   · l'intégration bande↔ajourage n'est pas une coupure nette : la largeur des
+ *     nervures s'épaissit progressivement en approchant de la bande, si bien que
+ *     le motif se densifie et fond dans la bande.
+ * Économie de matière réelle = mesurée sur le maillage, elle descend dans le prix.
+ * ──────────────────────────────────────────────────────────────────────── */
+// PRNG déterministe, utilisé par l'ajourage ET le tirage de formes.
+function mulberry32(a){
+  return function(){
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashSeed(str){
+  let h = 2166136261 >>> 0;
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h >>> 0;
+}
+
+let PERF_ACC = { cells:0, kept:0 };
+
+/* Graines indexées par cases (grille régulière sur la surface développée).
+ * Sans index, chaque cellule du maillage testerait TOUTES les graines : à 2000
+ * graines × ~30 000 cellules ça ferait 60 millions de distances par rendu. Avec
+ * l'index on ne teste que les cases voisines, en s'arrêtant dès que la 2ᵉ plus
+ * proche est garantie — le coût devient à peu près indépendant du nombre de
+ * graines. Coordonnées en mm développés (u = θ·rMoyen, périodique ; v = hauteur). */
+function buildVoroIndex(surf, rMean, H){
+  const K = Math.max(4, Math.min(4000, surf.voroCells|0));
+  const rng = mulberry32(hashSeed('voronoi|'+(surf.voroVariant||1)+'|'+K));
+  const W = Math.max(1, 2*Math.PI*rMean);
+  const seeds = new Array(K);
+  for(let k=0;k<K;k++) seeds[k] = { u: rng()*W, v: rng()*H };
+  const target = Math.max(2, Math.sqrt((W*H)/K) * 1.4);      // ~2 graines par case
+  const nu = Math.max(1, Math.min(256, Math.round(W/target)));
+  const nv = Math.max(1, Math.min(256, Math.round(H/target)));
+  const bw = W/nu, bh = H/nv;
+  const buckets = Array.from({length:nu*nv}, ()=>[]);
+  for(const s of seeds){
+    const iu = Math.min(nu-1, Math.max(0, Math.floor(s.u/bw)));
+    const iv = Math.min(nv-1, Math.max(0, Math.floor(s.v/bh)));
+    buckets[iv*nu+iu].push(s);
+  }
+  return {seeds, buckets, nu, nv, bw, bh, W, H, K, cellMm: Math.sqrt((W*H)/K)};
+}
+
+// Deux plus proches graines d'un point, via l'index.
+function voroD1D2(ix, u, v){
+  let d1=Infinity, d2=Infinity;
+  const iu0=Math.min(ix.nu-1,Math.max(0,Math.floor(u/ix.bw)));
+  const iv0=Math.min(ix.nv-1,Math.max(0,Math.floor(v/ix.bh)));
+  const step=Math.min(ix.bw, ix.bh), maxRing=Math.max(ix.nu, ix.nv);
+  for(let r=0;r<=maxRing;r++){
+    if(r>1 && d2 <= (r-1)*step) break;                        // le reste est forcément plus loin
+    for(let dv=-r; dv<=r; dv++){
+      const iv=iv0+dv; if(iv<0||iv>=ix.nv) continue;
+      for(let du=-r; du<=r; du++){
+        if(r>0 && Math.max(Math.abs(du),Math.abs(dv))!==r) continue;   // bord de l'anneau seulement
+        let iu=(iu0+du)%ix.nu; if(iu<0) iu+=ix.nu;                     // u est périodique
+        const arr=ix.buckets[iv*ix.nu+iu];
+        for(let i=0;i<arr.length;i++){
+          const s=arr[i];
+          let dU=Math.abs(u-s.u); if(dU>ix.W/2) dU=ix.W-dU;
+          const dV=v-s.v, dd=Math.sqrt(dU*dU+dV*dV);
+          if(dd<d1){ d2=d1; d1=dd; } else if(dd<d2){ d2=dd; }
+        }
+      }
+    }
+  }
+  return {d1,d2};
+}
+
+// Résolution du maillage imposée par la finesse du motif : une cellule doit être
+// couverte par plusieurs anneaux et plusieurs segments, sinon le motif se
+// désagrège au lieu de s'affiner.
+function voroResolution(surf, rMean, H){
+  const K = Math.max(4, Math.min(4000, surf.voroCells|0));
+  const W = Math.max(1, 2*Math.PI*rMean);
+  const cell = Math.sqrt((W*H)/K);
+  const stepMm = Math.max(0.9, Math.min(2.4, cell/3.2));
+  const segments = Math.max(96, Math.min(260, Math.ceil((W/(cell/3.2))/4)*4));
+  return {stepMm, segments, cellMm:cell};
+}
+
+// Matière ou trou au centre d'une cellule ? (+ largeur de nervure locale)
+function perfKeep(th, h, ctx){
+  if(h <= ctx.bandBottom || h >= ctx.bandTop) return true;   // bandes pleines imposées
+  const dBand = Math.min(h - ctx.bandBottom, ctx.bandTop - h);
+  const t = Math.min(1, dBand/ctx.transition);
+  const strutLocal = ctx.strut * (1 + 2.2*(1-t)*(1-t));      // fondu dans la bande
+  const {d1,d2} = voroD1D2(ctx.ix, (th/(2*Math.PI))*ctx.ix.W, h - ctx.h0);
+  return (d2 - d1) < strutLocal;                              // proche d'une arête = nervure
+}
+
+function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
+  const outerP = profile.map(p=>({h:p.h, r:p.r}));
+  const { inner } = offsetMeridianInward(outerP, wallMm);
+  const N = Math.max(12, segments|0), M = outerP.length;
+  if(M < 3) return buildShellMesh(profile, wallMm, segments, {...surf, style:'smooth'}, sculpt, hRef);
+  const H = outerP[M-1].h - outerP[0].h;
+  const band = Math.max(2, Math.min(H/2 - 2, surf.voroBandMm||12));
+  const rMean = outerP.reduce((s,p)=>s+p.r,0)/M;
+  const ctx = {
+    ix: buildVoroIndex(surf, rMean, Math.max(1,H)), H, h0: outerP[0].h, rMean,
+    strut: Math.max(0.6, surf.voroStrutMm||2.4),
+    bandBottom: outerP[0].h + band, bandTop: outerP[M-1].h - band,
+    transition: Math.max(4, band*1.6),
+  };
+  PERF_ACC.cellMm = ctx.ix.cellMm;
+  const Hq = hRef || outerP[M-1].h;
+  const outR = outerP.map(p=>ringAt(p.r, p.h, N, surf, 1, sculpt, Hq));
+  const inR  = inner.map(p=>ringAt(p.r, p.h, N, surf, 1, sculpt, Hq));
+
+  // matière/trou par cellule
+  const keep = [];
+  for(let i=0;i<M-1;i++){
+    const hc = (outerP[i].h + outerP[i+1].h)/2, row = [];
+    for(let j=0;j<N;j++) row.push(perfKeep((j+0.5)/N*Math.PI*2, hc, ctx));
+    keep.push(row);
+  }
+  // pas d'îlot de matière flottant (impossible à imprimer, inutile)
+  for(let i=0;i<M-1;i++) for(let j=0;j<N;j++){
+    if(!keep[i][j]) continue;
+    const up=(i<M-2)&&keep[i+1][j], dn=(i>0)&&keep[i-1][j];
+    const rt=keep[i][(j+1)%N], lf=keep[i][(j-1+N)%N];
+    if(!up && !dn && !rt && !lf) keep[i][j]=false;
+  }
+  const has = (i,j)=> i>=0 && i<M-1 && keep[i][(j+N)%N];
+
+  const tris = [];
+  let kept = 0;
+  for(let i=0;i<M-1;i++){
+    for(let j=0;j<N;j++){
+      if(!keep[i][j]) continue;
+      kept++;
+      const j2 = (j+1)%N;
+      const Ob=outR[i][j], Ob2=outR[i][j2], Ot=outR[i+1][j], Ot2=outR[i+1][j2];
+      const Ib=inR[i][j],  Ib2=inR[i][j2],  It=inR[i+1][j],  It2=inR[i+1][j2];
+      // face extérieure (normale sortante) et face intérieure (enroulement inversé)
+      tris.push([Ob,Ob2,Ot2]); tris.push([Ob,Ot2,Ot]);
+      tris.push([Ib,It2,Ib2]); tris.push([Ib,It,It2]);
+      // parois de bord : partout où la cellule voisine est un trou (ou le vide,
+      // aux deux extrémités de la coque → ce sont les couronnes plates)
+      if(!has(i,j+1)){ tris.push([Ob2,It2,Ot2]); tris.push([Ob2,Ib2,It2]); }   // côté +θ
+      if(!has(i,j-1)){ tris.push([Ob,Ot,It]);   tris.push([Ob,It,Ib]);   }     // côté −θ
+      if(!has(i+1,j)){ tris.push([Ot,Ot2,It]);  tris.push([It,Ot2,It2]); }     // dessus (+Z)
+      if(!has(i-1,j)){ tris.push([Ob,Ib,Ob2]);  tris.push([Ib,Ib2,Ob2]); }     // dessous (−Z)
+    }
+  }
+  PERF_ACC.cells += (M-1)*N; PERF_ACC.kept += kept;
+  return tris;
+}
+
+// Volume de la coque PLEINE équivalente (Pappus) — référence pour annoncer
+// l'économie de matière réelle de l'ajourage.
+function pappusShellVolMm3(profile, wallMm){
+  let lat = 0;
+  for(let i=0;i<profile.length-1;i++){
+    const rA = (profile[i].r+profile[i+1].r)/2;
+    const L = Math.hypot(profile[i+1].h-profile[i].h, profile[i+1].r-profile[i].r);
+    lat += 2*Math.PI*rA*L;
+  }
+  return lat*wallMm;
+}
+
+// Catmull-Rom sur la polyligne méridienne : lisse la silhouette SANS déplacer
+// les points de contrôle édités par le client (la courbe passe par eux).
+/* Pas vertical maximal imposé par la TORSION : si deux anneaux consécutifs
+ * tournent de plus de ~4°, les facettes entre eux coupent la matière (mesuré :
+ * −9 % de volume à 0,5 °/mm sur un profil à 5 points). On densifie donc les
+ * anneaux en fonction du vrillage, sans toucher à la silhouette. */
+function twistStepMm(sculpt){
+  const t = sculpt && Math.abs(sculpt.twistDegPerMm||0);
+  return t > 0.005 ? Math.max(1.5, 4/t) : 0;
+}
+
+function resampleMeridian(profile, surf, stepOverrideMm){
+  const st = SURFACE_STYLES[surf.style] || SURFACE_STYLES.lowpoly;
+  const step0 = stepOverrideMm > 0 ? stepOverrideMm : styleStepMm(surf);
+  // densification linéaire : garde la silhouette facettée, ajoute juste des anneaux
+  if(!st.smooth && step0 > 0 && profile.length >= 2){
+    const out=[];
+    for(let i=0;i<profile.length-1;i++){
+      const n=Math.max(1, Math.ceil(Math.abs(profile[i+1].h-profile[i].h)/step0));
+      for(let k=0;k<n;k++){
+        const t=k/n;
+        out.push({ h: profile[i].h + t*(profile[i+1].h-profile[i].h),
+                   r: profile[i].r + t*(profile[i+1].r-profile[i].r) });
+      }
+    }
+    out.push({h:profile[profile.length-1].h, r:profile[profile.length-1].r});
+    return out;
+  }
+  if(!st.smooth || profile.length < 3 || step0 <= 0) return profile.map(p=>({h:p.h, r:p.r}));
+  const step = step0;
+  const P = profile;
+  const at = i => P[Math.max(0, Math.min(P.length-1, i))];
+  const out = [];
+  for(let i=0;i<P.length-1;i++){
+    const p0=at(i-1), p1=at(i), p2=at(i+1), p3=at(i+2);
+    const segLen = Math.abs(p2.h-p1.h);
+    const n = Math.max(1, Math.ceil(segLen/step));
+    for(let k=0;k<n;k++){
+      const t=k/n, t2=t*t, t3=t2*t;
+      const f = (a,b,c,d)=> 0.5*((2*b) + (-a+c)*t + (2*a-5*b+4*c-d)*t2 + (-a+3*b-3*c+d)*t3);
+      out.push({ h:f(p0.h,p1.h,p2.h,p3.h), r:Math.max(0.5, f(p0.r,p1.r,p2.r,p3.r)) });
+    }
+  }
+  out.push({h:P[P.length-1].h, r:P[P.length-1].r});
+  // h strictement croissant (Catmull-Rom peut légèrement rétrograder sur un angle vif)
+  for(let i=1;i<out.length;i++) if(out[i].h <= out[i-1].h) out[i].h = out[i-1].h + 0.01;
+  return out;
+}
+
+// Déplacement radial du style de surface, appliqué IDENTIQUEMENT aux surfaces
+// intérieure et extérieure : l'épaisseur de paroi reste constante, donc la
+// pièce reste imprimable et la masse annoncée reste juste.
+function surfaceDisplacement(surf, theta, h){
+  const a = (surf.strieDepthMm||0)/2;
+  if(surf.style === 'stries'){
+    const n = Math.max(2, surf.strieCount|0);
+    if(surf.cross){
+      // deux réseaux de stries croisés = losanges en volume (cos nθ · cos kh)
+      const k = 2*Math.PI/Math.max(8, surf.pitchMm);
+      return a*Math.cos(n*theta)*Math.cos(k*h);
+    }
+    return a*Math.cos(n*theta);
+  }
+  if(surf.style === 'organic'){
+    // 3 harmoniques non commensurables : ondulation douce qui ne se répète jamais
+    const k = 2*Math.PI/Math.max(20, surf.pitchMm);
+    return a*(0.60*Math.sin(3*theta + 1.7*k*h)
+            + 0.30*Math.sin(5*theta - 1.1*k*h + 1.2)
+            + 0.25*Math.sin(2*theta + 0.6*k*h + 2.4));
+  }
+  return 0;
+}
+
+// Décale la méridienne vers l'INTÉRIEUR de la matière (offset de droites +
+// intersection = miter), pas une moyenne de normales qui amincirait la paroi
+// dans les angles. Les deux extrémités sont ramenées sur le plan de coupe pour
+// que les couronnes haute et basse soient plates (appui plateau propre).
+function offsetMeridianInward(profile, wall){
+  const n = profile.length;
+  const dirs = [], norms = [];
+  for(let i=0;i<n-1;i++){
+    const dr = profile[i+1].r-profile[i].r, dh = profile[i+1].h-profile[i].h;
+    const L = Math.hypot(dr,dh) || 1;
+    dirs.push({r:dr/L, h:dh/L});
+    norms.push({r:-dh/L, h:dr/L});   // normale rentrante
+  }
+  const inner = new Array(n);
+  let thinned = false;
+  for(let i=0;i<n;i++){
+    let pt;
+    if(i===0 || i===n-1){
+      const s = (i===0) ? 0 : n-2;
+      const A = { r: profile[i].r + wall*norms[s].r, h: profile[i].h + wall*norms[s].h };
+      // ramener sur le plan horizontal de l'extrémité
+      const t = Math.abs(dirs[s].h) > 1e-6 ? (profile[i].h - A.h)/dirs[s].h : 0;
+      pt = { r: A.r + t*dirs[s].r, h: profile[i].h };
+    } else {
+      const A = { r: profile[i].r + wall*norms[i-1].r, h: profile[i].h + wall*norms[i-1].h };
+      const B = { r: profile[i].r + wall*norms[i].r,   h: profile[i].h + wall*norms[i].h };
+      const d1 = dirs[i-1], d2 = dirs[i];
+      const den = d1.r*d2.h - d1.h*d2.r;
+      if(Math.abs(den) < 1e-6){ pt = {r:(A.r+B.r)/2, h:(A.h+B.h)/2}; }
+      else {
+        const t = ((B.r-A.r)*d2.h - (B.h-A.h)*d2.r)/den;
+        let cand = { r: A.r + t*d1.r, h: A.h + t*d1.h };
+        // limite de miter : pas de pic aberrant dans un angle très fermé
+        if(Math.hypot(cand.r-profile[i].r, cand.h-profile[i].h) > 3*wall) cand = {r:(A.r+B.r)/2, h:(A.h+B.h)/2};
+        pt = cand;
+      }
+    }
+    const maxR = profile[i].r - 0.2;
+    if(pt.r > maxR){ pt.r = maxR; }
+    if(pt.r < 0.8){ pt.r = 0.8; thinned = true; }   // rayon trop faible : paroi localement plus épaisse
+    inner[i] = pt;
+  }
+  // h intérieur strictement croissant, borné par les plans de coupe
+  const hBot = profile[0].h, hTop = profile[n-1].h;
+  for(let i=0;i<n;i++) inner[i].h = Math.max(hBot, Math.min(hTop, inner[i].h));
+  for(let i=1;i<n;i++) if(inner[i].h <= inner[i-1].h) inner[i].h = Math.min(hTop, inner[i-1].h + 0.01);
+  return { inner, thinned };
+}
+
+// Coupe le profil entre deux hauteurs (découpe en modules imprimés).
+function sliceProfile(profile, h0, h1){
+  const radiusAt = hh => {
+    if(hh <= profile[0].h) return profile[0].r;
+    for(let i=0;i<profile.length-1;i++){
+      if(hh <= profile[i+1].h){
+        const t = (hh-profile[i].h)/Math.max(1e-6, profile[i+1].h-profile[i].h);
+        return profile[i].r + t*(profile[i+1].r-profile[i].r);
+      }
+    }
+    return profile[profile.length-1].r;
+  };
+  const out = [{h:h0, r:radiusAt(h0)}];
+  profile.forEach(p=>{ if(p.h > h0+0.05 && p.h < h1-0.05) out.push({h:p.h, r:p.r}); });
+  out.push({h:h1, r:radiusAt(h1)});
+  return out;
+}
+
+/* SCULPTURE — torsion et courbure. Ce sont des transformations point-à-point
+ * continues appliquées après la révolution : la topologie est intacte (le
+ * maillage reste étanche) et le volume est conservé (rotation + cisaillement).
+ *  · torsion  : chaque anneau tourne de twistDegPerMm × hauteur → cannelures
+ *               qui s'enroulent, effet vrillé.
+ *  · courbure : décalage latéral parabolique → la pièce se penche/tord,
+ *               bendDeg = inclinaison atteinte au sommet.
+ * ATTENTION : la courbure ajoute un surplomb que l'analyse 2D du méridien ne
+ * voit pas — c'est signalé dans les avertissements. */
+function sculptXY(x, y, z, sc, hRef){
+  if(!sc) return [x,y];
+  let X=x, Y=y;
+  if(sc.twistDegPerMm){
+    const a = sc.twistDegPerMm*Math.PI/180*z, c=Math.cos(a), s=Math.sin(a);
+    X = x*c - y*s; Y = x*s + y*c;
+  }
+  if(sc.bendDeg && hRef>0){
+    const t = Math.max(0, Math.min(1, z/hRef));
+    X += Math.tan(sc.bendDeg*Math.PI/180) * hRef * 0.5 * t*t;
+  }
+  return [X,Y];
+}
+
+// Anneau de sommets à une hauteur donnée, déplacement de style + sculpture compris.
+function ringAt(r, h, segments, surf, sign, sculpt, hRef){
+  const ring = [];
+  for(let j=0;j<segments;j++){
+    const th = j/segments*Math.PI*2;
+    const d = surfaceDisplacement(surf, th, h);
+    const rr = Math.max(0.4, r + d*sign);
+    const [x,y] = sculptXY(rr*Math.cos(th), rr*Math.sin(th), h, sculpt, hRef);
+    ring.push([x, y, h]);
+  }
+  return ring;
+}
+
+/* Coque creuse : extérieur + intérieur + couronnes plates haut/bas.
+ * Renvoie des triangles bruts [[x,y,z]×3], normales sortantes (volume > 0). */
+function buildShellMesh(profile, wallMm, segments, surf, sculpt, hRef){
+  if(profile.length < 2) return [];
+  const stl = SURFACE_STYLES[surf.style];
+  if(stl && stl.perforated) return buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef);
+  const outerP = profile.map(p=>({h:p.h, r:p.r}));
+  const { inner } = offsetMeridianInward(outerP, wallMm);
+  const N = Math.max(3, segments|0);
+  const H = hRef || outerP[outerP.length-1].h;
+  const outR = outerP.map(p=>ringAt(p.r, p.h, N, surf, 1, sculpt, H));
+  const inR  = inner.map(p=>ringAt(p.r, p.h, N, surf, 1, sculpt, H));
+  const tris = [];
+
+  // surface extérieure — normale radiale sortante
+  for(let i=0;i<outR.length-1;i++){
+    for(let j=0;j<N;j++){
+      const j2=(j+1)%N;
+      const A=outR[i][j], B=outR[i][j2], C=outR[i+1][j2], D=outR[i+1][j];
+      tris.push([A,B,C]); tris.push([A,C,D]);
+    }
+  }
+  // surface intérieure — même quads, enroulement inversé (normale vers l'axe)
+  for(let i=0;i<inR.length-1;i++){
+    for(let j=0;j<N;j++){
+      const j2=(j+1)%N;
+      const A=inR[i][j], B=inR[i][j2], C=inR[i+1][j2], D=inR[i+1][j];
+      tris.push([A,C,B]); tris.push([A,D,C]);
+    }
+  }
+  // couronne basse (normale -Z) et couronne haute (normale +Z)
+  const last = outR.length-1;
+  for(let j=0;j<N;j++){
+    const j2=(j+1)%N;
+    const Ob=outR[0][j], Ob2=outR[0][j2], Ib=inR[0][j], Ib2=inR[0][j2];
+    tris.push([Ob, Ib, Ob2]); tris.push([Ib, Ib2, Ob2]);
+    const Ot=outR[last][j], Ot2=outR[last][j2], It=inR[last][j], It2=inR[last][j2];
+    tris.push([Ot, Ot2, It]); tris.push([It, Ot2, It2]);
+  }
+  return tris;
+}
+
+/* Collier d'emboîtement (option multi-pièces) : tube fermé posé au sommet du
+ * module bas, qui plonge dans le module du dessus. Corps distinct qui chevauche
+ * la paroi — l'union est faite par le slicer, pratique atelier standard. */
+function buildCollarMesh(rInnerAtCut, hCut, segments, joint, sculpt, hRef){
+  const rOut = Math.max(3, rInnerAtCut - joint.clearanceMm);
+  const rIn  = Math.max(1.5, rOut - joint.collarWallMm);
+  const h0 = hCut - joint.overlapMm, h1 = hCut + joint.collarHeightMm;
+  const N = Math.max(3, segments|0);
+  // le collier subit la même sculpture que le corps, sinon il sortirait de la paroi
+  const flat = (r,h)=>{ const ring=[]; for(let j=0;j<N;j++){ const th=j/N*Math.PI*2;
+    const [x,y]=sculptXY(r*Math.cos(th), r*Math.sin(th), h, sculpt, hRef); ring.push([x,y,h]); } return ring; };
+  const oL=flat(rOut,h0), oU=flat(rOut,h1), iL=flat(rIn,h0), iU=flat(rIn,h1);
+  const tris=[];
+  for(let j=0;j<N;j++){
+    const j2=(j+1)%N;
+    tris.push([oL[j],oL[j2],oU[j2]]); tris.push([oL[j],oU[j2],oU[j]]);        // extérieur
+    tris.push([iL[j],iU[j2],iL[j2]]); tris.push([iL[j],iU[j],iU[j2]]);        // intérieur
+    tris.push([oL[j],iL[j],oL[j2]]);  tris.push([iL[j],iL[j2],oL[j2]]);        // couronne basse
+    tris.push([oU[j],oU[j2],iU[j]]);  tris.push([iU[j],oU[j2],iU[j2]]);        // couronne haute
+  }
+  return { tris, rOut, rIn, h0, h1 };
+}
+
+/* ── Mesures sur le maillage (théorème de la divergence) ─────────────────── */
+function meshVolumeMm3(tris){
+  let v=0;
+  for(const [a,b,c] of tris){
+    v += (a[0]*(b[1]*c[2]-b[2]*c[1]) - a[1]*(b[0]*c[2]-b[2]*c[0]) + a[2]*(b[0]*c[1]-b[1]*c[0]))/6;
+  }
+  return v;
+}
+function meshCentroid(tris){
+  let vol=0, cx=0, cy=0, cz=0;
+  for(const [a,b,c] of tris){
+    const dv = (a[0]*(b[1]*c[2]-b[2]*c[1]) - a[1]*(b[0]*c[2]-b[2]*c[0]) + a[2]*(b[0]*c[1]-b[1]*c[0]))/6;
+    vol += dv;
+    cx += dv*(a[0]+b[0]+c[0])/4; cy += dv*(a[1]+b[1]+c[1])/4; cz += dv*(a[2]+b[2]+c[2])/4;
+  }
+  if(Math.abs(vol) < 1e-9) return {x:0,y:0,z:0,vol:0};
+  return {x:cx/vol, y:cy/vol, z:cz/vol, vol};
+}
+// Étanchéité : chaque arête orientée doit avoir exactement une jumelle inverse.
+function meshOpenEdges(tris){
+  const key=(p,q)=>p.map(v=>v.toFixed(3)).join(',')+'|'+q.map(v=>v.toFixed(3)).join(',');
+  const seen = new Map();
+  for(const [a,b,c] of tris){
+    [[a,b],[b,c],[c,a]].forEach(([p,q])=>{
+      const k=key(p,q), rk=key(q,p);
+      if(seen.get(rk)) seen.set(rk, seen.get(rk)-1);
+      else seen.set(k, (seen.get(k)||0)+1);
+    });
+  }
+  let open=0; seen.forEach(v=>{ if(v>0) open+=v; });
+  return open;
+}
+// Angle de basculement : atan(rayon d'appui / hauteur du centre de gravité).
+function tipAngleDeg(tris, baseRadiusMm, hBottomMm){
+  const c = meshCentroid(tris);
+  const cgH = Math.max(0.1, c.z - hBottomMm);
+  return { deg: Math.atan2(baseRadiusMm, cgH)*180/Math.PI, cgHeightMm: cgH };
+}
+/* ==GEOM-CORE-END== */
+
 /* ── Editeur de profil (coupe 2D cotée) ─────────────────────────────────── */
 const pc = $('profileCanvas'), pctx = pc.getContext('2d');
 const PAD = {l:150, r:20, t:20, b:20};
-function pMapX(r){ return PAD.l + (r/PRINT_BOUNDS.MAX_RADIUS_MM) * (pc.width-PAD.l-PAD.r); }
-function pMapY(h){ return pc.height - PAD.b - (h/PRINT_BOUNDS.MAX_HEIGHT_MM) * (pc.height-PAD.t-PAD.b); }
-function pUnmapX(x){ return Math.max(0,(x-PAD.l) / (pc.width-PAD.l-PAD.r) * PRINT_BOUNDS.MAX_RADIUS_MM); }
-function pUnmapY(y){ return Math.max(0,(pc.height-PAD.b-y) / (pc.height-PAD.t-PAD.b) * PRINT_BOUNDS.MAX_HEIGHT_MM); }
+// L'échelle de la coupe suit les bornes du TYPE de lampe : une applique (140 mm)
+// n'est pas dessinée à l'échelle d'une lampe à poser (250 mm).
+function pMapX(r){ return PAD.l + (r/bounds().maxR) * (pc.width-PAD.l-PAD.r); }
+function pMapY(h){ return pc.height - PAD.b - (h/bounds().maxH) * (pc.height-PAD.t-PAD.b); }
+function pUnmapX(x){ return Math.max(0,(x-PAD.l) / (pc.width-PAD.l-PAD.r) * bounds().maxR); }
+function pUnmapY(y){ return Math.max(0,(pc.height-PAD.b-y) / (pc.height-PAD.t-PAD.b) * bounds().maxH); }
 
+// Pente du segment par rapport à la verticale (toujours positive) — sert à
+// décrire la forme, pas à juger l'imprimabilité.
 function segmentAngleDeg(p1,p2){
   const dh=p2.h-p1.h, dr=p2.r-p1.r;
   return Math.atan2(Math.abs(dr), Math.max(0.001,dh)) * 180/Math.PI;
+}
+
+/* SURPLOMB RÉEL — en FDM, seule une paroi qui S'ÉVASE en montant crée un
+ * porte-à-faux : chaque couche dépasse celle du dessous et imprime dans le vide.
+ * Une paroi qui se resserre est auto-portante, quelle que soit sa pente (c'est le
+ * précédent atelier : un abat-jour imprimé sommet en bas passe sans support).
+ * L'ancienne mesure utilisait |dr| et sanctionnait donc aussi les rétrécissements,
+ * ce qui rendait le retournement de la pièce sans effet sur le diagnostic. */
+function overhangDeg(p1,p2){
+  const dh=p2.h-p1.h, dr=p2.r-p1.r;
+  return dr <= 0 ? 0 : Math.atan2(dr, Math.max(0.001,dh)) * 180/Math.PI;
 }
 
 function drawProfile(){
@@ -473,7 +1359,8 @@ function drawProfile(){
 
   // grid (every 20mm)
   pctx.strokeStyle='rgba(255,255,255,.05)'; pctx.lineWidth=1;
-  for(let hh=0; hh<=PRINT_BOUNDS.MAX_HEIGHT_MM; hh+=20){
+  const bH = bounds().maxH;
+  for(let hh=0; hh<=bH; hh+=20){
     const y=pMapY(hh); pctx.beginPath(); pctx.moveTo(PAD.l-90,y); pctx.lineTo(w-PAD.r,y); pctx.stroke();
   }
   // axis of symmetry
@@ -493,11 +1380,11 @@ function drawProfile(){
   }
   pctx.lineWidth=2;
   pctx.strokeStyle='rgba(100,210,255,.35)'; pathSide(-1); pctx.stroke();
-  pctx.strokeStyle=state.color; pathSide(1); pctx.stroke();
+  pctx.strokeStyle=bodyColor(state.body); pathSide(1); pctx.stroke();
 
   // segment warnings (right side)
   for(let i=0;i<pr.length-1;i++){
-    const a=segmentAngleDeg(pr[i],pr[i+1]);
+    const a=overhangDeg(pr[i],pr[i+1]);
     const col = a>OVERHANG.HARD_DEG?'#ff453a':(a>OVERHANG.WARN_DEG?'#ff9f0a':null);
     if(col){
       pctx.strokeStyle=col; pctx.lineWidth=4;
@@ -514,25 +1401,13 @@ function drawProfile(){
     pctx.strokeStyle='#000'; pctx.lineWidth=1.5; pctx.stroke();
   });
 
-  // modules assemblés (coupe) — rectangles symétriques, vert=ajusté / rouge=conflit
-  state.modules.forEach(entry=>{
-    const g=moduleGeom(entry), fit=moduleFit(entry);
-    const halfW = g.dia ? (pMapX(g.dia/2)-axisX) : (pMapX(profileRadiusAt(0))-axisX);
-    const y1=pMapY(g.h+g.thickMm), y2=pMapY(g.h);
-    pctx.setLineDash([5,3]); pctx.lineWidth=1.5;
-    pctx.strokeStyle = fit.ok ? 'rgba(48,209,88,.9)' : 'rgba(255,69,58,.95)';
-    pctx.fillStyle   = fit.ok ? 'rgba(48,209,88,.14)' : 'rgba(255,69,58,.16)';
-    pctx.beginPath(); pctx.rect(axisX-halfW, y1, halfW*2, Math.max(2,y2-y1));
-    pctx.fill(); pctx.stroke(); pctx.setLineDash([]);
-  });
-
   // labels
   pctx.fillStyle='#86868b'; pctx.font='11px -apple-system,sans-serif'; pctx.textAlign='right';
-  for(let hh=0; hh<=PRINT_BOUNDS.MAX_HEIGHT_MM; hh+=40){ pctx.fillText(hh+' mm', PAD.l-96, pMapY(hh)+4); }
+  for(let hh=0; hh<=bH; hh+=40){ pctx.fillText(hh+' mm', PAD.l-96, pMapY(hh)+4); }
   pctx.textAlign='left';
   pctx.fillText('axe', axisX-14, h-6);
-  pctx.fillStyle='rgba(255,159,10,.9)'; pctx.fillText('■ 45-55°', PAD.l-96, 16);
-  pctx.fillStyle='rgba(255,69,58,.9)'; pctx.fillText('■ >55° (support requis)', PAD.l-96, 30);
+  pctx.fillStyle='rgba(255,159,10,.9)'; pctx.fillText('■ évasement 45-55°', PAD.l-96, 16);
+  pctx.fillStyle='rgba(255,69,58,.9)'; pctx.fillText('■ évasement >55° (support)', PAD.l-96, 30);
 }
 
 let dragIdx=-1;
@@ -573,14 +1448,29 @@ window.addEventListener('mousemove', e=>{
   const {x,y}=canvasPos(e);
   const p = state.profile[dragIdx];
   p.r = pUnmapX(x); p.h = pUnmapY(y);
-  clampPoint(p, dragIdx===state.profile.length-1);
+  clampPoint(p, dragIdx===socketEndIdx());
   drawProfile(); // live drag feedback without full renumber to keep index stable
 });
 window.addEventListener('mouseup', ()=>{
   if(dragIdx>=0){ dragIdx=-1; normalizeProfile(); renderAll(); }
 });
-pc.addEventListener('touchstart', e=>{ e.preventDefault(); pc.dispatchEvent(new MouseEvent('mousedown', {})); const {x,y}=canvasPos(e); const idx=nearestPoint(x,y); if(idx>=0){state.selected=idx; dragIdx=idx;} renderAll(); }, {passive:false});
-pc.addEventListener('touchmove', e=>{ e.preventDefault(); if(dragIdx<0) return; const {x,y}=canvasPos(e); const p=state.profile[dragIdx]; p.r=pUnmapX(x); p.h=pUnmapY(y); clampPoint(p, dragIdx===state.profile.length-1); drawProfile(); }, {passive:false});
+// Tactile : même logique que la souris (sélection OU ajout de point) — l'ancienne
+// version renvoyait un MouseEvent sans coordonnées, donc on ne pouvait pas ajouter
+// de point au doigt.
+pc.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  const {x,y}=canvasPos(e);
+  const idx=nearestPoint(x,y);
+  if(idx>=0){ state.selected=idx; dragIdx=idx; renderAll(); return; }
+  if(x>=PAD.l && x<=pc.width-PAD.r && y>=PAD.t && y<=pc.height-PAD.b){
+    const np={h:pUnmapY(y), r:pUnmapX(x)};
+    state.profile.push(np);
+    normalizeProfile();
+    state.selected=state.profile.indexOf(np);
+    renderAll();
+  }
+}, {passive:false});
+pc.addEventListener('touchmove', e=>{ e.preventDefault(); if(dragIdx<0) return; const {x,y}=canvasPos(e); const p=state.profile[dragIdx]; p.r=pUnmapX(x); p.h=pUnmapY(y); clampPoint(p, dragIdx===socketEndIdx()); drawProfile(); }, {passive:false});
 pc.addEventListener('touchend', ()=>{ if(dragIdx>=0){dragIdx=-1; normalizeProfile(); renderAll();} });
 
 $('delPoint').onclick=()=>{
@@ -593,80 +1483,532 @@ $('delPoint').onclick=()=>{
 
 /* ── Aperçu 3D (révolution du profil, wireframe/solide ombré) ───────────── */
 const vc = $('previewCanvas'), vctx = vc.getContext('2d');
-let azimuth = 0.7, elevation = 0.35;
+const view = { az:0.7, el:0.35, zoom:1, explode:0, spin:0 };
 function project3d(x,y,z){
-  // rotate around Y (azimuth) then tilt (elevation)
-  const cx=Math.cos(azimuth), sx=Math.sin(azimuth);
+  // rotate around Y (azimuth) then tilt (elevation) — depth croissante = plus loin
+  const cx=Math.cos(view.az), sx=Math.sin(view.az);
   let X = x*cx - z*sx, Z = x*sx + z*cx;
-  const ce=Math.cos(elevation), se=Math.sin(elevation);
+  const ce=Math.cos(view.el), se=Math.sin(view.el);
   let Y = y*ce - Z*se, Zd = y*se + Z*ce;
   return {x:X, y:Y, depth:Zd};
 }
-function drawPreview(){
-  const w=vc.width,h=vc.height;
-  vctx.clearRect(0,0,w,h); vctx.fillStyle='#0e0e10'; vctx.fillRect(0,0,w,h);
-  const pr = state.profile;
-  if(pr.length<2) return;
-  const N=28;
-  const scale = Math.min((w-60)/(2*PRINT_BOUNDS.MAX_RADIUS_MM), (h-60)/PRINT_BOUNDS.MAX_HEIGHT_MM) * 0.95;
-  const cx=w/2, cy=h*0.82;
-  const maxH = pr[pr.length-1].h;
 
-  // build vertex grid [i][j]
-  const verts = pr.map(p => {
-    const ring=[];
-    for(let j=0;j<N;j++){
-      const th = j/N*Math.PI*2;
-      const x=p.r*Math.cos(th), z=p.r*Math.sin(th), y=(p.h - maxH/2);
-      const proj = project3d(x,y,z);
-      ring.push({sx: cx+proj.x*scale, sy: cy-proj.y*scale, depth:proj.depth});
+/* ── Construction du maillage (cache) ─────────────────────────────────────
+ * Le maillage est reconstruit à chaque changement de paramètre, PAS pendant
+ * l'orbite : tourner la pièce ne fait que reprojeter les triangles en cache.
+ * ────────────────────────────────────────────────────────────────────────── */
+let MESH = { parts:[], preview:[], stats:{} };
+
+function profileTopH(prof){ const p=prof||state.profile; return p.length ? p[p.length-1].h : 0; }
+function cutPlanesFor(prof){
+  const top = profileTopH(prof);
+  const n = state.split.on ? Math.max(2, Math.min(JOINT.maxModules, state.split.count)) : 1;
+  return Array.from({length:n+1},(_,i)=> top*i/n);
+}
+function partLabel(i, n){
+  if(n===1) return 'monobloc';
+  if(i===0) return 'bas';
+  if(i===n-1) return 'haut';
+  return 'module '+(i+1);
+}
+
+/* ── Agencement des corps ─────────────────────────────────────────────────
+ * Rend, pour chaque corps actif, sa place dans l'assemblage : translation,
+ * rotation autour de l'axe vertical, et échelle. L'échelle est CUITE dans la
+ * géométrie (c'est une pièce physiquement différente) ; la translation et la
+ * rotation ne servent qu'à l'aperçu et au plan d'assemblage du dossier —
+ * chaque corps est exporté à son propre origine, prêt à poser sur le plateau.
+ * « Organique » = dispersion déterministe tirée de la graine : espacements,
+ * échelles et rotations irréguliers, mais reproductibles.
+ * ────────────────────────────────────────────────────────────────────────── */
+function bodyPlacements(){
+  const c = state.compo, n = Math.max(1, c.count);
+  const cfg = TYPES[state.type].compo;
+  const baseFirst = !!cfg.baseFirst && n > 1 && c.layout !== 'vertical';
+  const rng = mulberry32(hashSeed('compo|'+(state.seed||'preset')+'|'+n+'|'+c.layout));
+  const out = [];
+  let stack = 0;
+  for(let i=0;i<n;i++){
+    const b = state.bodies[i] || newBody();
+    const j = c.symmetric ? 0 : (rng()*2-1);      // dispersion organique
+    const scale = (c.symmetric ? 1 : (1 + 0.22*j)) * (b.scale || 1);
+    const bodyH = profileTopH(b.profile) * scale;
+    let tx=0, ty=0, tz=0, rot=0;
+    if(c.layout === 'vertical'){
+      tz = stack; stack += bodyH;
+    } else if(c.layout === 'ligne'){
+      if(baseFirst && i===0){ tx=0; tz=0; }
+      else {
+        const k = baseFirst ? i-1 : i, m = baseFirst ? n-1 : n;
+        tx = (k - (m-1)/2) * c.spacingMm * (1 + 0.18*j);
+        tz = baseFirst ? profileTopH(state.bodies[0].profile) : 0;
+      }
+    } else { // circulaire
+      if(baseFirst && i===0){ tx=0; ty=0; tz=0; }
+      else {
+        const k = baseFirst ? i-1 : i, m = Math.max(1, baseFirst ? n-1 : n);
+        const a = k/m*Math.PI*2 + (c.symmetric ? 0 : 0.5*j);
+        const R = c.ringRadiusMm * (1 + 0.15*j);
+        tx = R*Math.cos(a); ty = R*Math.sin(a); rot = a*180/Math.PI;
+        tz = baseFirst ? profileTopH(state.bodies[0].profile) : 0;
+      }
     }
-    return ring;
-  });
+    out.push({ tx: tx + (b.offsetXMm||0), ty, tz: tz + (b.offsetZMm||0),
+               rot: rot + (b.rotDeg||0), scale, bodyH,
+               role: (baseFirst && i===0) ? 'base' : (n>1 ? 'corps '+(i+1) : 'corps unique') });
+  }
+  return out;
+}
 
-  const light = {x:0.4,y:0.7,z:0.6};
-  const lightLen = Math.hypot(light.x,light.y,light.z);
-  light.x/=lightLen; light.y/=lightLen; light.z/=lightLen;
+// Résolution angulaire d'un corps : dépend de SON style de surface. Un motif
+// ajouré n'est jamais dégradé pour l'aperçu (les cellules tomberaient ailleurs).
+// Métriques approchées d'un corps, pour dimensionner la résolution du motif.
+function bodyMetrics(bi){
+  const b = state.bodies[bi] || state.bodies[0];
+  const pr = (b && b.profile.length) ? b.profile : [{h:0,r:50},{h:150,r:30}];
+  const rMean = pr.reduce((s,p)=>s+p.r,0)/pr.length;
+  return { rMean, H: Math.max(1, pr[pr.length-1].h - pr[0].h) };
+}
+function segFor(bi, mode){
+  const surf = bodySurface(bi);
+  const perf = !!(SURFACE_STYLES[surf.style]||{}).perforated;
+  if(perf){
+    const {rMean,H} = bodyMetrics(bi);
+    return voroResolution(surf, rMean, H).segments;   // jamais dégradé : le motif bougerait
+  }
+  const chosen = parseInt(($('stlSegments')||{}).value||'14',10);
+  const seg = angularSegments(surf, chosen);
+  // l'aperçu est plafonné pour rester fluide (invisible à cette taille) ; l'export
+  // garde la pleine résolution, et l'écart est affiché sous l'aperçu
+  return (mode==='preview') ? Math.min(seg, 76) : seg;
+}
+// Pas vertical effectif : le plus fin des trois besoins (style, torsion, ajourage).
+// En mode aperçu on plafonne la finesse des styles continus — invisible sur un
+// canvas de 400 px, mais c'est ce qui garde l'orbite fluide. L'ajourage, lui,
+// n'est jamais dégradé : ses cellules tomberaient ailleurs.
+function effectiveStepMm(bi, surf, mode){
+  const b = state.bodies[bi];
+  const perf = !!(SURFACE_STYLES[surf.style]||{}).perforated;
+  const cand = [styleStepMm(surf), twistStepMm(b && b.sculpt)];
+  if(perf){
+    const {rMean,H} = bodyMetrics(bi);
+    cand.push(voroResolution(surf, rMean, H).stepMm);
+  }
+  const pos = cand.filter(x=>x>0);
+  let step = pos.length ? Math.min(...pos) : 0;
+  if(mode==='preview' && !perf && step>0) step = Math.max(step, 2.0);
+  return step;
+}
+
+function buildParts(segList, mode){
+  const wall = parseFloat(state.wall);
+  const places = bodyPlacements();
+  const topMin = SOCKETS[state.socket].housingMinRadiusMm;
+  const parts = [];
+  MESH.clamped = [];
+  places.forEach((pl, bi)=>{
+    const body = state.bodies[bi];
+    if(!body || body.profile.length < 2) return;
+    const surf = bodySurface(bi);
+    const segments = segList[bi];
+    // échelle cuite dans la géométrie
+    const prof = body.profile.map(p=>({ h:p.h*pl.scale, r:p.r*pl.scale }));
+    if(prof[prof.length-1].r < topMin){       // le haut doit toujours loger le culot
+      MESH.clamped.push({ body:bi+1, from:+prof[prof.length-1].r.toFixed(1), to:topMin });
+      prof[prof.length-1].r = topMin;
+    }
+    const hRef = profileTopH(prof);
+    const base = resampleMeridian(prof, surf, effectiveStepMm(bi, surf, mode));
+    const cuts = cutPlanesFor(prof);
+    const n = cuts.length-1;
+    for(let i=0;i<n;i++){
+      const sp = (n===1) ? base : sliceProfile(base, cuts[i], cuts[i+1]);
+      let tris = buildShellMesh(sp, wall, segments, surf, body.sculpt, hRef);
+      let collar = null;
+      if(i < n-1){
+        const { inner } = offsetMeridianInward(sp, wall);
+        collar = buildCollarMesh(inner[inner.length-1].r, cuts[i+1], segments, JOINT, body.sculpt, hRef);
+        tris = tris.concat(collar.tris);
+      }
+      const lbl = (places.length>1 ? pl.role : '') + (n>1 ? (places.length>1?' · ':'')+partLabel(i,n) : '');
+      parts.push({ tris, h0:cuts[i], h1:cuts[i+1], collar, index:i, nslice:n,
+                   body:bi, xf:pl, style:surf.style, refVolMm3:pappusShellVolMm3(sp, wall),
+                   label: lbl || 'monobloc' });
+    }
+  });
+  return parts;
+}
+
+// Place un sommet dans l'assemblage (aperçu + empreinte au sol), écartement des
+// modules empilés compris.
+function placeVertex(v, xf, extraZ){
+  const a = (xf.rot||0)*Math.PI/180, c=Math.cos(a), s=Math.sin(a);
+  return [ v[0]*c - v[1]*s + xf.tx, v[0]*s + v[1]*c + xf.ty, v[2] + xf.tz + (extraZ||0) ];
+}
+
+function rebuildMesh(){
+  const n = Math.max(1, state.compo.count);
+  const segsExport  = Array.from({length:n},(_,i)=>segFor(i,'export'));
+  const segsPreview = Array.from({length:n},(_,i)=>segFor(i,'preview'));
+  const same = segsExport.every((v,i)=>v===segsPreview[i])
+    && Array.from({length:n}).every((_,i)=>effectiveStepMm(i,bodySurface(i),'export')===effectiveStepMm(i,bodySurface(i),'preview'));
+  PERF_ACC = { cells:0, kept:0 };
+  MESH.parts   = buildParts(segsExport, 'export');
+  const perfExport = { ...PERF_ACC };
+  MESH.preview = same ? MESH.parts : buildParts(segsPreview, 'preview');
+  const segExport = Math.max(...segsExport), segPreview = Math.max(...segsPreview);
+  const volMm3 = MESH.parts.reduce((s,p)=>s+meshVolumeMm3(p.tris), 0);
+  const tris   = MESH.parts.reduce((s,p)=>s+p.tris.length, 0);
+  // stabilité : évaluée sur le corps posé au sol (le premier), avec son rayon d'appui réel
+  const ground = MESH.parts.filter(p=>Math.abs(p.xf.tz)<0.01 && p.index===0);
+  const groundTris = ground.flatMap(p=>p.tris);
+  const groundR = ground.length ? Math.max(...ground.map(p=>Math.hypot(p.xf.tx,p.xf.ty) + (state.bodies[p.body].profile[0].r*p.xf.scale))) : 1;
+  const tip = groundTris.length ? tipAngleDeg(groundTris, groundR, 0) : {deg:0, cgHeightMm:0};
+  // boîte englobante de l'assemblage (cadrage de l'aperçu + empreinte)
+  let bb={minX:1e9,maxX:-1e9,minY:1e9,maxY:-1e9,minZ:1e9,maxZ:-1e9};
+  MESH.preview.forEach(p=>p.tris.forEach(t=>t.forEach(v=>{
+    const w=placeVertex(v,p.xf,0);
+    bb.minX=Math.min(bb.minX,w[0]); bb.maxX=Math.max(bb.maxX,w[0]);
+    bb.minY=Math.min(bb.minY,w[1]); bb.maxY=Math.max(bb.maxY,w[1]);
+    bb.minZ=Math.min(bb.minZ,w[2]); bb.maxZ=Math.max(bb.maxZ,w[2]);
+  })));
+  if(bb.maxX<bb.minX) bb={minX:0,maxX:1,minY:0,maxY:1,minZ:0,maxZ:1};
+  // économie de matière de l'ajourage : volume réel vs coque pleine équivalente
+  const refVol = MESH.parts.reduce((s,p)=>s+(p.refVolMm3||0), 0);
+  const perfParts = MESH.parts.filter(p=>(SURFACE_STYLES[p.style]||{}).perforated);
+  const perf = perfParts.length ? {
+    cells: perfExport.cells, kept: perfExport.kept, cellMm: perfExport.cellMm||0,
+    refVolMm3: refVol,
+    savedPct: refVol>0 ? Math.max(0, (1 - volMm3/refVol)*100) : 0,
+  } : null;
+  MESH.stats = { volMm3, tris, segExport, segPreview, tip, bodies:bodyPlacements().length,
+                 bbox:bb, perf, openEdges:null };
+}
+function drawPreview(){
+  const w=vc.width, h=vc.height;
+  vctx.clearRect(0,0,w,h); vctx.fillStyle='#0e0e10'; vctx.fillRect(0,0,w,h);
+  const parts = MESH.preview;
+  if(!parts || !parts.length || state.profile.length<2) return;
+
+  const bb = MESH.stats.bbox || {minX:-50,maxX:50,minY:-50,maxY:50,minZ:0,maxZ:200};
+  const gap = view.explode * 45;                       // écartement vertical des modules
+  const spanXY = Math.max(1, Math.max(bb.maxX-bb.minX, bb.maxY-bb.minY));
+  const midZ = (bb.minZ+bb.maxZ)/2;
+  const totalH = Math.max(1, (bb.maxZ-bb.minZ) + gap*Math.max(0,parts.length-1));
+  const scale = Math.min((w-70)/(spanXY*1.15), (h-70)/totalH) * 0.94 * view.zoom;
+  const cx=w/2, cy=h*0.52;
+  const L = {x:0.35, y:0.62, z:-0.70};                 // lumière en repère vue (z<0 = vers la caméra)
+  const cols = state.bodies.map((_,i)=>hexToRgb(bodyColor(i)));
 
   const faces=[];
-  for(let i=0;i<pr.length-1;i++){
-    for(let j=0;j<N;j++){
-      const j2=(j+1)%N;
-      const a=verts[i][j], b=verts[i][j2], c=verts[i+1][j2], d=verts[i+1][j];
-      const depth=(a.depth+b.depth+c.depth+d.depth)/4;
-      // normal via cross of two edges (in projected 2D+depth pseudo-space, good enough for shading direction)
-      const e1={x:b.sx-a.sx,y:b.sy-a.sy}, e2={x:d.sx-a.sx,y:d.sy-a.sy};
-      const cross = e1.x*e2.y - e1.y*e2.x;
-      const shadeBase = 0.45 + 0.45*Math.abs(Math.cos((j/N)*Math.PI*2 - azimuth));
-      faces.push({pts:[a,b,c,d], depth, shade: Math.max(0.2,Math.min(1,shadeBase))});
+  parts.forEach((part,pi)=>{
+    const dz = gap*pi;
+    const rotA = (part.xf.rot||0)*Math.PI/180, rc=Math.cos(rotA), rs=Math.sin(rotA);
+    for(const [a,b,c] of part.tris){
+      const e1=[b[0]-a[0], b[1]-a[1], b[2]-a[2]];
+      const e2=[c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+      let nx=e1[1]*e2[2]-e1[2]*e2[1], ny=e1[2]*e2[0]-e1[0]*e2[2], nz=e1[0]*e2[1]-e1[1]*e2[0];
+      const nl=Math.hypot(nx,ny,nz)||1; nx/=nl; ny/=nl; nz/=nl;
+      // la normale subit la rotation d'assemblage du corps
+      const rnx = nx*rc - ny*rs, rny = nx*rs + ny*rc;
+      // maillage Z-up → vue Y-up : (x, z, y)
+      const rn = project3d(rnx, nz, rny);
+      if(rn.depth >= 0) continue;                      // face de dos : jamais dessinée
+      const P = [a,b,c].map(v=>{
+        const wv = placeVertex(v, part.xf, dz);
+        const p = project3d(wv[0], wv[2]-midZ, wv[1]);
+        return {sx: cx+p.x*scale, sy: cy-p.y*scale, depth:p.depth};
+      });
+      const dot = rn.x*L.x + rn.y*L.y + rn.depth*L.z;
+      const shade = Math.max(0.16, Math.min(1, 0.24 + 0.80*Math.max(0,dot)));
+      faces.push({P, depth:(P[0].depth+P[1].depth+P[2].depth)/3, shade, pi,
+                  body:part.body||0, tint:(part.body||0)+part.index});
     }
-  }
+  });
   faces.sort((f1,f2)=>f2.depth-f1.depth);
-  const col = hexToRgb(state.color);
+
   faces.forEach(f=>{
-    const s=f.shade;
+    const col = cols[f.body] || cols[0];
+    const s = f.shade * (f.tint%2 ? 0.93 : 1);         // corps et modules discernables
+    const fill = `rgb(${col.r*s|0},${col.g*s|0},${col.b*s|0})`;
     vctx.beginPath();
-    f.pts.forEach((p,idx)=>{ if(idx===0) vctx.moveTo(p.sx,p.sy); else vctx.lineTo(p.sx,p.sy); });
+    vctx.moveTo(f.P[0].sx,f.P[0].sy); vctx.lineTo(f.P[1].sx,f.P[1].sy); vctx.lineTo(f.P[2].sx,f.P[2].sy);
     vctx.closePath();
-    vctx.fillStyle = `rgb(${col.r*s|0},${col.g*s|0},${col.b*s|0})`;
-    vctx.fill();
-    vctx.strokeStyle='rgba(0,0,0,.25)'; vctx.lineWidth=0.5; vctx.stroke();
+    vctx.fillStyle = fill; vctx.fill();
+    vctx.strokeStyle = fill; vctx.lineWidth = 1; vctx.stroke();   // supprime les coutures d'anticrénelage
   });
 
   vctx.fillStyle='#86868b'; vctx.font='11px -apple-system,sans-serif';
-  vctx.fillText('aperçu illustratif — glisse pour tourner', 12, h-12);
+  const st = SURFACE_STYLES[bodySurface(state.body).style];
+  const nb = MESH.stats.bodies||1;
+  vctx.fillText(`${st.label} · ${MESH.stats.segPreview||0} segments affichés (export : ${MESH.stats.segExport||0}) · `
+    + `${nb>1?nb+' corps':'1 corps'} · ${parts.length} pièce${parts.length>1?'s':''} à imprimer`, 12, h-12);
 }
 function hexToRgb(hex){
   const v=parseInt(hex.slice(1),16);
   return {r:(v>>16)&255, g:(v>>8)&255, b:v&255};
 }
-let rotDrag=false, lastX=0;
-vc.addEventListener('mousedown', e=>{ rotDrag=true; lastX=e.clientX; });
-window.addEventListener('mousemove', e=>{ if(!rotDrag) return; azimuth += (e.clientX-lastX)*0.01; lastX=e.clientX; drawPreview(); });
+
+/* ── Orbite complète : azimut + élévation + zoom molette + rotation auto ── */
+let rotDrag=false, lastX=0, lastY=0;
+function syncViewInputs(){
+  const e=$('vElev'), z=$('vZoom');
+  if(e) e.value = Math.round(view.el*180/Math.PI);
+  if(z) z.value = Math.round(view.zoom*100);
+}
+vc.addEventListener('mousedown', e=>{ rotDrag=true; lastX=e.clientX; lastY=e.clientY; e.preventDefault(); });
+window.addEventListener('mousemove', e=>{
+  if(!rotDrag) return;
+  view.az += (e.clientX-lastX)*0.01;
+  view.el = Math.max(-1.22, Math.min(1.40, view.el + (e.clientY-lastY)*0.008));
+  lastX=e.clientX; lastY=e.clientY;
+  syncViewInputs(); drawPreview();
+});
 window.addEventListener('mouseup', ()=>{ rotDrag=false; });
-vc.addEventListener('touchstart', e=>{ rotDrag=true; lastX=e.touches[0].clientX; }, {passive:true});
-vc.addEventListener('touchmove', e=>{ if(!rotDrag) return; azimuth += (e.touches[0].clientX-lastX)*0.01; lastX=e.touches[0].clientX; drawPreview(); }, {passive:true});
+// Le zoom se règle UNIQUEMENT au curseur (#vZoom) : pas de molette, pas de
+// pincement à deux doigts — sur trackpad le pincement déclenchait un zoom
+// parasite pendant qu'on essayait simplement de faire défiler la page.
+vc.addEventListener('touchstart', e=>{ rotDrag=true; lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; }, {passive:true});
+vc.addEventListener('touchmove', e=>{
+  if(!rotDrag) return;
+  view.az += (e.touches[0].clientX-lastX)*0.01;
+  view.el = Math.max(-1.22, Math.min(1.40, view.el + (e.touches[0].clientY-lastY)*0.008));
+  lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+  syncViewInputs(); drawPreview();
+}, {passive:true});
 window.addEventListener('touchend', ()=>{ rotDrag=false; });
+
+/* ════════════════════════════════════════════════════════════════════════
+ * RENDU STUDIO — « photo produit » calculée en local, hors ligne.
+ * Même maillage que le STL : rien n'est embelli côté géométrie, seul
+ * l'éclairage change. Éclairage 3 points + spéculaire Blinn-Phong + Fresnel,
+ * ombre de contact, reflet au sol. Aucune dépendance, aucune donnée envoyée.
+ * ════════════════════════════════════════════════════════════════════════ */
+const FINISHES = {
+  mat:         { label:'Mat (PLA brut)',      spec:0.05, shin:6,  fres:0.20, trans:0.00 },
+  satine:      { label:'Satiné',              spec:0.20, shin:22, fres:0.42, trans:0.00 },
+  brillant:    { label:'Brillant (verni)',    spec:0.55, shin:75, fres:0.70, trans:0.00 },
+  translucide: { label:'Translucide diffusant', spec:0.16, shin:26, fres:0.50, trans:0.75 },
+};
+const BACKDROPS = {
+  studio: { label:'Studio sombre', top:'#17171a', bot:'#050506', floor:'#0a0a0c', pool:'rgba(255,255,255,.09)', dark:true },
+  clair:  { label:'Studio clair',  top:'#f4f4f6', bot:'#dcdce1', floor:'#e8e8ec', pool:'rgba(255,255,255,.85)', dark:false },
+  chaud:  { label:'Ambiance chaude', top:'#2b1d14', bot:'#0c0806', floor:'#150e09', pool:'rgba(255,186,110,.16)', dark:true },
+};
+const RENDER = { finish:'satine', bg:'studio', lit:true, lastURL:null, ms:0 };
+
+// Faces projetées à une résolution arbitraire (indépendant de l'aperçu live).
+function sceneFaces(W, H){
+  const parts = MESH.parts;
+  const bb = MESH.stats.bbox || {minX:-50,maxX:50,minY:-50,maxY:50,minZ:0,maxZ:200};
+  const spanXY = Math.max(1, Math.max(bb.maxX-bb.minX, bb.maxY-bb.minY));
+  const totalH = Math.max(1, bb.maxZ-bb.minZ);
+  const scale = Math.min((W*0.78)/spanXY, (H*0.72)/totalH);
+  const cx = W/2, cy = H*0.60, midZ = (bb.minZ+bb.maxZ)/2;
+  const faces = [];
+  let groundY = -1e9, footR = 0;
+  parts.forEach(part=>{
+    const a2=(part.xf.rot||0)*Math.PI/180, rc=Math.cos(a2), rs=Math.sin(a2);
+    for(const [a,b,c] of part.tris){
+      const e1=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], e2=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];
+      let nx=e1[1]*e2[2]-e1[2]*e2[1], ny=e1[2]*e2[0]-e1[0]*e2[2], nz=e1[0]*e2[1]-e1[1]*e2[0];
+      const nl=Math.hypot(nx,ny,nz)||1; nx/=nl; ny/=nl; nz/=nl;
+      const rnx=nx*rc-ny*rs, rny=nx*rs+ny*rc;
+      const N = project3d(rnx, nz, rny);
+      if(N.depth >= 0) continue;
+      const P=[a,b,c].map(v=>{
+        const w=placeVertex(v, part.xf, 0);
+        const p=project3d(w[0], w[2]-midZ, w[1]);
+        const sy=cy-p.y*scale;
+        if(sy>groundY) groundY=sy;
+        footR=Math.max(footR, Math.hypot(w[0],w[1])*scale);
+        return {sx:cx+p.x*scale, sy, depth:p.depth};
+      });
+      faces.push({P, n:{x:N.x,y:N.y,z:N.depth}, depth:(P[0].depth+P[1].depth+P[2].depth)/3, body:part.body||0});
+    }
+  });
+  faces.sort((f1,f2)=>f2.depth-f1.depth);
+  return {faces, cx, cy, groundY, footR, scale};
+}
+
+function shadeFace(n, base, fin, lit){
+  // repère vue : la caméra regarde vers +depth décroissant, V = (0,0,-1)
+  const dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z;
+  const KEY={x:0.42,y:0.72,z:-0.55}, FILL={x:-0.65,y:0.12,z:-0.40}, RIM={x:-0.15,y:0.35,z:0.90};
+  const nk=1/Math.hypot(KEY.x,KEY.y,KEY.z), nf=1/Math.hypot(FILL.x,FILL.y,FILL.z), nr=1/Math.hypot(RIM.x,RIM.y,RIM.z);
+  const dK=Math.max(0, dot(n,{x:KEY.x*nk,y:KEY.y*nk,z:KEY.z*nk}));
+  const dF=Math.max(0, dot(n,{x:FILL.x*nf,y:FILL.y*nf,z:FILL.z*nf}));
+  const dR=Math.max(0, dot(n,{x:RIM.x*nr,y:RIM.y*nr,z:RIM.z*nr}));
+  const lum = 0.16 + 1.00*dK + 0.32*dF;
+  // spéculaire Blinn-Phong (vecteur médian entre lumière et caméra)
+  const Hv={x:KEY.x*nk+0, y:KEY.y*nk+0, z:KEY.z*nk-1};
+  const hl=1/Math.hypot(Hv.x,Hv.y,Hv.z);
+  const spec = fin.spec*Math.pow(Math.max(0, dot(n,{x:Hv.x*hl,y:Hv.y*hl,z:Hv.z*hl})), fin.shin);
+  const fres = fin.fres*Math.pow(1-Math.min(1,Math.abs(n.z)), 3);
+  // contre-jour + émissif quand la lampe est allumée (chaud, en périphérie)
+  const glow = lit ? (0.35*dR + fin.trans*0.55*Math.pow(1-Math.min(1,Math.abs(n.z)),1.6)) : 0.22*dR;
+  const r = base.r*lum + 255*spec + 235*fres*0.5 + 255*glow*0.55;
+  const g = base.g*lum + 255*spec + 240*fres*0.5 + 205*glow*0.55;
+  const b = base.b*lum + 255*spec + 255*fres*0.5 + 150*glow*0.55;
+  const cl=v=>Math.max(0,Math.min(255,v|0));
+  return `rgb(${cl(r)},${cl(g)},${cl(b)})`;
+}
+
+function renderStudio(){
+  const cv=$('renderCanvas'), ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+  const t0=performance.now();
+  const bg=BACKDROPS[RENDER.bg], fin=FINISHES[RENDER.finish];
+  const {faces, cx, groundY, footR} = sceneFaces(W,H);
+
+  // fond : dégradé vertical + halo de lumière derrière le sujet
+  const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,bg.top); g.addColorStop(1,bg.bot);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  const pool=ctx.createRadialGradient(cx,H*0.34,10,cx,H*0.34,W*0.55);
+  pool.addColorStop(0,bg.pool); pool.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=pool; ctx.fillRect(0,0,W,H);
+  // sol
+  const gy=Math.min(H-8, groundY);
+  const fl=ctx.createLinearGradient(0,gy,0,H); fl.addColorStop(0,bg.floor); fl.addColorStop(1,bg.bot);
+  ctx.fillStyle=fl; ctx.fillRect(0,gy,W,H-gy);
+
+  const cols=state.bodies.map((_,i)=>hexToRgb(bodyColor(i)));
+  const paint=(f,alpha)=>{
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=shadeFace(f.n, cols[f.body]||cols[0], fin, RENDER.lit);
+    ctx.beginPath();
+    ctx.moveTo(f.P[0].sx,f.P[0].sy); ctx.lineTo(f.P[1].sx,f.P[1].sy); ctx.lineTo(f.P[2].sx,f.P[2].sy);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=1; ctx.stroke();
+  };
+
+  // reflet au sol : la scène miroir, atténuée puis estompée
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,gy,W,H-gy); ctx.clip();
+  ctx.translate(0, 2*gy); ctx.scale(1,-1);
+  faces.forEach(f=>paint(f, 0.16));
+  ctx.restore();
+  ctx.globalAlpha=1;
+  const fade=ctx.createLinearGradient(0,gy,0,H); fade.addColorStop(0,'rgba(0,0,0,0)'); fade.addColorStop(1,bg.bot);
+  ctx.fillStyle=fade; ctx.fillRect(0,gy,W,H-gy);
+
+  // ombre de contact
+  const sh=ctx.createRadialGradient(cx,gy,4,cx,gy,Math.max(40,footR*1.5));
+  sh.addColorStop(0,'rgba(0,0,0,.62)'); sh.addColorStop(0.55,'rgba(0,0,0,.22)'); sh.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.save(); ctx.translate(cx,gy); ctx.scale(1,0.20); ctx.translate(-cx,-gy);
+  ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(cx,gy,Math.max(40,footR*1.5),0,7); ctx.fill();
+  ctx.restore();
+
+  // halo chaud si la lampe est allumée
+  if(RENDER.lit){
+    const c2=(faces.length?faces[faces.length-1].P[0].sy:H/2);
+    const bl=ctx.createRadialGradient(cx,c2,10,cx,c2,W*0.30);
+    bl.addColorStop(0,'rgba(255,196,120,.20)'); bl.addColorStop(1,'rgba(255,180,100,0)');
+    ctx.fillStyle=bl; ctx.fillRect(0,0,W,H);
+  }
+
+  faces.forEach(f=>paint(f,1));
+  ctx.globalAlpha=1;
+
+  // mention honnête, incrustée dans l'image exportée
+  ctx.fillStyle = bg.dark ? 'rgba(255,255,255,.34)' : 'rgba(0,0,0,.38)';
+  ctx.font='16px -apple-system,sans-serif';
+  ctx.fillText('Rendu indicatif — géométrie exacte, éclairage stylisé · Custom 3D Lamp Studio · DELIGNY R&D', 18, H-18);
+
+  RENDER.ms=Math.round(performance.now()-t0);
+  RENDER.lastURL=cv.toDataURL('image/png');
+  $('rDownload').disabled=false;
+  const info=$('renderInfo');
+  info.innerHTML='';
+  const d=document.createElement('div'); d.className='line ok';
+  d.textContent=`Rendu ${W}×${H} calculé en ${RENDER.ms} ms sur ${faces.length} faces visibles · finition ${fin.label} · ${BACKDROPS[RENDER.bg].label}`
+    + (state.compo.count>1?` · ${state.compo.count} corps aux couleurs propres`:'');
+  info.appendChild(d);
+  return RENDER.lastURL;
+}
+
+/* ── Pont AI Engine (fal img2img) ─────────────────────────────────────────
+ * On NE met AUCUNE clé dans cette page : elle est publique et statique. Le
+ * rendu AI passe par le moteur GENERAL DESIGN STUDIO qui tourne en local
+ * (python3 server.py, port 4555) et qui détient la clé côté serveur. Absent =
+ * bouton désactivé et explication, jamais de promesse en l'air.
+ * Doctrine maison : l'AI ne fabrique QUE des pixels, jamais la géométrie —
+ * le STL exporté n'est pas touché par ce rendu.
+ * ──────────────────────────────────────────────────────────────────────── */
+const AI = { base:'http://127.0.0.1:4555', ok:null, busy:false, note:'' };
+
+function aiPrompt(){
+  const b=state.bodies[state.body];
+  const surf=bodySurface(state.body);
+  const mat={PLA:'matte PLA',PLA_T:'translucent diffusing PLA',PETG:'satin PETG'}[state.material];
+  const texture={lowpoly:'faceted low-poly surface',smooth:'smooth continuous surface',
+    stries:(surf.cross?'crossed diamond fluting in relief':'vertical fluting'),
+    organic:'organic rippled surface',voronoi:'voronoi perforated lattice shell'}[surf.style];
+  const kind={suspension:'pendant lamp',poser:'table lamp',applique:'wall sconce'}[state.type];
+  return `professional product photography of a 3D printed ${kind}, ${mat}, ${texture}, `
+    + `${state.compo.count>1?state.compo.count+' stacked bodies, ':''}warm LED glow from inside, `
+    + `seamless studio backdrop, soft key light and rim light, subtle floor reflection, `
+    + `50mm lens, sharp focus, high detail, no text, no watermark`;
+}
+
+async function detectAI(){
+  try{
+    const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),1200);
+    const r=await fetch(AI.base+'/api/status',{signal:ctl.signal});
+    clearTimeout(to);
+    AI.ok = r.ok;
+  }catch(e){ AI.ok=false; }
+  renderAIBlock();
+}
+
+function renderAIBlock(){
+  const box=$('aiBlock'); if(!box) return;
+  if(AI.ok===null){ box.innerHTML='<div class="hint">Recherche du moteur AI local…</div>'; return; }
+  if(!AI.ok){
+    box.innerHTML = `<div class="disc-small"><b>Rendu AI (type KeyShot) — moteur local non détecté.</b><br>
+      Ce configurateur est une page statique : <b>aucune clé d'API n'y est stockée</b>, il ne peut donc pas appeler
+      un service d'image tout seul. Le rendu AI passe par le moteur <b>General Design Studio</b> lancé sur ta machine
+      (<code>python3 server.py</code>, port 4555), qui détient la clé côté serveur. Le rendu studio ci-dessus, lui,
+      fonctionne partout et hors ligne.</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="disc-small"><b>Moteur AI local détecté (General Design Studio, port 4555).</b>
+    Le rendu studio ci-dessus est envoyé au moteur d'image <b>fal</b> en img2img : l'image part chez un service externe,
+    la géométrie non — <b>l'AI ne produit que des pixels, le STL exporté n'est jamais modifié</b>. Chaque appel est facturé
+    sur ta clé.</div>
+    <div class="row-btn"><button class="btn pri" id="aiGo">✨ Rendu AI (fal img2img)</button>
+    <label style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">Fidélité à la géométrie
+      <input type="range" id="aiStrength" min="20" max="70" step="5" value="45" style="accent-color:var(--blue)">
+      <b id="aiStrengthVal">45 %</b></label></div>
+    <div class="warnbox" id="aiInfo"></div>
+    <div id="aiOut"></div>`;
+  $('aiStrength').oninput = e=>{ $('aiStrengthVal').textContent = e.target.value+' %'; };
+  $('aiGo').onclick = aiRender;
+}
+
+async function aiRender(){
+  if(AI.busy) return;
+  const info=$('aiInfo'), out=$('aiOut');
+  const img = RENDER.lastURL || renderStudio();
+  AI.busy=true;
+  info.innerHTML='<div class="line warn">Rendu AI en cours (fal img2img)…</div>';
+  try{
+    const r=await fetch(AI.base+'/api/render',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ image:img, prompt:aiPrompt(),
+        strength: parseInt($('aiStrength').value,10)/100, steps:30, guidance:3.5 })});
+    const j=await r.json();
+    if(!j.ok){ info.innerHTML=`<div class="line bad">Rendu AI indisponible : ${j.note||'réponse inattendue'}</div>`; }
+    else{
+      info.innerHTML=`<div class="line ok">Rendu AI reçu de ${j.provider} en ${(j.ms/1000).toFixed(1)} s — image seulement, géométrie inchangée.</div>`;
+      out.innerHTML=`<img src="${j.image}" style="width:100%;border-radius:14px;margin-top:10px" alt="Rendu AI de la lampe configurée">
+        <div class="hint">Prompt envoyé : <i>${aiPrompt()}</i></div>`;
+    }
+  }catch(e){
+    info.innerHTML=`<div class="line bad">Moteur AI injoignable (${e.name}). Le moteur local a-t-il été arrêté ?</div>`;
+    AI.ok=false;
+  }
+  AI.busy=false;
+}
 
 /* ── Tableau de points + warnings ────────────────────────────────────── */
 function renderTable(){
@@ -676,12 +2018,13 @@ function renderTable(){
     let cls = i===state.selected?'sel':'';
     let angTxt='—';
     if(i<state.profile.length-1){
-      const a=segmentAngleDeg(p,state.profile[i+1]);
-      angTxt = a.toFixed(0)+'°';
+      const a=overhangDeg(p,state.profile[i+1]);
+      angTxt = a>0 ? a.toFixed(0)+'°' : 'auto-portant';
       if(a>OVERHANG.HARD_DEG) cls+=' bad'; else if(a>OVERHANG.WARN_DEG) cls+=' warn';
     }
     const tr=document.createElement('tr'); tr.className=cls.trim();
-    tr.innerHTML = `<td>${i+1}${i===state.profile.length-1?' (haut)':''}</td><td>${p.h.toFixed(0)}</td><td>${p.r.toFixed(1)}</td><td>${angTxt}</td>`;
+    const mark = i===socketEndIdx() ? ` (culot ${state.socket})` : (i===openEndIdx() ? ' (ouverture)' : '');
+    tr.innerHTML = `<td>${i+1}${mark}</td><td>${p.h.toFixed(0)}</td><td>${p.r.toFixed(1)}</td><td>${angTxt}</td>`;
     tb.appendChild(tr);
   });
   $('delPoint').disabled = !(state.selected>=0 && state.profile.length>3);
@@ -692,11 +2035,20 @@ function renderWarnings(){
   const lines=[];
   let hasHard=false, hasWarn=false;
   for(let i=0;i<state.profile.length-1;i++){
-    const a=segmentAngleDeg(state.profile[i],state.profile[i+1]);
-    if(a>OVERHANG.HARD_DEG){ hasHard=true; lines.push(['bad', `Segment ${i+1}→${i+2} : surplomb ${a.toFixed(0)}° (> ${OVERHANG.HARD_DEG}°) — support d'impression nécessaire ou redesign.`]); }
-    else if(a>OVERHANG.WARN_DEG){ hasWarn=true; lines.push(['warn', `Segment ${i+1}→${i+2} : surplomb ${a.toFixed(0)}° (${OVERHANG.WARN_DEG}-${OVERHANG.HARD_DEG}°) — passe mais sous-face striée attendue.`]); }
+    const a=overhangDeg(state.profile[i],state.profile[i+1]);
+    if(a>OVERHANG.HARD_DEG){ hasHard=true; lines.push(['bad', `Segment ${i+1}→${i+2} : la paroi s'évase de ${a.toFixed(0)}° en montant (> ${OVERHANG.HARD_DEG}°) — support d'impression nécessaire, ou retourne la pièce tête en bas.`]); }
+    else if(a>OVERHANG.WARN_DEG){ hasWarn=true; lines.push(['warn', `Segment ${i+1}→${i+2} : évasement de ${a.toFixed(0)}° (${OVERHANG.WARN_DEG}-${OVERHANG.HARD_DEG}°) — passe, mais sous-face striée attendue.`]); }
   }
-  if(!hasHard && !hasWarn) lines.push(['ok', 'Aucun surplomb critique détecté — profil imprimable sans support prévisible.']);
+  if(!hasHard && !hasWarn) lines.push(['ok', "Aucun surplomb : la paroi ne s'évase jamais assez en montant pour décrocher — imprimable sans support dans cette orientation."]);
+  // la sculpture ajoute un surplomb que le méridien 2D ne montre pas
+  const sc = state.bodies[state.body].sculpt;
+  if(Math.abs(sc.bendDeg) >= 1){
+    const tot = Math.abs(sc.bendDeg);
+    lines.push([tot>25?'bad':'warn', `Courbure ${sc.bendDeg.toFixed(0)}° : ajoute jusqu'à ${tot.toFixed(0)}° d'inclinaison au sommet, EN PLUS des surplombs du profil ci-dessus — support probable au-delà de 25°.`]);
+  }
+  if(Math.abs(sc.twistDegPerMm) >= 0.02){
+    lines.push(['ok', `Torsion ${sc.twistDegPerMm.toFixed(2)} °/mm : ${(Math.abs(sc.twistDegPerMm)*profileTopH()).toFixed(0)}° de vrillage sur la hauteur — n'ajoute pas de surplomb (rotation pure).`]);
+  }
   lines.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
 }
 
@@ -714,126 +2066,47 @@ function renderSockets(){
   });
 }
 
-/* ── Modules d'assemblage ─────────────────────────────────────────────── */
-function profileRadiusAt(hMm){
-  const pr=state.profile;
-  if(!pr.length) return 0;
-  if(hMm<=pr[0].h) return pr[0].r;
-  for(let i=0;i<pr.length-1;i++){
-    if(hMm<=pr[i+1].h){
-      const t=(hMm-pr[i].h)/Math.max(0.001,(pr[i+1].h-pr[i].h));
-      return pr[i].r + t*(pr[i+1].r-pr[i].r);
-    }
-  }
-  return pr[pr.length-1].r;
-}
-// Géométrie effective d'un module assemblé : diamètre (dérivé du culot pour la
-// plaque porte-douille), épaisseur, hauteur de pose selon sa famille de position.
-function moduleGeom(entry){
-  const m=MODULES[entry.id];
-  const topH=state.profile.length?state.profile[state.profile.length-1].h:0;
-  const dia = entry.id==='plaque_douille' ? SOCKETS[state.socket].shoulderDiaMm : m.diaMm;
-  let h;
-  if(m.pos==='top') h=Math.max(0,topH-m.thickMm);
-  else if(m.pos==='bottom') h=0;
-  else h=Math.min(Math.max(0,entry.hMm||0), Math.max(0,topH-m.thickMm));
-  return {dia, thickMm:m.thickMm, h, pos:m.pos};
-}
-// Ajustement : sur toute l'épaisseur du module, rayon intérieur dispo (profil − paroi)
-// vs rayon module + jeu radial atelier. La base 'bottom' épouse le profil : toujours ok.
-function moduleFit(entry){
-  const g=moduleGeom(entry);
-  if(g.pos==='bottom' || !g.dia) return {ok:true, availR:profileRadiusAt(0), needR:null};
-  const wall=parseFloat(state.wall);
-  let availR=Infinity;
-  for(let hh=g.h; hh<=g.h+g.thickMm; hh+=Math.max(1,g.thickMm/4)){
-    availR=Math.min(availR, profileRadiusAt(hh)-wall);
-  }
-  const needR=g.dia/2+RADIAL_CLEARANCE_MM;
-  return {ok:availR>=needR, availR, needR};
-}
-function moduleMeasuredTag(id){
-  const m=MODULES[id];
-  const meas = m.measured==='socket' ? SOCKETS[state.socket].measured : m.measured;
-  return meas ? '<span class="tag measured">MESURÉ ATELIER</span>'
-              : '<span class="tag standard">COTE PROVISOIRE — à mesurer avant série</span>';
-}
-function renderModules(){
-  const adders=$('moduleAdders'), list=$('moduleList');
-  if(!adders||!list) return;
-  adders.innerHTML='';
-  Object.entries(MODULES).forEach(([id,m])=>{
-    const already=state.modules.some(x=>x.id===id);
-    const b=document.createElement('button');
-    b.className='btn'; b.disabled=already;
-    b.textContent=(already?'✓ ':'+ ')+m.label;
-    if(!already) b.onclick=()=>{
-      const topH=state.profile.length?state.profile[state.profile.length-1].h:0;
-      state.modules.push({id, hMm:Math.round(topH/2)});
-      renderAll();
-    };
-    adders.appendChild(b);
-  });
-  list.innerHTML='';
-  state.modules.forEach((entry,idx)=>{
-    const m=MODULES[entry.id], g=moduleGeom(entry), fit=moduleFit(entry);
-    const row=document.createElement('div');
-    row.className='socket-opt';
-    const posTxt = m.pos==='top' ? `en tête (h=${g.h.toFixed(0)} mm, sous le culot)`
-                 : m.pos==='bottom' ? 'en pied (h=0)'
-                 : `position réglable : <input type="range" min="0" max="${Math.max(0,(state.profile.length?state.profile[state.profile.length-1].h:0)-g.thickMm).toFixed(0)}" step="1" value="${g.h.toFixed(0)}" data-mod="${idx}" style="vertical-align:middle;width:140px"> <b>h=${g.h.toFixed(0)} mm</b>`;
-    const fitTxt = fit.needR===null
-      ? `<span style="color:#30d158">✓ épouse le profil (r=${fit.availR.toFixed(1)} mm à h=0)</span>`
-      : fit.ok
-        ? `<span style="color:#30d158">✓ ajustement ok — dispo ${fit.availR.toFixed(1)} mm ≥ requis ${fit.needR.toFixed(1)} mm</span>`
-        : `<span style="color:#ff453a">✗ conflit — dispo ${fit.availR.toFixed(1)} mm &lt; requis ${fit.needR.toFixed(1)} mm : élargis le profil à cette hauteur</span>`;
-    row.innerHTML=`<div style="flex:1"><div class="t">${m.label} ${moduleMeasuredTag(entry.id)}</div>
-      <div class="d">${g.dia?('Ø'+g.dia.toFixed(1)+' mm × '+g.thickMm+' mm — '):''}${m.fix}<br>
-      ${posTxt}<br>${fitTxt}<br><span style="opacity:.75">${m.source}</span></div></div>
-      <button class="btn danger" data-del="${idx}" style="align-self:flex-start">Retirer</button>`;
-    row.querySelectorAll('[data-mod]').forEach(inp=>{
-      inp.oninput=e=>{ state.modules[+e.target.dataset.mod].hMm=+e.target.value; renderAll(); };
-    });
-    row.querySelector('[data-del]').onclick=e=>{ state.modules.splice(+e.target.dataset.del,1); renderAll(); };
-    list.appendChild(row);
-  });
-  if(!state.modules.length){
-    list.innerHTML='<div class="hint">Aucun module assemblé — la lampe reste un volume extérieur + culot seul.</div>';
-  }
-}
-
 /* ── Swatches ─────────────────────────────────────────────────────────── */
 function renderSwatches(){
   const el=$('swatches'); el.innerHTML='';
+  const cur = bodyColor(state.body);
   COLORS.forEach(c=>{
-    const s=document.createElement('div'); s.className='swatch'+(state.color===c?' on':'');
+    const s=document.createElement('div'); s.className='swatch'+(cur===c?' on':'');
     s.style.background=c;
-    s.onclick=()=>{ state.color=c; renderAll(); };
+    s.onclick=()=>{ setBodyColor(c); renderAll(); };
     el.appendChild(s);
   });
+  const lbl=$('colorScope');
+  if(lbl){
+    const multi = state.compo.count>1;
+    lbl.textContent = !multi ? ''
+      : (state.linkBodies
+          ? '— corps liés : la couleur s\'applique à tous.'
+          : `— s'applique au corps ${state.body+1} seulement. Chaque corps étant imprimé à part, une bobine différente par corps suffit : aucune imprimante multi-matière nécessaire.`);
+  }
 }
 
-/* ── Prix / specs ─────────────────────────────────────────────────────── */
+/* ── Prix / specs — calculés sur le MAILLAGE RÉELLEMENT EXPORTÉ ───────────
+ * Le volume vient du théorème de la divergence appliqué aux triangles de la
+ * coque (colliers d'emboîtement compris) : le devis et le fichier livré
+ * décrivent la même pièce. L'ancienne version supposait une coque alors que
+ * le STL exporté était un solide plein — écart ×21 sur la masse.
+ * ──────────────────────────────────────────────────────────────────────── */
 function computeSpecs(){
-  const pr = state.profile;
-  let lateralAreaMm2=0;
-  for(let i=0;i<pr.length-1;i++){
-    const rAvg=(pr[i].r+pr[i+1].r)/2;
-    const segLen=Math.hypot(pr[i+1].h-pr[i].h, pr[i+1].r-pr[i].r);
-    lateralAreaMm2 += 2*Math.PI*rAvg*segLen; // Pappus (théorème du centre de gravité)
-  }
-  const wallMm = parseFloat(state.wall);
-  let volumeMm3 = lateralAreaMm2 * wallMm * GEOMETRY_CONFIG.INTERNAL_STRUCTURE_FACTOR;
-  const volumeCm3 = volumeMm3/1000;
+  const nParts = Math.max(1, MESH.parts.length);
+  const volumeCm3 = (MESH.stats.volMm3||0)/1000 * GEOMETRY_CONFIG.INTERNAL_STRUCTURE_FACTOR;
   const density = PRICE_CONFIG.MATERIAL_DENSITY_G_CM3[state.material];
   const massG = volumeCm3*density;
   const printHours = Math.max(0.4, volumeCm3/PRICE_CONFIG.PRINT_CM3_PER_HOUR);
   const materialCost = massG/1000*PRICE_CONFIG.MATERIAL_COST_EUR_PER_KG[state.material];
-  const machineCost = printHours*PRICE_CONFIG.HOURLY_RATE_EUR;
+  const setupCost = (nParts-1)*PRICE_CONFIG.PART_SETUP_EUR;         // un lancement machine par module en plus
+  const machineCost = printHours*PRICE_CONFIG.HOURLY_RATE_EUR + setupCost;
   const socketCost = PRICE_CONFIG.SOCKET_KIT_EUR[state.socket];
-  const subtotal = machineCost+materialCost+socketCost+PRICE_CONFIG.BASE_HARDWARE_EUR;
+  const jointCost = (nParts-1)*PRICE_CONFIG.JOINT_HARDWARE_EUR;      // visserie de liaison par plan de coupe
+  const subtotal = machineCost+materialCost+socketCost+PRICE_CONFIG.BASE_HARDWARE_EUR+jointCost;
   const price = Math.max(PRICE_CONFIG.MIN_PRICE_EUR, subtotal*PRICE_CONFIG.MARGIN_MULTIPLIER);
-  return {volumeCm3, massG, printHours, materialCost, machineCost, socketCost, hardwareCost:PRICE_CONFIG.BASE_HARDWARE_EUR, price};
+  return {volumeCm3, massG, printHours, materialCost, machineCost, socketCost, jointCost, setupCost,
+          hardwareCost:PRICE_CONFIG.BASE_HARDWARE_EUR, price, nParts};
 }
 
 function renderPrice(){
@@ -844,46 +2117,578 @@ function renderPrice(){
   $('s-mass').innerHTML = s.massG.toFixed(0)+'<small> g</small>';
   $('s-price').innerHTML = s.price.toFixed(0)+'<small> €</small>';
   $('s-breakdown').innerHTML = [
-    ['Machine/temps atelier', s.machineCost.toFixed(2)+' €'],
+    ['Machine/temps atelier'+(s.nParts>1?` (${s.nParts} lancements)`:''), s.machineCost.toFixed(2)+' €'],
     ['Matière ('+MATERIALS[state.material]+')', s.materialCost.toFixed(2)+' €'],
     ['Kit culot '+state.socket, s.socketCost.toFixed(2)+' €'],
     ['Visserie/câble/passe-câble', s.hardwareCost.toFixed(2)+' €'],
+    ...(s.nParts>1?[[`Liaison des modules (${s.nParts-1} plan${s.nParts>2?'s':''} de coupe)`, s.jointCost.toFixed(2)+' €']]:[]),
     ['Marge atelier ×'+PRICE_CONFIG.MARGIN_MULTIPLIER, ''],
-    ...(state.modules.length?[[`Modules d'assemblage (${state.modules.length})`, 'sur devis atelier — non inclus']]:[]),
   ].map(([k,v])=>`<div><span>${k}</span><span>${v}</span></div>`).join('');
 }
 
-/* ── Bornes UI ────────────────────────────────────────────────────────── */
+/* ── Bornes UI (dépendent du type de lampe) ──────────────────────────── */
 function renderBounds(){
-  $('bMaxH').textContent = PRINT_BOUNDS.MAX_HEIGHT_MM;
-  $('bMaxR').textContent = PRINT_BOUNDS.MAX_RADIUS_MM;
+  const b = bounds();
+  $('bType').textContent = TYPES[state.type].label;
+  $('bMaxH').textContent = b.maxH;
+  $('bMaxR').textContent = b.maxR;
   $('bMinTop').textContent = SOCKETS[state.socket].housingMinRadiusMm;
 }
 
+/* ── Presets pilotés par le type de lampe ────────────────────────────── */
+function renderPresets(){
+  const row = $('presetRow'); if(!row) return;
+  row.innerHTML = '';
+  TYPES[state.type].silhouettes.forEach(name=>{
+    const b = document.createElement('button');
+    b.className = 'btn' + (state.shape===name && !state.seed ? ' pri' : '');
+    b.textContent = SILHOUETTES[name].label;
+    b.onclick = ()=> setPreset(name);
+    row.appendChild(b);
+  });
+  const si = $('seedInput');
+  if(si && document.activeElement !== si) si.value = state.seed || '';
+  // avec plusieurs corps, le tirage vise le corps courant ; le second bouton
+  // permet de tirer tous les corps d'un coup
+  const multi = state.compo.count > 1;
+  const ra = $('randomAll'); if(ra) ra.style.display = multi ? '' : 'none';
+  const rs = $('randomShape');
+  if(rs){
+    rs.textContent = multi ? `🎲 Forme aléatoire (corps ${state.body+1})` : '🎲 Forme aléatoire';
+    rs.title = multi ? 'Ne redessine que le corps sélectionné — délie les corps si besoin' : '';
+  }
+
+  const fi = $('flipInfo');
+  if(fi){
+    const b = state.bodies[state.body];
+    const scope = (state.linkBodies && !state.expert && state.compo.count>1) ? ' (tous les corps liés)' : '';
+    fi.textContent = b.flipped
+      ? `Tête en bas : le culot ${state.socket} est EN BAS (h=0, contre le plateau), l'ouverture est en haut${scope}.`
+      : `Orientation normale : le culot ${state.socket} est EN HAUT, l'ouverture en bas${scope}.`;
+  }
+}
+
+/* ── Style de surface ─────────────────────────────────────────────────── */
+const SURFACE_HINTS = {
+  lowpoly: "Facettes franches : la surface est la révolution brute du profil, le nombre de segments angulaires (carte 7) est visible et assumé. Le plus léger en fichier et le plus rapide à imprimer.",
+  smooth:  "Silhouette lissée par une courbe de Catmull-Rom qui PASSE par tes points de contrôle (elle ne les déplace pas), et 96 segments angulaires : plus de facettes visibles.",
+  stries:  "Stries verticales creusées/saillies dans la paroi. « Croiser » ajoute un second réseau incliné : les deux se multiplient et donnent un vrai relief en LOSANGES. Le creux est appliqué à l'identique sur les faces intérieure et extérieure, donc l'épaisseur de paroi reste constante et la pièce reste imprimable.",
+  organic: "Trois ondulations de fréquences non commensurables se superposent : le relief ne se répète jamais exactement sur le tour ni sur la hauteur. Effet galet/coquillage.",
+  voronoi: "VRAIS TROUS TRAVERSANTS : la paroi ne garde que les nervures du diagramme de Voronoï, chaque bord de trou est refermé pour que le maillage reste étanche et imprimable. Une bande pleine est imposée en haut (elle porte le culot) et en bas (l'appui) ; en approchant de ces bandes les nervures s'épaississent progressivement, donc le motif se densifie et FOND dans la bande au lieu d'être coupé net. C'est le style qui économise le plus de matière.",
+};
+function renderSurface(){
+  const seg = $('surface-seg'); if(!seg) return;
+  const s = bodySurfaceForEdit();
+
+  // Lien entre corps : visible seulement s'il y a plusieurs corps
+  const linkBox = $('linkRow');
+  if(linkBox){
+    linkBox.style.display = state.compo.count>1 ? '' : 'none';
+    linkBox.className = 'socket-opt'+(state.linkBodies?' on':'');
+    $('linkOn').checked = state.linkBodies;
+    $('linkText').textContent = state.linkBodies
+      ? 'Corps liés — profil, style et sculpture communs à tous les corps.'
+      : `Corps indépendants — tout ce qui suit ne touche QUE le corps ${state.body+1} (change de corps dans la carte 2 ou 5).`;
+  }
+
+  seg.innerHTML='';
+  Object.entries(SURFACE_STYLES).forEach(([k,v])=>{
+    const b=document.createElement('button');
+    b.textContent = v.label;
+    if(s.style===k) b.className='on';
+    b.onclick = ()=>{ bodySurfaceForEdit().style=k; renderAll(); };
+    seg.appendChild(b);
+  });
+
+  const box = $('surfaceParams'); box.innerHTML='';
+  const addSlider = (label, key, min, max, step, fmt)=>{
+    const f=document.createElement('div'); f.className='field';
+    f.innerHTML = `<label>${label} : <b>${fmt(s[key])}</b></label>
+      <input type="range" min="${min}" max="${max}" step="${step}" value="${s[key]}" style="width:100%;accent-color:var(--blue)">`;
+    f.querySelector('input').oninput = e=>{ s[key] = parseFloat(e.target.value); renderSoon(); };
+    box.appendChild(f);
+  };
+  if(s.style==='voronoi'){
+    // échelle logarithmique : réglage fin de 8 à 2000 cellules sur une seule course
+    const toCells = t => Math.round(8*Math.pow(2000/8, t/100));
+    const toSlider = c => Math.round(100*Math.log(Math.max(8,c)/8)/Math.log(2000/8));
+    const f=document.createElement('div'); f.className='field';
+    f.innerHTML = `<label>Densité : <b>${s.voroCells} cellules</b> <span class="dim" id="voroCellSize"></span></label>
+      <input type="range" min="0" max="100" step="1" value="${toSlider(s.voroCells)}" style="width:100%;accent-color:var(--blue)">`;
+    f.querySelector('input').oninput = e=>{ s.voroCells = toCells(parseFloat(e.target.value)); renderSoon(); };
+    box.appendChild(f);
+    addSlider('Largeur des nervures','voroStrutMm',0.6,7,0.1,v=>v.toFixed(1)+' mm');
+    addSlider('Bande pleine aux extrémités','voroBandMm',3,40,1,v=>v.toFixed(0)+' mm');
+    const row=document.createElement('div'); row.className='row-btn';
+    const b=document.createElement('button');
+    b.className='btn pri'; b.textContent='🎲 Autre motif';
+    b.onclick=()=>{ s.voroVariant=(s.voroVariant||1)+1; renderAll(); };
+    row.appendChild(b);
+    const tag=document.createElement('span');
+    tag.className='seed'; tag.style.width='auto'; tag.textContent='motif n°'+(s.voroVariant||1);
+    row.appendChild(tag);
+    box.appendChild(row);
+    const p=MESH.stats.perf;
+    if(p){
+      const cs=$('voroCellSize');
+      if(cs) cs.textContent = `— cellules d'environ ${p.cellMm.toFixed(1)} mm`;
+      const info=document.createElement('div'); info.className='warnbox';
+      const d=document.createElement('div'); d.className='line ok';
+      d.textContent = `Matière économisée : ${p.savedPct.toFixed(0)} % — ${(MESH.stats.volMm3/1000).toFixed(1)} cm³ au lieu de ${(p.refVolMm3/1000).toFixed(1)} cm³ pour la même coque pleine. Le prix suit.`;
+      info.appendChild(d);
+      const add=(cl,t)=>{ const w=document.createElement('div'); w.className='line '+cl; w.textContent=t; info.appendChild(w); };
+      if(s.voroStrutMm < 1.6)
+        add('warn', `Nervures de ${s.voroStrutMm.toFixed(1)} mm : très fines pour une buse 0,4 mm (2 périmètres = 0,8 mm). En dessous de 1,6 mm la pièce devient fragile et le trancheur peut sauter des parois.`);
+      if(p.cellMm < s.voroStrutMm*2.2)
+        add('warn', `Cellules de ${p.cellMm.toFixed(1)} mm pour des nervures de ${s.voroStrutMm.toFixed(1)} mm : le motif se referme (${(100*p.kept/Math.max(1,p.cells)).toFixed(0)} % de paroi conservée). Affine les nervures ou baisse la densité.`);
+      if(MESH.stats.tris > 120000)
+        add('warn', `${(MESH.stats.tris/1000).toFixed(0)}k triangles : fichier lourd et aperçu ralenti. C'est le prix d'un motif très fin.`);
+      box.appendChild(info);
+    }
+  }
+  // jauge de lissage : commune aux styles continus
+  if(SURFACE_STYLES[s.style].smooth && !SURFACE_STYLES[s.style].perforated){
+    addSlider('Lissage — densité du maillage','smoothing',0,100,1,v=>{
+      const seg=angularSegments(s,14), st=styleStepMm(s);
+      return `${v.toFixed(0)} % · ${seg} segments, anneaux tous les ${st.toFixed(1)} mm`;
+    });
+  }
+  if(s.style==='stries'){
+    addSlider('Nombre de stries sur le tour','strieCount',6,48,1,v=>v);
+    addSlider('Profondeur du relief','strieDepthMm',0.4,4,0.1,v=>v.toFixed(1)+' mm');
+    const f=document.createElement('label'); f.className='socket-opt'+(s.cross?' on':'');
+    f.innerHTML = `<input type="checkbox" ${s.cross?'checked':''}>
+      <div><div class="t">Croiser deux réseaux de stries → losanges en volume</div>
+      <div class="d">Le relief devient un damier de losanges bombés (cos nθ · cos kh), pas de simples rainures.</div></div>`;
+    f.querySelector('input').onchange = e=>{ bodySurfaceForEdit().cross = e.target.checked; renderAll(); };
+    box.appendChild(f);
+    if(s.cross) addSlider('Pas des losanges en hauteur','pitchMm',10,90,1,v=>v.toFixed(0)+' mm');
+  }
+  if(s.style==='organic'){
+    addSlider("Amplitude de l'ondulation",'strieDepthMm',0.4,6,0.1,v=>v.toFixed(1)+' mm');
+    addSlider("Échelle du relief",'pitchMm',20,120,1,v=>v.toFixed(0)+' mm');
+  }
+  $('surfaceHint').textContent = SURFACE_HINTS[s.style];
+  renderSculpt();
+}
+
+/* ── Sculpture : torsader / tordre ────────────────────────────────────────
+ * Réglages communs à tous les corps, sauf en mode expert où ils ne touchent
+ * que le corps en cours d'édition.
+ * ──────────────────────────────────────────────────────────────────────── */
+function renderSculpt(){
+  const box=$('sculptParams'); if(!box) return;
+  box.innerHTML='';
+  const cur = state.bodies[state.body].sculpt;
+  const title=document.createElement('div');
+  title.className='lbl'; title.style.marginTop='4px';
+  title.innerHTML = 'Sculpture'+((state.linkBodies && !state.expert)
+    ? ' <small>appliquée à tous les corps (liés)</small>'
+    : ` <small>corps ${state.body+1} uniquement</small>`);
+  box.appendChild(title);
+  const add=(label,key,min,max,step,fmt)=>{
+    const f=document.createElement('div'); f.className='field';
+    f.innerHTML=`<label>${label} : <b>${fmt(cur[key])}</b></label>
+      <input type="range" min="${min}" max="${max}" step="${step}" value="${cur[key]}" style="width:100%;accent-color:var(--blue)">`;
+    f.querySelector('input').oninput=e=>{
+      const v=parseFloat(e.target.value);
+      sculptTargets().forEach(b=>{ b.sculpt[key]=v; });
+      renderSoon();
+    };
+    box.appendChild(f);
+  };
+  add('Torsion (vrillage autour de l\'axe)','twistDegPerMm',-1.2,1.2,0.02,v=>v.toFixed(2)+' °/mm');
+  add('Courbure (inclinaison au sommet)','bendDeg',-35,35,1,v=>v.toFixed(0)+' °');
+  const n=document.createElement('div'); n.className='hint';
+  n.textContent = "La torsion enroule les cannelures autour de l'axe, la courbure penche la pièce. Les deux conservent l'épaisseur de paroi et l'étanchéité du maillage. La courbure ajoute un surplomb que l'analyse du profil 2D ne voit pas — il est signalé dans les avertissements.";
+  box.appendChild(n);
+}
+
+/* ── Composition : nombre de corps, agencement, symétrie ─────────────────── */
+const LAYOUT_LABELS = { vertical:'Empilés (vertical)', ligne:'Alignés (ligne)', circulaire:'En couronne (circulaire)' };
+function renderCompo(){
+  const cfg = TYPES[state.type].compo;
+  const c = state.compo;
+  c.count = Math.max(1, Math.min(cfg.maxBodies, c.count));
+  if(!cfg.layouts.includes(c.layout)) c.layout = cfg.layouts[0];
+  while(state.bodies.length < c.count) state.bodies.push(newBodyLike(state.bodies.length));
+  if(state.body >= c.count) state.body = c.count-1;
+
+  $('compoHint').textContent = cfg.note;
+  $('bodyCount').max = cfg.maxBodies;
+  $('bodyCount').value = c.count;
+  $('bodyCountVal').textContent = c.count + (c.count>1?' corps':' corps');
+  $('bodyCountMax').textContent = `(maxi ${cfg.maxBodies} pour une ${TYPES[state.type].label.toLowerCase()})`;
+
+  const seg=$('layout-seg'); seg.innerHTML='';
+  cfg.layouts.forEach(l=>{
+    const b=document.createElement('button');
+    b.textContent=LAYOUT_LABELS[l];
+    if(c.layout===l) b.className='on';
+    b.onclick=()=>{ c.layout=l; renderAll(); };
+    seg.appendChild(b);
+  });
+  $('layoutField').style.display = c.count>1 ? '' : 'none';
+
+  const par=$('compoParams'); par.innerHTML='';
+  if(c.count>1){
+    const sym=document.createElement('label');
+    sym.className='socket-opt'+(c.symmetric?' on':'');
+    sym.innerHTML=`<input type="checkbox" ${c.symmetric?'checked':''}>
+      <div><div class="t">${c.symmetric?'Symétrique / répétitif':'Organique / libre'}</div>
+      <div class="d">${c.symmetric
+        ? 'Corps identiques, espacements réguliers — répétition nette.'
+        : 'Échelles, espacements et rotations dispersés à partir de la graine : irrégulier mais reproductible à l\'identique.'}</div></div>`;
+    sym.querySelector('input').onchange=e=>{ c.symmetric=e.target.checked; renderAll(); };
+    par.appendChild(sym);
+    const add=(label,key,min,max,unit)=>{
+      const f=document.createElement('div'); f.className='field';
+      f.innerHTML=`<label>${label} : <b>${c[key].toFixed(0)} ${unit}</b></label>
+        <input type="range" min="${min}" max="${max}" step="1" value="${c[key]}" style="width:100%;accent-color:var(--blue)">`;
+      f.querySelector('input').oninput=e=>{ c[key]=parseFloat(e.target.value); renderSoon(); };
+      par.appendChild(f);
+    };
+    if(c.layout==='ligne') add('Écartement entre corps','spacingMm',40,300,'mm');
+    if(c.layout==='circulaire') add('Rayon de la couronne','ringRadiusMm',40,260,'mm');
+  }
+
+  // onglets de corps : c'est ici qu'on choisit LEQUEL on dessine. Rendus DEUX
+  // fois — au-dessus de l'éditeur de profil (carte 2) et ici — parce que c'est
+  // dans la carte 2 qu'on a besoin de changer de corps sans remonter la page.
+  [$('bodyTabs'), $('bodyTabsTop')].forEach(tabs=>{
+    if(!tabs) return;
+    tabs.innerHTML='';
+    if(c.count<2) return;
+    const lbl=document.createElement('span');
+    lbl.style.cssText='font-size:12px;color:var(--dim2);align-self:center;margin-right:4px';
+    lbl.textContent = state.linkBodies ? 'Corps à dessiner (liés) :' : 'Corps à dessiner (indépendants) :';
+    tabs.appendChild(lbl);
+    for(let i=0;i<c.count;i++){
+      const b=document.createElement('button');
+      b.className='btn'+(state.body===i?' pri':'');
+      const nm=(cfg.baseFirst && i===0 && c.layout!=='vertical') ? 'Base' : 'Corps '+(i+1);
+      const own=(!state.linkBodies && state.bodies[i] && state.bodies[i].surface) ? ' •' : '';
+      b.textContent=nm+own;
+      b.title = own ? 'Ce corps a son propre style de surface' : '';
+      b.onclick=()=>{ state.body=i; state.selected=-1; renderAll(); };
+      tabs.appendChild(b);
+    }
+    const copy=document.createElement('button');
+    copy.className='btn'; copy.textContent='⧉ Copier ce corps sur tous';
+    copy.title='Recopie profil, style de surface et sculpture du corps courant sur tous les autres';
+    copy.onclick=()=>{
+      const src=state.bodies[state.body];
+      state.bodies.forEach((b,i)=>{ if(i!==state.body){
+        b.profile=src.profile.map(p=>({h:p.h,r:p.r})); b.shape=src.shape;
+        b.sculpt={...src.sculpt};
+        b.surface = src.surface ? {...src.surface} : null;
+      }});
+      renderAll();
+    };
+    tabs.appendChild(copy);
+  });
+
+  const box=$('compoBox'); box.innerHTML='';
+  const places=bodyPlacements();
+  const lines=[];
+  if(c.count===1){
+    lines.push(['ok','Un seul corps : la lampe est un volume unique.']);
+  } else {
+    places.forEach((pl,i)=>{
+      lines.push(['ok', `${pl.role} : hauteur ${pl.bodyH.toFixed(0)} mm · échelle ×${pl.scale.toFixed(2)}`
+        + ` · position (x ${pl.tx.toFixed(0)}, y ${pl.ty.toFixed(0)}, z ${pl.tz.toFixed(0)}) mm`
+        + (pl.rot ? ` · rotation ${pl.rot.toFixed(0)}°` : '')]);
+    });
+    const bb=MESH.stats.bbox;
+    if(bb) lines.push(['ok', `Encombrement de l'assemblage : ${(bb.maxX-bb.minX).toFixed(0)} × ${(bb.maxY-bb.minY).toFixed(0)} × ${(bb.maxZ-bb.minZ).toFixed(0)} mm — chaque corps est imprimé séparément, seule SA taille doit tenir sur le plateau.`]);
+    lines.push(['warn', `${MESH.parts.length} pièces à imprimer, donc autant de lancements machine : le prix suit.`]);
+  }
+  (MESH.clamped||[]).forEach(cl=>{
+    lines.push(['warn', `Corps ${cl.body} : rayon du point haut remonté de ${cl.from} à ${cl.to} mm pour loger le culot ${state.socket}.`]);
+  });
+  // L'échelle du mode expert s'applique APRÈS les bornes du profil : un corps
+  // agrandi peut dépasser le plafond du type, voire la course Z de la machine.
+  const b = bounds();
+  places.forEach((pl,i)=>{
+    if(pl.bodyH > PRINT_BOUNDS.PLATE_Z_MM)
+      lines.push(['bad', `Corps ${i+1} : ${pl.bodyH.toFixed(0)} mm de haut — au-delà de la course Z de la machine (${PRINT_BOUNDS.PLATE_Z_MM} mm). Réduis l'échelle ou découpe ce corps en modules.`]);
+    else if(pl.bodyH > b.maxH + 0.5)
+      lines.push(['warn', `Corps ${i+1} : ${pl.bodyH.toFixed(0)} mm de haut — au-delà du plafond conseillé pour une ${TYPES[state.type].label.toLowerCase()} (${b.maxH} mm). Imprimable, mais hors gabarit du type.`]);
+    const rMax = Math.max(...(state.bodies[i].profile.map(p=>p.r)), 0)*pl.scale;
+    if(rMax*2 > PRINT_BOUNDS.PLATE_XY_MM)
+      lines.push(['bad', `Corps ${i+1} : Ø${(rMax*2).toFixed(0)} mm — ne tient pas sur le plateau ${PRINT_BOUNDS.PLATE_XY_MM}×${PRINT_BOUNDS.PLATE_XY_MM} mm.`]);
+  });
+  lines.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
+}
+
+// Nouveau corps : reprend la silhouette du corps 1 (composition cohérente par
+// défaut), variée si l'agencement est organique.
+function newBodyLike(i){
+  const src = state.bodies[0];
+  const b = newBody(src ? src.shape : 'cloche');
+  if(src){
+    b.profile = src.profile.map(p=>({h:p.h, r:p.r}));
+    b.sculpt = {...src.sculpt};
+  }
+  // corps déliés : le nouveau corps naît avec sa propre silhouette, sinon il
+  // est le clone du premier
+  if(!state.linkBodies){
+    const rng = mulberry32(hashSeed('body'+i+(state.seed||'')));
+    const fams = TYPES[state.type].silhouettes;
+    const fam = fams[Math.min(fams.length-1, Math.floor(rng()*fams.length))];
+    const bb = bounds();
+    b.shape = fam;
+    b.profile = profileFromSilhouette(fam, bb.minH + rng()*(bb.maxH-bb.minH), bb.maxR*(0.4+rng()*0.5), rng, 0.08);
+  }
+  return b;
+}
+
+/* ── Mode expert : paramètres par corps ──────────────────────────────────── */
+function renderExpert(){
+  const row=$('expertRow'), box=$('expertParams');
+  if(!row) return;
+  $('expertOn').checked = state.expert;
+  row.className='socket-opt'+(state.expert?' on':'');
+  box.innerHTML='';
+  if(!state.expert) return;
+  const b = state.bodies[state.body];
+  const head=document.createElement('div');
+  head.className='lbl'; head.style.marginTop='10px';
+  head.innerHTML=`Corps ${state.body+1} sur ${state.compo.count} <small>— chaque corps garde ses propres valeurs</small>`;
+  box.appendChild(head);
+  const add=(label,obj,key,min,max,step,unit)=>{
+    const f=document.createElement('div'); f.className='field';
+    f.innerHTML=`<label>${label} : <b>${(obj[key]||0).toFixed(2).replace(/\.00$/,'')} ${unit}</b></label>
+      <input type="range" min="${min}" max="${max}" step="${step}" value="${obj[key]||0}" style="width:100%;accent-color:var(--blue)">`;
+    f.querySelector('input').oninput=e=>{ obj[key]=parseFloat(e.target.value); renderSoon(); };
+    box.appendChild(f);
+  };
+  add('Échelle du corps', b,'scale', 0.35, 2.2, 0.01, '×');
+  add('Torsion', b.sculpt,'twistDegPerMm', -1.2, 1.2, 0.02, '°/mm');
+  add('Courbure', b.sculpt,'bendDeg', -35, 35, 1, '°');
+  add('Rotation autour de l\'axe vertical', b,'rotDeg', -180, 180, 1, '°');
+  add('Décalage horizontal', b,'offsetXMm', -150, 150, 1, 'mm');
+  add('Décalage vertical', b,'offsetZMm', -150, 150, 1, 'mm');
+  const hh=document.createElement('div'); hh.className='hint';
+  hh.textContent = "L'échelle est cuite dans la géométrie exportée (c'est une pièce physiquement différente) ; rotation et décalages ne servent qu'au plan d'assemblage — chaque corps est exporté à son propre origine, posé à plat.";
+  box.appendChild(hh);
+  const resetB=document.createElement('button');
+  resetB.className='btn danger'; resetB.textContent='Réinitialiser ce corps';
+  resetB.onclick=()=>{ const keep=b.profile, k2=b.shape; Object.assign(b,newBody(k2)); b.profile=keep; renderAll(); };
+  box.appendChild(resetB);
+}
+
+/* ── Découpe en modules imprimés ──────────────────────────────────────── */
+function renderSplit(){
+  const on=$('splitOn'), cf=$('splitCountField'), box=$('splitBox');
+  if(!on) return;
+  on.checked = state.split.on;
+  $('splitToggleRow').className = 'socket-opt'+(state.split.on?' on':'');
+  cf.style.display = state.split.on ? '' : 'none';
+  $('splitCount').value = state.split.count;
+  $('splitCountVal').textContent = state.split.count;
+  box.innerHTML='';
+  const lines=[];
+  if(!state.split.on){
+    lines.push(['ok', `Pièce monobloc : 1 seule impression, hauteur ${profileTopH().toFixed(0)} mm (course Z de l'Ender-3 S1 : ${PRINT_BOUNDS.PLATE_Z_MM} mm).`]);
+  } else {
+    MESH.parts.forEach((p,i)=>{
+      const collar = p.collar
+        ? ` · collier d'emboîtement Ø${(p.collar.rOut*2).toFixed(1)} mm sur ${JOINT.collarHeightMm} mm`
+        : '';
+      lines.push(['ok', `Module ${i+1} — ${p.label} : h ${p.h0.toFixed(0)}→${p.h1.toFixed(0)} mm (${(p.h1-p.h0).toFixed(0)} mm)${collar}`]);
+    });
+    lines.push(['warn', `Surcoût : ${MESH.parts.length-1} lancement(s) machine supplémentaire(s) + visserie de liaison — visible dans le détail du prix.`]);
+    lines.push(['warn', `Le collier est un corps distinct qui chevauche la paroi de ${JOINT.overlapMm} mm : la fusion est faite par le trancheur (pratique atelier standard), elle n'est pas booléenne dans le STL.`]);
+  }
+  lines.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
+}
+
+/* ── Vérifications sur le maillage exporté ───────────────────────────── */
+let checkTimer=null;
+function renderChecks(){
+  const box=$('checksbox'); if(!box) return;
+  const s=MESH.stats, pr=state.profile, lines=[];
+  if(!pr.length) return;
+  lines.push(['ok', `Maillage exporté : ${s.tris} triangles · ${(s.volMm3/1000).toFixed(1)} cm³ de matière · ${MESH.parts.length>1?MESH.parts.length+' pièces à imprimer':'1 pièce'} · paroi ${state.wall} mm`]);
+  if(s.perf){
+    lines.push(['ok', `Ajourage Voronoï : ${s.perf.savedPct.toFixed(0)} % de matière en moins que la coque pleine `
+      + `(${(s.volMm3/1000).toFixed(1)} au lieu de ${(s.perf.refVolMm3/1000).toFixed(1)} cm³) — ${(100*s.perf.kept/Math.max(1,s.perf.cells)).toFixed(0)} % de la paroi conservée en nervures. `
+      + `Chaque trou est refermé par son bord : le maillage reste étanche.`]);
+    lines.push(['warn', "Une coque ajourée est plus souple qu'une coque pleine : si la lampe porte la douille en tête, garde une bande pleine généreuse en haut (réglage « bande pleine »)."]);
+  }
+  const r = TYPES[state.type].rules||{};
+  const body = state.bodies[state.body];
+  const rOpen = openEndR(body), rMax = Math.max(...pr.map(p=>p.r));
+  const where = body.flipped ? 'haute' : 'basse';
+  if(body.flipped)
+    lines.push(['ok', `Tête en bas : le culot ${state.socket} est contre le plateau (h=0) et l'ouverture de lumière est en haut — la lampe éclaire vers le plafond, et les surplombs analysés ci-dessus sont bien ceux de cette orientation.`]);
+  if(r.bottomWidest && rOpen < rMax-0.5)
+    lines.push(['warn', `Ouverture ${where} Ø${(rOpen*2).toFixed(0)} mm plus étroite que le ventre Ø${(rMax*2).toFixed(0)} mm : la lumière sortira surtout par l'autre extrémité.`]);
+  if(r.minBottomRadiusMm && rOpen < r.minBottomRadiusMm)
+    lines.push(['warn', `Ouverture ${where} Ø${(rOpen*2).toFixed(0)} mm sous le Ø${(r.minBottomRadiusMm*2).toFixed(0)} mm conseillé pour une suspension.`]);
+  if(r.minTipAngleDeg){
+    const t=s.tip.deg;
+    const cl = t>=r.minTipAngleDeg ? 'ok' : (t>=r.minTipAngleDeg-8 ? 'warn' : 'bad');
+    lines.push([cl, `Assise : basculement à ${t.toFixed(0)}° (centre de gravité à ${s.tip.cgHeightMm.toFixed(0)} mm, appui Ø${(rBottom*2).toFixed(0)} mm) — mini conseillé ${r.minTipAngleDeg}°. Calculé sur la coque seule : douille, câble et lest éventuel ne sont pas comptés.`]);
+  }
+  if(r.maxDepthMm)
+    lines.push(['ok', `Saillie au mur : ${profileTopH().toFixed(0)} mm (plafond ${r.maxDepthMm} mm pour une applique).`]);
+  lines.push([ s.openEdges===null ? 'warn' : (s.openEdges===0 ? 'ok' : 'bad'),
+    s.openEdges===null ? 'Étanchéité du maillage : vérification en cours…'
+    : s.openEdges===0 ? 'Maillage étanche : chaque arête porte exactement deux faces — imprimable sans réparation.'
+    : `Maillage NON étanche : ${s.openEdges} arête(s) ouverte(s) — signale-le à l'atelier.` ]);
+  box.innerHTML='';
+  lines.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
+  if(s.openEdges===null){
+    clearTimeout(checkTimer);
+    checkTimer = setTimeout(()=>{
+      MESH.stats.openEdges = MESH.parts.reduce((a,p)=>a+meshOpenEdges(p.tris), 0);
+      renderChecks(); renderHud();
+    }, 120);
+  }
+}
+
 /* ── Master render ────────────────────────────────────────────────────── */
+let renderQueued=false;
+function renderSoon(){
+  if(renderQueued) return;
+  renderQueued=true;
+  requestAnimationFrame(()=>{ renderQueued=false; renderAll(); });
+}
+// La liste des corps doit être alignée sur le compteur AVANT de mailler,
+// sinon un corps ajouté n'apparaîtrait qu'au rendu suivant.
+function syncBodies(){
+  const cfg = TYPES[state.type].compo;
+  state.compo.count = Math.max(1, Math.min(cfg.maxBodies, state.compo.count));
+  if(!cfg.layouts.includes(state.compo.layout)) state.compo.layout = cfg.layouts[0];
+  while(state.bodies.length < state.compo.count) state.bodies.push(newBodyLike(state.bodies.length));
+  if(state.body >= state.compo.count) state.body = state.compo.count-1;
+}
 function renderAll(){
+  syncBodies();
+  rebuildMesh();
   drawProfile();
   drawPreview();
   renderTable();
   renderWarnings();
   renderSockets();
-  renderModules();
   renderSwatches();
+  renderPresets();
+  renderSurface();
+  renderCompo();
+  renderExpert();
+  renderSplit();
+  renderChecks();
   renderPrice();
   renderBounds();
-  $('type-hint').textContent = TYPE_HINTS[state.type];
+  renderHud();
+  const ex=$('vExplodeWrap'); if(ex) ex.style.display = MESH.parts.length>1 ? '' : 'none';
+  $('type-hint').textContent = TYPES[state.type].hint;
 }
 
-/* ── Type toggle ──────────────────────────────────────────────────────── */
+/* ── Type toggle — le type re-borne le profil existant ─────────────────── */
 document.querySelectorAll('#type-seg button').forEach(b=>{
   b.onclick=()=>{
     document.querySelectorAll('#type-seg button').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     state.type=b.dataset.v;
+    // le profil courant est ramené dans les bornes du nouveau type (jamais effacé)
+    if(!TYPES[state.type].silhouettes.includes(state.shape) && !state.seed){
+      setPreset(TYPES[state.type].silhouettes[0]);
+      return;
+    }
+    normalizeProfile();
     renderAll();
   };
 });
-document.querySelectorAll('[data-preset]').forEach(b=> b.onclick=()=>setPreset(b.dataset.preset));
+
+/* ── Retourner tête en bas ────────────────────────────────────────────── */
+$('flipShape').onclick = ()=>{
+  const targets = (state.linkBodies && !state.expert) ? state.bodies : [state.bodies[state.body]];
+  targets.forEach(b=>{ b.profile = mirrorProfile(b.profile); b.flipped = !b.flipped; });
+  state.selected = -1;
+  normalizeProfile();
+  renderAll();
+};
+
+/* ── Tirage aléatoire / graine ────────────────────────────────────────── */
+$('randomShape').onclick = ()=> randomShape(undefined, 'body');
+$('randomAll').onclick   = ()=> randomShape(undefined, 'all');
+$('seedApply').onclick   = ()=> randomShape($('seedInput').value.trim() || undefined, state.compo.count>1 && !state.linkBodies ? 'all' : 'body');
+$('seedInput').onkeydown = e=>{ if(e.key==='Enter') $('seedApply').onclick(); };
+
+/* ── Contrôles de vue ─────────────────────────────────────────────────── */
+$('vElev').oninput  = e=>{ view.el = parseFloat(e.target.value)*Math.PI/180; drawPreview(); };
+$('vZoom').oninput  = e=>{ view.zoom = parseFloat(e.target.value)/100; drawPreview(); };
+$('vExplode').oninput = e=>{ view.explode = parseFloat(e.target.value)/100; drawPreview(); };
+$('vReset').onclick = ()=>{ view.az=0.7; view.el=0.35; view.zoom=1; syncViewInputs(); drawPreview(); };
+$('vTurn').onclick  = e=>{
+  if(view.spin){ cancelAnimationFrame(view.spin); view.spin=0; e.target.textContent='▶ Tourner'; return; }
+  e.target.textContent='⏸ Arrêter';
+  const step=()=>{ view.az+=0.003; drawPreview(); view.spin=requestAnimationFrame(step); };  // 4× plus lent
+  view.spin=requestAnimationFrame(step);
+};
+
+/* ── Onglets du visualiseur + bandeau d'état ──────────────────────────────
+ * Les visuels sont collés en haut d'écran (position:sticky) : on édite le
+ * profil en voyant la coque, le prix et l'étanchéité sans jamais descendre.
+ * ──────────────────────────────────────────────────────────────────────── */
+document.querySelectorAll('.vtabs button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.vtabs button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    const pane=b.dataset.pane;
+    $('pane-geo').hidden    = pane!=='geo';
+    $('pane-render').hidden = pane!=='render';
+    if(pane==='render' && !RENDER.lastURL) renderStudio();
+  };
+});
+
+function renderHud(){
+  const el=$('hud'); if(!el) return;
+  const s=MESH.stats, sp=window.__lastSpecs||computeSpecs();
+  const seal = s.openEdges===null ? ['warn','vérif…'] : (s.openEdges===0 ? ['ok','étanche'] : ['bad',s.openEdges+' trous']);
+  const cells=[
+    ['Prix estimé', `${sp.price.toFixed(0)}<small> €</small>`, ''],
+    ['Matière', `${sp.massG.toFixed(0)}<small> g · ${sp.volumeCm3.toFixed(0)} cm³</small>`, ''],
+    ['À imprimer', `${MESH.parts.length}<small> pièce${MESH.parts.length>1?'s':''} · ${s.bodies||1} corps</small>`, ''],
+    ['Maillage', `${seal[1]}<small> · ${(s.tris/1000).toFixed(1)}k tri</small>`, seal[0]],
+  ];
+  el.innerHTML = cells.map(([k,v,cl])=>`<div><div class="k">${k}</div><div class="v ${cl}">${v}</div></div>`).join('');
+}
+
+/* ── Rendu studio ─────────────────────────────────────────────────────── */
+(function initRenderControls(){
+  const f=$('rFinish'), b=$('rBg');
+  Object.entries(FINISHES).forEach(([k,v])=>{ const o=document.createElement('option'); o.value=k; o.textContent=v.label; if(k===RENDER.finish) o.selected=true; f.appendChild(o); });
+  Object.entries(BACKDROPS).forEach(([k,v])=>{ const o=document.createElement('option'); o.value=k; o.textContent=v.label; if(k===RENDER.bg) o.selected=true; b.appendChild(o); });
+  f.onchange=e=>{ RENDER.finish=e.target.value; if(RENDER.lastURL) renderStudio(); };
+  b.onchange=e=>{ RENDER.bg=e.target.value; if(RENDER.lastURL) renderStudio(); };
+  $('rLit').onchange=e=>{ RENDER.lit=e.target.checked; if(RENDER.lastURL) renderStudio(); };
+  $('rRender').onclick=()=>renderStudio();
+  $('rDownload').onclick=()=>{
+    if(!RENDER.lastURL) return;
+    const a=document.createElement('a');
+    a.href=RENDER.lastURL; a.download=`rendu-lampe-${state.type}-${Date.now()}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+})();
+
+/* ── Composition & expert ─────────────────────────────────────────────── */
+$('bodyCount').oninput = e=>{ state.compo.count = parseInt(e.target.value,10); renderSoon(); };
+$('expertOn').onchange = e=>{ state.expert = e.target.checked; renderAll(); };
+$('linkOn').onchange   = e=>{
+  state.linkBodies = e.target.checked;
+  // en reliant, on aligne tout de suite les corps sur celui qu'on dessine :
+  // sinon la case « liés » serait cochée sur des corps encore différents
+  if(state.linkBodies){ state.bodies.forEach(b=>{ b.surface=null; }); propagateProfile(); }
+  renderAll();
+};
+
+/* ── Découpe en modules ───────────────────────────────────────────────── */
+$('splitOn').onchange    = e=>{ state.split.on = e.target.checked; renderAll(); };
+$('splitCount').oninput  = e=>{ state.split.count = parseInt(e.target.value,10); renderSoon(); };
 
 /* ── material / wall ──────────────────────────────────────────────────── */
 $('material').onchange = e=>{ state.material=e.target.value; renderAll(); };
@@ -897,22 +2702,94 @@ function buildDossier(){
     generated_at: new Date().toISOString(),
     produit: "Custom 3D Lamp Studio — dossier de commande/specs (PAS un fichier de fabrication prêt à imprimer)",
     type_lampe: state.type,
+    forme: {
+      silhouette: state.shape,
+      silhouette_label: (SILHOUETTES[state.shape]||{}).label || state.shape,
+      graine_aleatoire: state.seed,   // même graine + même type + même culot = même forme, reproductible par l'atelier
+      note: state.seed
+        ? "Forme issue du tirage aléatoire borné : rejouer cette graine dans le configurateur régénère exactement ce profil."
+        : "Forme issue d'un preset ou d'une édition manuelle des points — le profil ci-dessous fait foi.",
+    },
+    corps_lies: state.linkBodies,
+    ajourage: MESH.stats.perf ? {
+      type: 'Voronoï — trous traversants, bords refermés (maillage étanche)',
+      cellules: state.surface.voroCells, nervures_mm: state.surface.voroStrutMm,
+      bande_pleine_mm: state.surface.voroBandMm, motif_no: state.surface.voroVariant,
+      matiere_economisee_pct: +MESH.stats.perf.savedPct.toFixed(0),
+      volume_coque_pleine_cm3: +(MESH.stats.perf.refVolMm3/1000).toFixed(1),
+      note: "Les bandes pleines des extrémités sont imposées (culot en haut, appui en bas) ; les nervures s'épaississent progressivement en approchant des bandes pour s'y fondre. Même n° de motif = même ajourage.",
+    } : null,
+    style_surface: {
+      style: state.surface.style,
+      label: SURFACE_STYLES[state.surface.style].label,
+      styles_par_corps: state.linkBodies ? null : state.bodies.slice(0,state.compo.count).map((b,i)=>({
+        corps:i+1, style: bodySurface(i).style, label: SURFACE_STYLES[bodySurface(i).style].label })),
+      stries_sur_le_tour: state.surface.style==='stries' ? state.surface.strieCount : null,
+      profondeur_relief_mm: (state.surface.style==='stries'||state.surface.style==='organic') ? state.surface.strieDepthMm : null,
+      croise_losanges: state.surface.style==='stries' ? state.surface.cross : null,
+      pas_mm: (state.surface.style==='stries'&&state.surface.cross)||state.surface.style==='organic' ? state.surface.pitchMm : null,
+      segments_angulaires: MESH.stats.segExport,
+      note: "Le relief est appliqué à l'identique sur les faces intérieure et extérieure : l'épaisseur de paroi reste constante.",
+    },
+    composition: {
+      nombre_de_corps: state.compo.count,
+      agencement: state.compo.layout,
+      agencement_label: LAYOUT_LABELS[state.compo.layout],
+      regularite: state.compo.symmetric ? 'symétrique / répétitif' : 'organique / dispersé (tiré de la graine, reproductible)',
+      base_portante: !!(TYPES[state.type].compo.baseFirst && state.compo.count>1 && state.compo.layout!=='vertical'),
+      ecartement_mm: state.compo.layout==='ligne' ? state.compo.spacingMm : null,
+      rayon_couronne_mm: state.compo.layout==='circulaire' ? state.compo.ringRadiusMm : null,
+      encombrement_assemblage_mm: MESH.stats.bbox ? {
+        x:+(MESH.stats.bbox.maxX-MESH.stats.bbox.minX).toFixed(0),
+        y:+(MESH.stats.bbox.maxY-MESH.stats.bbox.minY).toFixed(0),
+        z:+(MESH.stats.bbox.maxZ-MESH.stats.bbox.minZ).toFixed(0) } : null,
+      corps: bodyPlacements().map((pl,i)=>{
+        const b=state.bodies[i];
+        return { corps:i+1, role:pl.role, silhouette:(SILHOUETTES[b.shape]||{}).label||b.shape,
+          orientation: b.flipped ? 'tête en bas — culot en BAS (h=0)' : 'normale — culot en HAUT',
+          couleur: bodyColor(i),
+          culot_a_h_mm: b.flipped ? 0 : +pl.bodyH.toFixed(1),
+          hauteur_mm:+pl.bodyH.toFixed(1), echelle:+pl.scale.toFixed(3),
+          position_mm:{x:+pl.tx.toFixed(1), y:+pl.ty.toFixed(1), z:+pl.tz.toFixed(1)},
+          rotation_deg:+pl.rot.toFixed(1),
+          torsion_deg_par_mm:+(b.sculpt.twistDegPerMm||0).toFixed(3),
+          courbure_deg:+(b.sculpt.bendDeg||0).toFixed(1),
+          profil_mm: b.profile.map(p=>({hauteur:+(p.h*pl.scale).toFixed(1), rayon:+(p.r*pl.scale).toFixed(1)})) };
+      }),
+      note: "Chaque corps est un STL séparé, exporté à son propre origine et posé à plat : seule la taille d'UN corps doit tenir sur le plateau. Position et rotation ci-dessus = plan d'assemblage, à réaliser à l'atelier.",
+    },
+    sculpture: {
+      note: "Torsion et courbure sont des transformations continues appliquées après la révolution : maillage étanche et épaisseur de paroi conservées. La courbure ajoute un surplomb non visible sur le profil 2D.",
+    },
+    modules_imprimes: {
+      multi_pieces: state.split.on,
+      nombre: MESH.parts.length,
+      liaison: state.split.on ? `collier d'emboîtement solidaire du module inférieur, hauteur ${JOINT.collarHeightMm} mm, jeu ${JOINT.clearanceMm} mm au rayon` : null,
+      decoupe: MESH.parts.map((p,i)=>({
+        module: i+1, role: p.label,
+        h_de_mm: +p.h0.toFixed(1), h_a_mm: +p.h1.toFixed(1),
+        collier_diametre_mm: p.collar ? +(p.collar.rOut*2).toFixed(1) : null,
+        fichier_stl: MESH.parts.length===1 ? 'fichier unique' : `${i+1} sur ${MESH.parts.length}`,
+      })),
+    },
+    maillage_exporte: {
+      type: "coque creuse, ouverte en bas et en haut",
+      triangles: MESH.stats.tris,
+      volume_matiere_cm3: +((MESH.stats.volMm3||0)/1000).toFixed(1),
+      etanche: MESH.stats.openEdges===0 ? true : (MESH.stats.openEdges===null ? 'non vérifié' : false),
+      angle_basculement_deg: +MESH.stats.tip.deg.toFixed(1),
+      centre_gravite_hauteur_mm: +MESH.stats.tip.cgHeightMm.toFixed(1),
+      note: "Volume et masse du devis sont calculés sur CE maillage (théorème de la divergence), pas sur une approximation.",
+    },
     profil_mm: state.profile.map(p=>({hauteur:+p.h.toFixed(1), rayon:+p.r.toFixed(1)})),
     hauteur_totale_mm: +state.profile[state.profile.length-1].h.toFixed(1),
     rayon_max_mm: +Math.max(...state.profile.map(p=>p.r)).toFixed(1),
     culot: { ref: state.socket, ...sock },
-    modules_assemblage: state.modules.map(entry=>{
-      const m=MODULES[entry.id], g=moduleGeom(entry), fit=moduleFit(entry);
-      return { ref:entry.id, label:m.label, position:m.pos, hauteur_pose_mm:+g.h.toFixed(1),
-        diametre_mm: g.dia?+g.dia.toFixed(1):null, epaisseur_mm:g.thickMm, fixation:m.fix,
-        ajustement: fit.needR===null ? {ok:true, note:'épouse le profil à h=0'}
-          : {ok:fit.ok, rayon_disponible_mm:+fit.availR.toFixed(1), rayon_requis_mm:+fit.needR.toFixed(1), jeu_radial_mm:RADIAL_CLEARANCE_MM},
-        cote_mesuree: m.measured==='socket'?SOCKETS[state.socket].measured:m.measured, source:m.source };
-    }),
-    note_fusion: "Les modules sont fabriqués par l'atelier (liste fermée). La fusion géométrique modules↔volume extérieur est réalisée par l'atelier en CAO à partir de ce dossier — le STL exporté ne contient que le volume extérieur.",
     materiau: MATERIALS[state.material],
     epaisseur_paroi_mm: +state.wall,
-    couleur: state.color,
+    couleur: state.compo.count>1 && !state.linkBodies
+      ? state.bodies.slice(0,state.compo.count).map((b,i)=>`corps ${i+1} : ${bodyColor(i)}`).join(' · ')
+      : state.color,
     imprimante_cible: { modele: "Creality Ender-3 S1 (vérifié atelier)", plateau_mm: `${PRINT_BOUNDS.PLATE_XY_MM}×${PRINT_BOUNDS.PLATE_XY_MM}×${PRINT_BOUNDS.PLATE_Z_MM}`, buse_mm: 0.4 },
     estimation: { volume_cm3: +s.volumeCm3.toFixed(1), masse_g: +s.massG.toFixed(0), temps_impression_h: +s.printHours.toFixed(1), prix_eur: +s.price.toFixed(0) },
     securite: "Assemblage électrique réalisé par un professionnel/l'atelier, jamais par le client. LED ≤7W réels, jamais halogène/incandescent. Culot standard du commerce marqué CE.",
@@ -925,66 +2802,16 @@ function download(filename, content, mime){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-/* ── Maillage 3D réel par révolution du profil (STL imprimable) ─────────
- * IMPORTANT — gate de sécurité : cette fonction ne reçoit et ne manipule
- * QUE le profil de la structure/abat-jour (state.profile, points h/r édités
- * dans la coupe 2D du panneau 2). Elle ne génère JAMAIS la géométrie du
- * culot/alésage/filetage — ces cotes restent dans SOCKETS (liste fermée,
- * jamais éditable, jamais révolutionnée). Le rayon mini du point du haut
- * est simplement borné par SOCKETS[...].housingMinRadiusMm en amont
- * (clampPoint/normalizeProfile) ; aucun bore électrique n'est modélisé ici.
+/* ── Export du maillage réel ─────────────────────────────────────────────
+ * Le STL exporté est EXACTEMENT le maillage affiché dans l'aperçu et pesé
+ * dans le prix : une coque creuse d'épaisseur paroi, ouverte en bas et en
+ * haut. En option multi-pièces, un fichier PAR MODULE (collier d'emboîtement
+ * inclus dans le module du dessous).
+ *
+ * Gate de sécurité inchangé : aucune géométrie de culot/alésage/filetage
+ * n'est générée — SOCKETS ne sert qu'à borner le rayon mini du point haut,
+ * le perçage réel du logement est fait par le professionnel qui assemble.
  * ──────────────────────────────────────────────────────────────────── */
-function buildRevolutionMesh(profile, segments){
-  const N = Math.max(3, segments|0);
-  if(profile.length<2) return [];
-  // Anneaux de sommets par révolution de chaque point de contrôle autour de l'axe Z
-  // (h -> z, r -> rayon dans le plan XY). Convention Z-up, cohérente avec le format STL.
-  const rings = profile.map(p=>{
-    const ring=[];
-    for(let j=0;j<N;j++){
-      const th = j/N*Math.PI*2;
-      ring.push([p.r*Math.cos(th), p.r*Math.sin(th), p.h]);
-    }
-    return ring;
-  });
-
-  const tris=[]; // triangles bruts [[x,y,z]x3] — pas de liste indexée, le format STL n'en a pas besoin
-
-  // Surface latérale : chaque quad (anneau i / anneau i+1) -> 2 triangles.
-  // Ordre choisi (A,B,C) puis (A,C,D) donne une normale sortante (vérifié par calcul du
-  // produit vectoriel des arêtes : (B-A)x(C-A) pointe radialement vers l'extérieur quand
-  // h croît et theta croît dans ce sens).
-  for(let i=0;i<rings.length-1;i++){
-    for(let j=0;j<N;j++){
-      const j2=(j+1)%N;
-      const A=rings[i][j], B=rings[i][j2], C=rings[i+1][j2], D=rings[i+1][j];
-      tris.push([A,B,C]);
-      tris.push([A,C,D]);
-    }
-  }
-
-  // Cap radial bas (h min) : fan depuis le centre de l'axe, normale sortante -Z.
-  const hBot = profile[0].h;
-  const Obot = [0,0,hBot];
-  for(let j=0;j<N;j++){
-    const j2=(j+1)%N;
-    tris.push([Obot, rings[0][j2], rings[0][j]]);
-  }
-
-  // Cap radial haut (h max, point de fixation du culot) : fan depuis le centre, normale
-  // sortante +Z. Ferme le volume en un solide plein — le logement/l'alésage du culot n'est
-  // PAS creusé ici (liste fermée SOCKETS, jamais générée géométriquement).
-  const hTop = profile[profile.length-1].h;
-  const Otop = [0,0,hTop];
-  const last = rings.length-1;
-  for(let j=0;j<N;j++){
-    const j2=(j+1)%N;
-    tris.push([Otop, rings[last][j], rings[last][j2]]);
-  }
-
-  return tris;
-}
-
 function triangleNormal(v1,v2,v3){
   const e1=[v2[0]-v1[0], v2[1]-v1[1], v2[2]-v1[2]];
   const e2=[v3[0]-v1[0], v3[1]-v1[1], v3[2]-v1[2]];
@@ -1017,12 +2844,23 @@ function trianglesToSTLBinary(tris, label){
 }
 
 $('exportStl').onclick=()=>{
-  const segments = parseInt($('stlSegments').value,10) || 48;
-  const tris = buildRevolutionMesh(state.profile, segments);
-  if(!tris.length){ alert('Profil insuffisant pour générer un maillage (minimum 2 points).'); return; }
-  const buf = trianglesToSTLBinary(tris, state.type);
-  download('lampe-'+state.type+'-'+Date.now()+'.stl', buf, 'model/stl');
-  $('stlInfo').innerHTML = `Dernier export : <b>${tris.length}</b> triangles · <b>${(buf.byteLength/1024).toFixed(1)} Ko</b> · ${segments} segments angulaires.`;
+  if(!MESH.parts.length){ alert('Profil insuffisant pour générer un maillage (minimum 2 points).'); return; }
+  const stamp = Date.now();
+  const n = MESH.parts.length;
+  let totalTris=0, totalKo=0;
+  const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+  MESH.parts.forEach((p,i)=>{
+    const buf = trianglesToSTLBinary(p.tris, `${state.type}-${p.label}`);
+    const name = n===1
+      ? `lampe-${state.type}-${state.surface.style}-${stamp}.stl`
+      : `lampe-${state.type}-${String(i+1).padStart(2,'0')}sur${n}-${slug(p.label)}-${stamp}.stl`;
+    download(name, buf, 'model/stl');
+    totalTris += p.tris.length; totalKo += buf.byteLength/1024;
+  });
+  const s = MESH.stats;
+  $('stlInfo').innerHTML = `Dernier export : <b>${n} fichier${n>1?'s':''}</b> · <b>${totalTris}</b> triangles · <b>${totalKo.toFixed(1)} Ko</b> · `
+    + `${s.segExport} segments angulaires · style « ${SURFACE_STYLES[state.surface.style].label} » · `
+    + `coque creuse paroi ${state.wall} mm, <b>${(s.volMm3/1000).toFixed(1)} cm³</b> de matière — c'est ce volume qui est facturé.`;
 };
 
 $('exportJson').onclick=()=>{
@@ -1036,6 +2874,35 @@ $('exportTxt').onclick=()=>{
     '',
     'Généré le : '+new Date().toLocaleString('fr-FR'),
     'Type de lampe : '+d.type_lampe,
+    `Silhouette : ${d.forme.silhouette_label}${d.forme.graine_aleatoire?` — graine ${d.forme.graine_aleatoire} (rejouable à l'identique)`:''}`,
+    `Style de surface : ${d.style_surface.label}`
+      + (d.style_surface.stries_sur_le_tour?` — ${d.style_surface.stries_sur_le_tour} stries sur le tour, relief ${d.style_surface.profondeur_relief_mm}mm${d.style_surface.croise_losanges?`, croisées en losanges au pas de ${d.style_surface.pas_mm}mm`:''}`:'')
+      + (d.style_surface.style==='organic'?` — amplitude ${d.style_surface.profondeur_relief_mm}mm, échelle ${d.style_surface.pas_mm}mm`:'')
+      + ` — ${d.style_surface.segments_angulaires} segments angulaires`,
+    '',
+    '--- Composition ---',
+    `  ${d.composition.nombre_de_corps} corps — ${d.composition.agencement_label} — ${d.composition.regularite}`
+      + (d.composition.base_portante?' — le corps 1 sert de base portante':''),
+    ...(d.composition.encombrement_assemblage_mm
+      ? [`  Encombrement de l'assemblage : ${d.composition.encombrement_assemblage_mm.x} × ${d.composition.encombrement_assemblage_mm.y} × ${d.composition.encombrement_assemblage_mm.z} mm`] : []),
+    ...d.composition.corps.map(b=>`  ${b.role} : ${b.silhouette} [${b.orientation}], couleur ${b.couleur}, h=${b.hauteur_mm}mm, échelle ×${b.echelle}`
+      + `, pose (x ${b.position_mm.x}, y ${b.position_mm.y}, z ${b.position_mm.z})mm`
+      + (b.rotation_deg?`, rotation ${b.rotation_deg}°`:'')
+      + (b.torsion_deg_par_mm?`, torsion ${b.torsion_deg_par_mm}°/mm`:'')
+      + (b.courbure_deg?`, courbure ${b.courbure_deg}°`:'')),
+    '  '+d.composition.note,
+    '',
+    '--- Modules imprimés (découpe multi-pièces) ---',
+    ...(d.modules_imprimes.multi_pieces
+      ? [`  ${d.modules_imprimes.nombre} modules — ${d.modules_imprimes.liaison}`,
+         ...d.modules_imprimes.decoupe.map(m=>`  module ${m.module} (${m.role}) : h ${m.h_de_mm}→${m.h_a_mm}mm${m.collier_diametre_mm?` — collier Ø${m.collier_diametre_mm}mm`:''}`)]
+      : ['  pièce monobloc']),
+    '',
+    '--- Maillage STL livré ---',
+    `  ${d.maillage_exporte.type} — ${d.maillage_exporte.triangles} triangles — ${d.maillage_exporte.volume_matiere_cm3} cm³ de matière`,
+    `  Étanchéité : ${d.maillage_exporte.etanche===true?'étanche (manifold)':d.maillage_exporte.etanche===false?'NON ÉTANCHE — à signaler':'non vérifié'}`,
+    `  Basculement : ${d.maillage_exporte.angle_basculement_deg}° — centre de gravité à ${d.maillage_exporte.centre_gravite_hauteur_mm}mm`,
+    '  '+d.maillage_exporte.note,
     '',
     '--- Profil (hauteur mm, rayon mm), axe de révolution ---',
     ...d.profil_mm.map((p,i)=>`  point ${i+1} : h=${p.hauteur}mm  r=${p.rayon}mm`),
@@ -1046,11 +2913,6 @@ $('exportTxt').onclick=()=>{
     `Source cotes : ${d.culot.source}`,
     `Puissance LED max : ${d.culot.maxWattageW}W`,
     '',
-    '--- Modules d\'assemblage (fabriqués atelier — fusion CAO atelier) ---',
-    ...(d.modules_assemblage.length
-      ? d.modules_assemblage.map(mm=>`  ${mm.label} — pose h=${mm.hauteur_pose_mm}mm${mm.diametre_mm?(' — Ø'+mm.diametre_mm+'×'+mm.epaisseur_mm+'mm'):''} — ajustement ${mm.ajustement.ok?'OK':'CONFLIT'}${mm.cote_mesuree?'':' — COTE PROVISOIRE à mesurer'}`)
-      : ['  aucun']),
-    d.note_fusion,
     '',
     '--- Matière & paroi ---',
     `Matériau : ${d.materiau}`,
@@ -1085,11 +2947,16 @@ $('prepEmail').onclick=()=>{
     `Email : ${email||'—'}`,
     '',
     `Type de lampe : ${state.type}`,
+    `Silhouette : ${(SILHOUETTES[state.shape]||{}).label||state.shape}${state.seed?` — graine ${state.seed}`:''}`,
+    `Style de surface : ${SURFACE_STYLES[state.surface.style].label}`
+      + (state.surface.style==='stries'?` (${state.surface.strieCount} stries, ${state.surface.strieDepthMm}mm${state.surface.cross?`, croisées losanges pas ${state.surface.pitchMm}mm`:''})`:'')
+      + (state.surface.style==='organic'?` (amplitude ${state.surface.strieDepthMm}mm, échelle ${state.surface.pitchMm}mm)`:''),
+    `Composition : ${state.compo.count} corps — ${LAYOUT_LABELS[state.compo.layout]} — ${state.compo.symmetric?'symétrique':'organique'}`,
+    `Pièces à imprimer : ${MESH.parts.length>1?`${MESH.parts.length} (${MESH.parts.map(p=>p.label).join(' + ')})`:'1 (monobloc)'}`,
     `Hauteur totale : ${state.profile[state.profile.length-1].h.toFixed(0)}mm — Rayon max : ${Math.max(...state.profile.map(p=>p.r)).toFixed(0)}mm`,
     `Culot : ${state.socket} (${sock.label})`,
     `Matériau : ${MATERIALS[state.material]} — paroi ${state.wall}mm`,
-    `Couleur : ${state.color}`,
-    `Modules d'assemblage : ${state.modules.length?state.modules.map(m=>MODULES[m.id].label).join(' · '):'aucun'}`,
+    `Couleur : ${state.compo.count>1 && !state.linkBodies ? state.bodies.slice(0,state.compo.count).map((b,i)=>`corps ${i+1} ${bodyColor(i)}`).join(', ') : state.color}`,
     `Volume estimé : ${s.volumeCm3.toFixed(1)} cm³ — Temps impr. estimé : ${s.printHours.toFixed(1)}h`,
     `Prix estimé : ${s.price.toFixed(0)} €`,
     '',
@@ -1104,7 +2971,9 @@ $('prepEmail').onclick=()=>{
 };
 
 /* ── Init ─────────────────────────────────────────────────────────────── */
-setPreset('dune');
+syncViewInputs();
+setPreset(TYPES[state.type].silhouettes[0]);
+detectAI();
 </script>
 <img src="https://atlas-studio.pro/deligny/api/px?page=index" alt="" width="1" height="1" style="position:absolute;left:-9999px" loading="eager">
 </body></html>

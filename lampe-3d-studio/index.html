@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-i70H8/WeZBP/pQdNMjF95JewshBGTPtrZfF2PzJW1mA='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-49UkuMwy5kdOcZzMrKz572IZyCJc+y1jurOa57hCVkM='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -533,7 +533,7 @@ const TYPES = {
     silhouettes: ['cloche','cone','ogive','diabolo'],
     rules: { bottomWidest: true, minBottomRadiusMm: 40 },
     // composition : une suspension peut être une grappe de plusieurs corps
-    compo: { maxBodies: 5, layouts: ['vertical','ligne','circulaire'], baseFirst: false,
+    compo: { maxBodies: 5, layouts: ['vertical','ligne','circulaire','libre'], baseFirst: false,
              note: "Une suspension se compose de 1 à 5 corps : empilés sur le même câble (vertical), alignés côte à côte (ligne) ou en couronne (circulaire). Chaque corps est un abat-jour imprimé séparément." },
   },
   poser: {
@@ -543,7 +543,7 @@ const TYPES = {
     silhouettes: ['dune','galet','colonne','gradins'],
     rules: { minTipAngleDeg: 25 },
     // le 1er corps sert de BASE en ligne/couronne : les autres se posent dessus
-    compo: { maxBodies: 7, layouts: ['vertical','ligne','circulaire'], baseFirst: true,
+    compo: { maxBodies: 7, layouts: ['vertical','ligne','circulaire','libre'], baseFirst: true,
              note: "Une lampe à poser va de 1 à 7 corps : empilés (vertical), ou une BASE (corps 1) portant les autres alignés ou en couronne — réguliers si « symétrique », dispersés si « organique »." },
   },
   applique: {
@@ -552,7 +552,7 @@ const TYPES = {
     minHeightMm: 50, maxHeightMm: 140, maxRadiusMm: 100,
     silhouettes: ['demiDome','ecope','disque'],
     rules: { maxDepthMm: 140 },
-    compo: { maxBodies: 7, layouts: ['ligne','circulaire','vertical'], baseFirst: false,
+    compo: { maxBodies: 7, layouts: ['ligne','circulaire','vertical','libre'], baseFirst: false,
              note: "Une applique va de 1 à 7 corps, répétés le long du mur (ligne), en couronne, ou empilés. « Symétrique » = répétition régulière ; « organique » = espacements, échelles et rotations dispersés." },
   },
 };
@@ -611,7 +611,7 @@ function newBody(shape){
     profile: [],                              // [{h,r}] trié par h croissant
     sculpt: { twistDegPerMm:0, bendDeg:0 },    // torsion (°/mm) et courbure (° au sommet)
     scale: 1,                                  // échelle propre (cuite dans la géométrie)
-    rotDeg: 0, offsetXMm: 0, offsetZMm: 0,     // placement fin (mode expert)
+    rotDeg: 0, offsetXMm: 0, offsetYMm: 0, offsetZMm: 0,   // déplacement propre du corps
     surface: null,                             // style de surface propre (null = celui commun)
     color: null,                               // couleur propre (null = celle commune)
     flipped: false,                            // true = tête en bas : le culot est en BAS (h=0)
@@ -1832,7 +1832,11 @@ function bodyPlacements(){
     const scale = (c.symmetric ? 1 : (1 + 0.22*j)) * (b.scale || 1);
     const bodyH = profileTopH(b.profile) * scale;
     let tx=0, ty=0, tz=0, rot=0;
-    if(c.layout === 'vertical'){
+    if(c.layout === 'libre'){
+      // tous les corps naissent au MÊME endroit : c'est le déplacement propre de
+      // chacun qui les sépare — ou pas, si on veut les faire se recouvrir
+      tx = 0; ty = 0; tz = 0;
+    } else if(c.layout === 'vertical'){
       tz = stack; stack += bodyH;
     } else if(c.layout === 'ligne'){
       if(baseFirst && i===0){ tx=0; tz=0; }
@@ -1851,7 +1855,7 @@ function bodyPlacements(){
         tz = baseFirst ? profileTopH(state.bodies[0].profile) : 0;
       }
     }
-    out.push({ tx: tx + (b.offsetXMm||0), ty, tz: tz + (b.offsetZMm||0),
+    out.push({ tx: tx + (b.offsetXMm||0), ty: ty + (b.offsetYMm||0), tz: tz + (b.offsetZMm||0),
                rot: rot + (b.rotDeg||0), scale, bodyH,
                role: (baseFirst && i===0) ? 'base' : (n>1 ? 'corps '+(i+1) : 'corps unique') });
   }
@@ -2853,7 +2857,8 @@ function renderSculpt(){
 }
 
 /* ── Composition : nombre de corps, agencement, symétrie ─────────────────── */
-const LAYOUT_LABELS = { vertical:'Empilés (vertical)', ligne:'Alignés (ligne)', circulaire:'En couronne (circulaire)' };
+const LAYOUT_LABELS = { vertical:'Empilés (vertical)', ligne:'Alignés (ligne)',
+                        circulaire:'En couronne (circulaire)', libre:'Libre — superposables' };
 function renderCompo(){
   const cfg = TYPES[state.type].compo;
   const c = state.compo;
@@ -2936,6 +2941,30 @@ function renderCompo(){
     tabs.appendChild(copy);
   });
 
+  // Déplacement du corps sélectionné — accessible sans mode expert, parce que
+  // c'est le geste de composition de base dès qu'on a plus d'un corps.
+  if(c.count>1){
+    const b=state.bodies[state.body];
+    const titre=document.createElement('div');
+    titre.className='lbl'; titre.style.marginTop='12px';
+    titre.innerHTML = `Déplacer le corps ${state.body+1} <small>— s'ajoute à la position donnée par l'agencement</small>`;
+    par.appendChild(titre);
+    const axe=(label,cle,min,max)=>{
+      const f=document.createElement('div'); f.className='field';
+      f.innerHTML=`<label>${label} : <b>${(b[cle]||0).toFixed(0)} mm</b></label>
+        <input type="range" min="${min}" max="${max}" step="1" value="${b[cle]||0}" style="width:100%;accent-color:var(--blue)">`;
+      f.querySelector('input').oninput=e=>{ b[cle]=parseFloat(e.target.value); renderSoon(); };
+      par.appendChild(f);
+    };
+    axe('Gauche ↔ droite','offsetXMm',-200,200);
+    axe('Avant ↔ arrière','offsetYMm',-200,200);
+    axe('Bas ↔ haut','offsetZMm',-200,200);
+    const raz=document.createElement('button');
+    raz.className='btn'; raz.textContent='⌖ Recentrer ce corps';
+    raz.onclick=()=>{ b.offsetXMm=b.offsetYMm=b.offsetZMm=0; renderAll(); };
+    par.appendChild(raz);
+  }
+
   const box=$('compoBox'); box.innerHTML='';
   const places=bodyPlacements();
   const lines=[];
@@ -2950,6 +2979,7 @@ function renderCompo(){
     const bb=MESH.stats.bbox;
     if(bb) lines.push(['ok', `Encombrement de l'assemblage : ${(bb.maxX-bb.minX).toFixed(0)} × ${(bb.maxY-bb.minY).toFixed(0)} × ${(bb.maxZ-bb.minZ).toFixed(0)} mm — chaque corps est imprimé séparément, seule SA taille doit tenir sur le plateau.`]);
     lines.push(['warn', `${MESH.parts.length} pièces à imprimer, donc autant de lancements machine : le prix suit.`]);
+    interferences(places).forEach(l=>lines.push(l));
   }
   (MESH.clamped||[]).forEach(cl=>{
     lines.push(['warn', `Corps ${cl.body} : rayon du point haut remonté de ${cl.from} à ${cl.to} mm pour loger le culot ${state.socket}.`]);
@@ -2967,6 +2997,69 @@ function renderCompo(){
       lines.push(['bad', `Corps ${i+1} : Ø${(rMax*2).toFixed(0)} mm — ne tient pas sur le plateau ${PRINT_BOUNDS.PLATE_XY_MM}×${PRINT_BOUNDS.PLATE_XY_MM} mm.`]);
   });
   lines.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
+}
+
+/* INTERFÉRENCE ENTRE CORPS — dès qu'on peut les déplacer librement, deux corps
+ * peuvent se retrouver au même endroit. Trois cas, et il faut les distinguer :
+ *  · disjoints            → rien à signaler ;
+ *  · EMBOÎTÉS avec du jeu → un corps tient entièrement dans la cavité de l'autre.
+ *    C'est une vraie lampe à double peau, parfaitement imprimable (deux pièces
+ *    qui se glissent l'une dans l'autre) ;
+ *  · qui SE TRAVERSENT    → les parois se croisent. Deux pièces imprimées à part
+ *    ne peuvent pas s'assembler ainsi : c'est un défaut, pas un style.
+ * ────────────────────────────────────────────────────────────────────────── */
+function rayonExterieurA(corps, place, zMonde){
+  const pr = corps.profile;
+  if(!pr.length) return 0;
+  const h = (zMonde - place.tz) / (place.scale || 1);
+  if(h < pr[0].h || h > pr[pr.length-1].h) return null;   // hors de la pièce
+  for(let k=0;k<pr.length-1;k++){
+    if(h <= pr[k+1].h){
+      const t=(h-pr[k].h)/Math.max(1e-6, pr[k+1].h-pr[k].h);
+      return (pr[k].r + t*(pr[k+1].r-pr[k].r)) * (place.scale||1);
+    }
+  }
+  return pr[pr.length-1].r * (place.scale||1);
+}
+
+function interferences(places){
+  const wall = parseFloat(state.wall), n = places.length, out = [];
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    const A=state.bodies[i], B=state.bodies[j], pa=places[i], pb=places[j];
+    if(!A || !B || A.profile.length<2 || B.profile.length<2) continue;
+    const d = Math.hypot(pa.tx-pb.tx, pa.ty-pb.ty);
+    const z0 = Math.max(pa.tz, pb.tz);
+    const z1 = Math.min(pa.tz+pa.bodyH, pb.tz+pb.bodyH);
+    if(z1 <= z0){ continue; }                       // hauteurs disjointes
+    let croisent=false, aDansB=true, bDansA=true, jeuMini=Infinity, penetration=0;
+    for(let k=0;k<=24;k++){
+      const z = z0 + (z1-z0)*k/24;
+      const ra = rayonExterieurA(A, pa, z), rb = rayonExterieurA(B, pb, z);
+      if(ra===null || rb===null) continue;
+      const cavA = ra - wall, cavB = rb - wall;      // rayons intérieurs
+      const bDansCavA = (d + rb) < cavA;
+      const aDansCavB = (d + ra) < cavB;
+      const disjoints = d > (ra + rb);
+      if(!bDansCavA) bDansA = false;
+      if(!aDansCavB) aDansB = false;
+      if(!bDansCavA && !aDansCavB && !disjoints){
+        croisent = true;
+        penetration = Math.max(penetration, (ra + rb) - d);
+      }
+      if(bDansCavA) jeuMini = Math.min(jeuMini, cavA - (d + rb));
+      if(aDansCavB) jeuMini = Math.min(jeuMini, cavB - (d + ra));
+    }
+    if(croisent){
+      out.push(['bad', `Corps ${i+1} et ${j+1} se TRAVERSENT sur ${(z1-z0).toFixed(0)} mm de hauteur `
+        + `(${penetration.toFixed(1)} mm d'interpénétration). Imprimés séparément, ils ne pourront pas être assemblés : `
+        + `écarte-les, ou emboîte-en un complètement dans l'autre.`]);
+    } else if(bDansA || aDansB){
+      const dedans = bDansA ? j+1 : i+1, dehors = bDansA ? i+1 : j+1;
+      out.push(['ok', `Corps ${dedans} entièrement logé dans le corps ${dehors} — double peau, `
+        + `jeu mini ${jeuMini.toFixed(1)} mm. Deux pièces distinctes qui se glissent l'une dans l'autre : imprimable.`]);
+    }
+  }
+  return out;
 }
 
 // Nouveau corps : reprend la silhouette du corps 1 (composition cohérente par
@@ -3328,6 +3421,7 @@ function buildDossier(){
           courbure_deg:+(b.sculpt.bendDeg||0).toFixed(1),
           profil_mm: b.profile.map(p=>({hauteur:+(p.h*pl.scale).toFixed(1), rayon:+(p.r*pl.scale).toFixed(1)})) };
       }),
+      interferences: interferences(bodyPlacements()).map(([niveau, texte])=>({niveau, texte})),
       note: "Chaque corps est un STL séparé, exporté à son propre origine et posé à plat : seule la taille d'UN corps doit tenir sur le plateau. Position et rotation ci-dessus = plan d'assemblage, à réaliser à l'atelier.",
     },
     sculpture: {

@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-LCyQSwyylFDhfY9DUaVuWgHCD8MR16f4DBBx4GPsc0M='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-vKZXTkX+HPT1xcjjaje8EwCrpJg29U+3r5YKdJH3YYw='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -650,7 +650,8 @@ let state = {
   surface: { base:'facette', smoothing:45,
              stries:false, strieCount:18, strieDepthMm:1.6, cross:false, pitchMm:34,
              organique:false, orgAmpMm:2.4, orgPitchMm:40,
-             ajour:false, voroCells:26, voroStrutMm:3.2, voroBandMm:14, voroVariant:1 },
+             // 91 cellules ≈ 24 mm de côté : le motif se lit sans devenir une dentelle
+             ajour:false, voroCells:91, voroStrutMm:3.2, voroBandMm:14, voroVariant:1 },
   split: { on:false, count:2 },   // découpe horizontale d'un corps en modules empilables
   expert: false,
   linkBodies: true,   // true = profil/style/sculpture communs ; false = chaque corps est réglé à part
@@ -1206,6 +1207,30 @@ function twistStepMm(sculpt){
   return t > 0.005 ? Math.max(1.5, 4/t) : 0;
 }
 
+/* Spline cubique NATURELLE : passe par tous les points et raccorde les courbures
+ * (C²). C'est la continuité de courbure qui fait qu'une surface lissée n'a plus
+ * d'arête visible — une simple continuité de tangente laisse un anneau net à
+ * chaque point de contrôle. Résolution du système tridiagonal en place. */
+function splineNaturelle(xs, ys){
+  const n = xs.length, y2 = new Array(n).fill(0), u = new Array(n).fill(0);
+  for(let i=1;i<n-1;i++){
+    const sig = (xs[i]-xs[i-1])/(xs[i+1]-xs[i-1]);
+    const p = sig*y2[i-1] + 2;
+    y2[i] = (sig-1)/p;
+    let t = (ys[i+1]-ys[i])/(xs[i+1]-xs[i]) - (ys[i]-ys[i-1])/(xs[i]-xs[i-1]);
+    u[i] = (6*t/(xs[i+1]-xs[i-1]) - sig*u[i-1])/p;
+  }
+  for(let k=n-2;k>=0;k--) y2[k] = y2[k]*y2[k+1] + u[k];
+  return function(x){
+    let lo=0, hi=n-1;
+    while(hi-lo > 1){ const k=(hi+lo)>>1; if(xs[k] > x) hi=k; else lo=k; }
+    const h = xs[hi]-xs[lo];
+    if(h <= 0) return ys[lo];
+    const a = (xs[hi]-x)/h, b = (x-xs[lo])/h;
+    return a*ys[lo] + b*ys[hi] + ((a*a*a-a)*y2[lo] + (b*b*b-b)*y2[hi])*(h*h)/6;
+  };
+}
+
 function resampleMeridian(profile, surf, stepOverrideMm){
   const lisse = (surf.base === 'lisse');
   const step0 = stepOverrideMm > 0 ? stepOverrideMm : styleStepMm(surf);
@@ -1225,23 +1250,26 @@ function resampleMeridian(profile, surf, stepOverrideMm){
     return out;
   }
   if(!lisse || profile.length < 3 || step0 <= 0) return profile.map(p=>({h:p.h, r:p.r}));
-  const step = step0;
-  const P = profile;
-  const at = i => P[Math.max(0, Math.min(P.length-1, i))];
+  /* SPLINE CUBIQUE NATURELLE, continue en COURBURE (C²).
+   * La Catmull-Rom utilisée avant n'était continue qu'en tangente (C¹) : la
+   * courbure sautait à chaque point de contrôle, et comme l'ombrage dépend de la
+   * normale, ce saut se voyait sous forme d'un anneau net autour de la lampe —
+   * le lissage semblait ne marcher qu'horizontalement. Une spline naturelle
+   * passe toujours PAR les points édités (on peut donc continuer à les glisser)
+   * mais raccorde aussi les courbures : plus aucune arête horizontale.
+   * En contrepartie elle n'est pas locale — déplacer un point réoriente toute la
+   * courbe, exactement comme une spline de CAO. */
+  const xs = profile.map(p=>p.h), ys = profile.map(p=>p.r);
+  const f = splineNaturelle(xs, ys);
+  const h0 = xs[0], h1 = xs[xs.length-1];
+  const n = Math.max(2, Math.ceil((h1-h0)/step0));
   const out = [];
-  for(let i=0;i<P.length-1;i++){
-    const p0=at(i-1), p1=at(i), p2=at(i+1), p3=at(i+2);
-    const segLen = Math.abs(p2.h-p1.h);
-    const n = Math.max(1, Math.ceil(segLen/step));
-    for(let k=0;k<n;k++){
-      const t=k/n, t2=t*t, t3=t2*t;
-      const f = (a,b,c,d)=> 0.5*((2*b) + (-a+c)*t + (2*a-5*b+4*c-d)*t2 + (-a+3*b-3*c+d)*t3);
-      out.push({ h:f(p0.h,p1.h,p2.h,p3.h), r:Math.max(0.5, f(p0.r,p1.r,p2.r,p3.r)) });
-    }
+  for(let k=0;k<=n;k++){
+    const h = h0 + (h1-h0)*k/n;
+    out.push({ h, r: Math.max(0.5, f(h)) });
   }
-  out.push({h:P[P.length-1].h, r:P[P.length-1].r});
-  // h strictement croissant (Catmull-Rom peut légèrement rétrograder sur un angle vif)
-  for(let i=1;i<out.length;i++) if(out[i].h <= out[i-1].h) out[i].h = out[i-1].h + 0.01;
+  // les points de contrôle édités doivent rester exactement sur la courbe
+  out[0].r = ys[0]; out[out.length-1].r = ys[ys.length-1];
   return out;
 }
 
@@ -2314,7 +2342,7 @@ function renderStudio(){
  * Doctrine maison : l'AI ne fabrique QUE des pixels, jamais la géométrie —
  * le STL exporté n'est pas touché par ce rendu.
  * ──────────────────────────────────────────────────────────────────────── */
-const AI = { base:'http://127.0.0.1:4555', ok:null, busy:false, note:'' };
+const AI = { base:'http://127.0.0.1:4555', ok:null, busy:false, note:'', moteur:'fidele' };
 
 function aiPrompt(){
   const b=state.bodies[state.body];
@@ -2327,6 +2355,17 @@ function aiPrompt(){
   if(surf.ajour)     tex.push('voronoi perforated lattice shell');
   const texture=tex.join(', ');
   const kind={suspension:'pendant lamp',poser:'table lamp',applique:'wall sconce'}[state.type];
+  // Kontext est un moteur d'ÉDITION : on lui donne un ordre, pas une description.
+  // Dire ce qu'il ne doit PAS toucher est ce qui garde la géométrie intacte —
+  // l'ancien prompt descriptif laissait le modèle réinventer la pièce.
+  if(AI.moteur !== 'creatif'){
+    return `Turn this 3D viewport render into a professional product photograph. `
+      + `Keep the object EXACTLY as it is: same silhouette, same proportions, same ${texture}, `
+      + `same openings and same hole pattern, pixel-aligned. Change only the material and the light: `
+      + `${mat} surface with fine 3D-printing layer lines, warm LED glow from inside, `
+      + `soft studio key light with rim light, seamless neutral backdrop, subtle floor reflection. `
+      + `Do not add, remove or reshape any part. No text, no logo, no watermark.`;
+  }
   return `professional product photography of a 3D printed ${kind}, ${mat}, ${texture}, `
     + `${state.compo.count>1?state.compo.count+' stacked bodies, ':''}warm LED glow from inside, `
     + `seamless studio backdrop, soft key light and rim light, subtle floor reflection, `
@@ -2372,14 +2411,30 @@ function renderAIBlock(){
     Le rendu studio ci-dessus est envoyé au moteur d'image <b>fal</b> en img2img : l'image part chez un service externe,
     la géométrie non — <b>l'AI ne produit que des pixels, le STL exporté n'est jamais modifié</b>. Chaque appel est facturé
     sur ta clé.</div>
-    <div class="row-btn"><button class="btn pri" id="aiGo">✨ Rendu AI (fal img2img)</button>
-    <label style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">Fidélité à la géométrie
+    <div class="seg" id="aiMoteur" style="margin-top:10px">
+      <button data-m="fidele" class="on">🎯 Fidèle — édition guidée</button>
+      <button data-m="creatif">🎨 Créatif — réinterprète</button>
+    </div>
+    <div class="hint" id="aiMoteurNote"></div>
+    <div class="row-btn"><button class="btn pri" id="aiGo">✨ Calculer le rendu AI</button>
+    <label id="aiStrengthWrap" style="font-size:12.5px;color:var(--dim2);display:none;align-items:center;gap:6px">Liberté du modèle
       <input type="range" id="aiStrength" min="20" max="70" step="5" value="45" style="accent-color:var(--blue)">
       <b id="aiStrengthVal">45 %</b></label></div>
     <div class="warnbox" id="aiInfo"></div>
     <div id="aiOut"></div>`;
   $('aiStrength').oninput = e=>{ $('aiStrengthVal').textContent = e.target.value+' %'; };
   $('aiGo').onclick = aiRender;
+  const majMoteur = ()=>{
+    document.querySelectorAll('#aiMoteur button').forEach(b=>b.classList.toggle('on', b.dataset.m===AI.moteur));
+    $('aiStrengthWrap').style.display = AI.moteur==='creatif' ? 'flex' : 'none';
+    $('aiMoteurNote').textContent = AI.moteur==='fidele'
+      ? "Édition guidée : le modèle repart de l'image et ne change QUE la matière et la lumière. C'est le mode à utiliser avant impression — ce que tu vois est ce que tu imprimeras."
+      : "Réinterprétation libre : plus beau, mais le modèle redessine l'objet — trous, silhouette et proportions peuvent changer. À réserver à une image d'ambiance, jamais à une validation avant impression.";
+  };
+  document.querySelectorAll('#aiMoteur button').forEach(b=>{
+    b.onclick = ()=>{ AI.moteur = b.dataset.m; majMoteur(); };
+  });
+  majMoteur();
 }
 
 async function aiRender(){
@@ -2390,7 +2445,7 @@ async function aiRender(){
   info.innerHTML='<div class="line warn">Rendu AI en cours (fal img2img)…</div>';
   try{
     const r=await fetch(AI.base+'/api/render',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ image:img, prompt:aiPrompt(),
+      body:JSON.stringify({ image:img, prompt:aiPrompt(), moteur:AI.moteur,
         strength: parseInt($('aiStrength').value,10)/100, steps:30, guidance:3.5 })});
     const j=await r.json();
     if(!j.ok){ info.innerHTML=`<div class="line bad">Rendu AI indisponible : ${j.note||'réponse inattendue'}</div>`; }

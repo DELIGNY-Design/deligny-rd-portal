@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-EcM4QoWAd8CT9LC/j9u++q+laDVTfPn59VqFe2vni1U='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-i70H8/WeZBP/pQdNMjF95JewshBGTPtrZfF2PzJW1mA='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -2119,7 +2119,9 @@ function drawPreview(hq){
       const rnx = nx*rc - ny*rs, rny = nx*rs + ny*rc;
       const rn = project3d(rnx, nz, rny);
       const d = rn.x*L.x + rn.y*L.y + rn.depth*L.z;
-      return { depth: rn.depth, shade: Math.max(0.16, Math.min(1, 0.24 + 0.80*Math.max(0,d))),
+      // plage volontairement plus large que 0-1 : c'est la courbe filmique qui
+      // ramène le haut, au lieu de couper net à blanc
+      return { depth: rn.depth, shade: Math.max(0.20, 0.20 + 1.05*Math.max(0,d)),
                n: {x:rn.x, y:rn.y, z:rn.depth} };
     };
     part.tris.forEach((tri, ti)=>{
@@ -2177,7 +2179,7 @@ function drawPreview(hq){
     const s = f.shade * k;
     const teinte = hq
       ? (v,n)=> shadeFace(n || f.nv, col, FINISHES[RENDER.finish], RENDER.lit)
-      : (v)=> `rgb(${col.r*v|0},${col.g*v|0},${col.b*v|0})`;
+      : (v)=> `rgb(${tonemap(col.r*v)},${tonemap(col.g*v)},${tonemap(col.b*v)})`;
     let fill = teinte(s, f.nv);
     if(f.sh3){
       // Dégradé linéaire entre le sommet le plus sombre et le plus clair :
@@ -2303,6 +2305,18 @@ function sceneFaces(W, H){
   return {faces, cx, cy, groundY, footR, scale};
 }
 
+/* COMPRESSION DES HAUTES LUMIÈRES (tone mapping filmique).
+ * Les trois sources, le spéculaire, le Fresnel et l'émissif s'additionnent : la
+ * somme dépasse largement le maximum affichable. Écrêter à 255 transformait
+ * 37,8 % des pixels en blanc pur — toute la forme s'y perdait, c'est le « cramé ».
+ * Cette courbe écrase progressivement le haut de la plage au lieu de la couper :
+ * les hautes lumières gardent leur modelé, les ombres respirent. */
+function tonemap(v){
+  const x = Math.max(0, v)/255;
+  const y = (x*(2.51*x + 0.03))/(x*(2.43*x + 0.59) + 0.14);
+  return Math.max(0, Math.min(255, Math.round(y*255)));
+}
+
 function shadeFace(n, base, fin, lit){
   // repère vue : la caméra regarde vers +depth décroissant, V = (0,0,-1)
   const dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z;
@@ -2322,8 +2336,7 @@ function shadeFace(n, base, fin, lit){
   const r = base.r*lum + 255*spec + 235*fres*0.5 + 255*glow*0.55;
   const g = base.g*lum + 255*spec + 240*fres*0.5 + 205*glow*0.55;
   const b = base.b*lum + 255*spec + 255*fres*0.5 + 150*glow*0.55;
-  const cl=v=>Math.max(0,Math.min(255,v|0));
-  return `rgb(${cl(r)},${cl(g)},${cl(b)})`;
+  return `rgb(${tonemap(r)},${tonemap(g)},${tonemap(b)})`;
 }
 
 function renderStudio(){

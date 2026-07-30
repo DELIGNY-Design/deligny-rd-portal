@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-49UkuMwy5kdOcZzMrKz572IZyCJc+y1jurOa57hCVkM='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-LcVKu5j+bdS+fy59W+hvgZhqh69RE4b6tbgca8uDJCw='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -533,7 +533,7 @@ const TYPES = {
     silhouettes: ['cloche','cone','ogive','diabolo'],
     rules: { bottomWidest: true, minBottomRadiusMm: 40 },
     // composition : une suspension peut être une grappe de plusieurs corps
-    compo: { maxBodies: 5, layouts: ['vertical','ligne','circulaire','libre'], baseFirst: false,
+    compo: { maxBodies: 5, layouts: ['vertical','ligne','circulaire','imbrique','libre'], baseFirst: false,
              note: "Une suspension se compose de 1 à 5 corps : empilés sur le même câble (vertical), alignés côte à côte (ligne) ou en couronne (circulaire). Chaque corps est un abat-jour imprimé séparément." },
   },
   poser: {
@@ -543,7 +543,7 @@ const TYPES = {
     silhouettes: ['dune','galet','colonne','gradins'],
     rules: { minTipAngleDeg: 25 },
     // le 1er corps sert de BASE en ligne/couronne : les autres se posent dessus
-    compo: { maxBodies: 7, layouts: ['vertical','ligne','circulaire','libre'], baseFirst: true,
+    compo: { maxBodies: 7, layouts: ['vertical','ligne','circulaire','imbrique','libre'], baseFirst: true,
              note: "Une lampe à poser va de 1 à 7 corps : empilés (vertical), ou une BASE (corps 1) portant les autres alignés ou en couronne — réguliers si « symétrique », dispersés si « organique »." },
   },
   applique: {
@@ -552,7 +552,7 @@ const TYPES = {
     minHeightMm: 50, maxHeightMm: 140, maxRadiusMm: 100,
     silhouettes: ['demiDome','ecope','disque'],
     rules: { maxDepthMm: 140 },
-    compo: { maxBodies: 7, layouts: ['ligne','circulaire','vertical','libre'], baseFirst: false,
+    compo: { maxBodies: 7, layouts: ['ligne','circulaire','vertical','imbrique','libre'], baseFirst: false,
              note: "Une applique va de 1 à 7 corps, répétés le long du mur (ligne), en couronne, ou empilés. « Symétrique » = répétition régulière ; « organique » = espacements, échelles et rotations dispersés." },
   },
 };
@@ -645,7 +645,7 @@ let state = {
   seed: null,        // graine du dernier tirage aléatoire (null si preset/édition manuelle)
   bodies: [newBody('cloche')],
   body: 0,           // corps en cours d'édition dans la coupe 2D
-  compo: { count:1, layout:'vertical', symmetric:true, spacingMm:120, ringRadiusMm:90 },
+  compo: { count:1, layout:'vertical', symmetric:true, spacingMm:120, ringRadiusMm:90, jeuImbricationMm:8 },
   // couches combinables : une base + des reliefs additifs + un ajourage
   surface: { base:'facette', smoothing:45,
              stries:false, strieCount:18, strieDepthMm:1.6, cross:false, pitchMm:34,
@@ -1819,6 +1819,50 @@ function partLabel(i, n){
  * « Organique » = dispersion déterministe tirée de la graine : espacements,
  * échelles et rotations irréguliers, mais reproductibles.
  * ────────────────────────────────────────────────────────────────────────── */
+/* IMBRICATION (lampe à double peau) — on cherche la plus GRANDE réduction qui
+ * garde le corps intérieur entièrement dans la cavité du corps extérieur, avec
+ * le jeu demandé, sur toute la hauteur commune. On la cherche par dichotomie
+ * plutôt que de laisser l'utilisateur tâtonner au curseur : c'est une contrainte
+ * géométrique, elle a une réponse exacte.
+ * Un corps réduit de k voit sa hauteur réduite d'autant : à la cote z, son rayon
+ * vaut k·r(z/k) — c'est cette comparaison-là qu'il faut faire, pas celle des
+ * rayons maximaux.
+ * ────────────────────────────────────────────────────────────────────────── */
+function rayonProfilA(pr, h){
+  if(!pr.length) return 0;
+  if(h <= pr[0].h) return pr[0].r;
+  for(let k=0;k<pr.length-1;k++){
+    if(h <= pr[k+1].h){
+      const t=(h-pr[k].h)/Math.max(1e-6, pr[k+1].h-pr[k].h);
+      return pr[k].r + t*(pr[k+1].r-pr[k].r);
+    }
+  }
+  return pr[pr.length-1].r;
+}
+function echelleImbrication(profExt, echelleExt, profInt, jeu, wall){
+  const Hext = profExt[profExt.length-1].h * echelleExt;
+  const Hint = profInt[profInt.length-1].h;
+  const tient = (k)=>{
+    const h = Hint * k;
+    if(h > Hext) return false;                       // dépasse en hauteur
+    for(let s=0; s<=30; s++){
+      const z = h * s/30;
+      const rInt = k * rayonProfilA(profInt, (z/k));
+      const cav  = echelleExt * rayonProfilA(profExt, z/echelleExt) - wall;
+      if(rInt + jeu > cav) return false;
+      if(cav <= 0) return false;
+    }
+    return true;
+  };
+  let lo = 0.05, hi = 1.0;
+  if(tient(hi)) return hi;
+  for(let i=0;i<26;i++){
+    const mid = (lo+hi)/2;
+    if(tient(mid)) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
 function bodyPlacements(){
   const c = state.compo, n = Math.max(1, c.count);
   const cfg = TYPES[state.type].compo;
@@ -1832,7 +1876,21 @@ function bodyPlacements(){
     const scale = (c.symmetric ? 1 : (1 + 0.22*j)) * (b.scale || 1);
     const bodyH = profileTopH(b.profile) * scale;
     let tx=0, ty=0, tz=0, rot=0;
-    if(c.layout === 'libre'){
+    if(c.layout === 'imbrique'){
+      // chaque corps se loge dans le précédent, à la même base
+      tx = 0; ty = 0; tz = 0;
+      if(i > 0){
+        const ext = state.bodies[i-1], pExt = out[i-1];
+        if(ext && ext.profile.length > 1 && b.profile.length > 1){
+          const k = echelleImbrication(ext.profile, pExt.scale, b.profile,
+                                       c.jeuImbricationMm, parseFloat(state.wall));
+          out.push({ tx:(b.offsetXMm||0), ty:(b.offsetYMm||0), tz:(b.offsetZMm||0),
+                     rot:(b.rotDeg||0), scale:k, bodyH: profileTopH(b.profile)*k,
+                     role:'peau '+(i+1), imbrique:true });
+          continue;
+        }
+      }
+    } else if(c.layout === 'libre'){
       // tous les corps naissent au MÊME endroit : c'est le déplacement propre de
       // chacun qui les sépare — ou pas, si on veut les faire se recouvrir
       tx = 0; ty = 0; tz = 0;
@@ -2858,7 +2916,8 @@ function renderSculpt(){
 
 /* ── Composition : nombre de corps, agencement, symétrie ─────────────────── */
 const LAYOUT_LABELS = { vertical:'Empilés (vertical)', ligne:'Alignés (ligne)',
-                        circulaire:'En couronne (circulaire)', libre:'Libre — superposables' };
+                        circulaire:'En couronne (circulaire)', imbrique:'Imbriqués (double peau)',
+                        libre:'Libre — superposables' };
 function renderCompo(){
   const cfg = TYPES[state.type].compo;
   const c = state.compo;
@@ -2903,6 +2962,15 @@ function renderCompo(){
     };
     if(c.layout==='ligne') add('Écartement entre corps','spacingMm',40,300,'mm');
     if(c.layout==='circulaire') add('Rayon de la couronne','ringRadiusMm',40,260,'mm');
+    if(c.layout==='imbrique'){
+      add("Jeu entre les peaux",'jeuImbricationMm',2,40,'mm');
+      const n=document.createElement('div'); n.className='hint';
+      n.textContent = "Chaque corps est réduit automatiquement pour se loger dans le précédent avec ce jeu, "
+        + "sur toute la hauteur commune — la réduction est calculée, pas réglée à la main. "
+        + "Deux pièces distinctes qui se glissent l'une dans l'autre : la peau extérieure filtre, "
+        + "l'intérieure diffuse. Un jeu généreux laisse passer l'air, ce qui est utile au-dessus d'une LED.";
+      par.appendChild(n);
+    }
   }
 
   // onglets de corps : c'est ici qu'on choisit LEQUEL on dessine. Rendus DEUX

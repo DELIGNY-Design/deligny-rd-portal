@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-xSzNiX/Yj1eoGVa8EwgRRQez607GkEs88GKp2Yf4rbk='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-Ai++nVD9Otr03LlPaH32gepsizEe64flvzkUVgh4isQ='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -985,20 +985,29 @@ function voroResolution(surf, rMean, H){
   const K = Math.max(4, Math.min(4000, surf.voroCells|0));
   const W = Math.max(1, 2*Math.PI*rMean);
   const cell = Math.sqrt((W*H)/K);
-  const stepMm = Math.max(0.9, Math.min(2.4, cell/3.2));
-  const segments = Math.max(96, Math.min(260, Math.ceil((W/(cell/3.2))/4)*4));
+  const stepMm = Math.max(0.9, Math.min(1.9, cell/3.2));
+  // Deux exigences : résoudre le MOTIF (cellules), et rendre la SILHOUETTE lisse
+  // (un segment ne doit pas dépasser ~1,7 mm d'arc, sinon les facettes verticales
+  // se voient — c'était le cas à 96 segments sur un Ø130).
+  const parMotif = W/(cell/3.2);
+  const parSilhouette = W/1.7;
+  const segments = Math.max(160, Math.min(340, Math.ceil(Math.max(parMotif, parSilhouette)/4)*4));
   return {stepMm, segments, cellMm:cell};
 }
 
-// Matière ou trou au centre d'une cellule ? (+ largeur de nervure locale)
-function perfKeep(th, h, ctx){
-  if(h <= ctx.bandBottom || h >= ctx.bandTop) return true;   // bandes pleines imposées
+/* CHAMP d'ajourage, continu et signé : > 0 = matière, < 0 = trou, 0 = le bord
+ * exact du trou. C'est parce qu'il est CONTINU qu'on peut découper le contour
+ * là où il passe vraiment, au lieu de garder ou jeter des cellules entières —
+ * ce qui donnait des trous en escalier. */
+function perfField(th, h, ctx){
+  if(h <= ctx.bandBottom || h >= ctx.bandTop) return 1e6;     // bandes pleines imposées
   const dBand = Math.min(h - ctx.bandBottom, ctx.bandTop - h);
   const t = Math.min(1, dBand/ctx.transition);
-  const strutLocal = ctx.strut * (1 + 2.2*(1-t)*(1-t));      // fondu dans la bande
+  const strutLocal = ctx.strut * (1 + 2.2*(1-t)*(1-t));       // fondu dans la bande
   const {d1,d2} = voroD1D2(ctx.ix, (th/(2*Math.PI))*ctx.ix.W, h - ctx.h0);
-  return (d2 - d1) < strutLocal;                              // proche d'une arête = nervure
+  return strutLocal - (d2 - d1);                              // marge de nervure
 }
+function perfKeep(th, h, ctx){ return perfField(th, h, ctx) > 0; }
 
 function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
   const outerP = profile.map(p=>({h:p.h, r:p.r}));
@@ -1016,46 +1025,120 @@ function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
   };
   PERF_ACC.cellMm = ctx.ix.cellMm;
   const Hq = hRef || outerP[M-1].h;
-  const outR = outerP.map(p=>ringAt(p.r, p.h, N, surf, 1, sculpt, Hq));
-  const inR  = inner.map(p=>ringAt(p.r, p.h, N, surf, 1, sculpt, Hq));
 
-  // matière/trou par cellule
-  const keep = [];
-  for(let i=0;i<M-1;i++){
-    const hc = (outerP[i].h + outerP[i+1].h)/2, row = [];
-    for(let j=0;j<N;j++) row.push(perfKeep((j+0.5)/N*Math.PI*2, hc, ctx));
-    keep.push(row);
+  /* Un point de la surface, repéré en coordonnées de grille FRACTIONNAIRES :
+   * fi = position le long du méridien, fj = position sur le tour. C'est ce qui
+   * permet de placer un sommet AILLEURS qu'aux nœuds de la grille — donc de
+   * suivre le vrai bord du trou au lieu de l'escalier de la grille. */
+  const pt = (fi, fj, poly)=>{
+    const i0 = Math.max(0, Math.min(M-2, Math.floor(fi)));
+    const t  = Math.max(0, Math.min(1, fi - i0));
+    const h  = poly[i0].h + t*(poly[i0+1].h - poly[i0].h);
+    const r  = poly[i0].r + t*(poly[i0+1].r - poly[i0].r);
+    // fj = N doit redonner EXACTEMENT le sommet fj = 0 : sinon sin(2π) vaut
+    // −2,4e−16 et la couture du tour laisse deux sommets distincts.
+    const th = ((fj % N + N) % N / N)*Math.PI*2;
+    const rr = Math.max(0.4, r + surfaceDisplacement(surf, th, h));
+    const [x,y] = sculptXY(rr*Math.cos(th), rr*Math.sin(th), h, sculpt, Hq);
+    return [x,y,h];
+  };
+
+  // champ signé aux nœuds de la grille
+  const F = [];
+  for(let i=0;i<M;i++){
+    const row = new Float64Array(N);
+    for(let j=0;j<N;j++) row[j] = perfField((j/N)*Math.PI*2, outerP[i].h, ctx);
+    F.push(row);
   }
-  // pas d'îlot de matière flottant (impossible à imprimer, inutile)
-  for(let i=0;i<M-1;i++) for(let j=0;j<N;j++){
-    if(!keep[i][j]) continue;
-    const up=(i<M-2)&&keep[i+1][j], dn=(i>0)&&keep[i-1][j];
-    const rt=keep[i][(j+1)%N], lf=keep[i][(j-1+N)%N];
-    if(!up && !dn && !rt && !lf) keep[i][j]=false;
-  }
-  const has = (i,j)=> i>=0 && i<M-1 && keep[i][(j+N)%N];
 
   const tris = [];
-  let kept = 0;
+  let cells = 0, kept = 0;
+
+  /* MARCHING TRIANGLES — chaque cellule est coupée en 4 triangles autour de son
+   * centre, et chaque triangle est découpé sur le contour f = 0. Le triangle
+   * lève toute ambiguïté (contrairement au carré, où deux coins opposés en
+   * matière peuvent se lire de deux façons), et les points de découpe ne
+   * dépendent que des deux valeurs aux extrémités de l'arête : deux triangles
+   * voisins les calculent donc à l'identique et le maillage reste étanche. */
+  const marche = (v0, v1, v2)=>{
+    const V = [v0,v1,v2], poly = [];
+    let nCut = 0;
+    for(let k=0;k<3;k++){
+      const a = V[k], b = V[(k+1)%3];
+      if(a.f > 0) poly.push(a);
+      if((a.f > 0) !== (b.f > 0)){
+        const t = a.f/(a.f - b.f);                       // position exacte du bord
+        poly.push({ fi: a.fi + t*(b.fi-a.fi), fj: a.fj + t*(b.fj-a.fj), cut:true });
+        nCut++;
+      }
+    }
+    if(poly.length < 3) return;
+    const n = poly.length;
+    const O = poly.map(p=>pt(p.fi, p.fj, outerP));
+    const I = poly.map(p=>pt(p.fi, p.fj, inner));
+    // face extérieure, face intérieure (enroulement inversé)
+    for(let k=1;k<n-1;k++){
+      tris.push([O[0],O[k],O[k+1]]);
+      tris.push([I[0],I[k+1],I[k]]);
+    }
+    /* Paroi du bord de trou. Sa direction ne peut PAS être déduite de l'ordre où
+     * les points de découpe ont été trouvés : selon le coin qui porte la matière,
+     * le contour est parcouru dans un sens ou dans l'autre, et un mur à l'envers
+     * ne referme rien (14 000 arêtes ouvertes, mesurées). On lit donc la direction
+     * sur le POLYGONE lui-même : l'arête dont les deux extrémités sont des points
+     * de découpe est le contour, dans le sens du polygone. */
+    if(nCut === 2){
+      for(let k=0;k<n;k++){
+        const a=poly[k], b=poly[(k+1)%n];
+        if(!a.cut || !b.cut) continue;
+        const Ao=O[k], Bo=O[(k+1)%n], Ai=I[k], Bi=I[(k+1)%n];
+        tris.push([Ao,Bi,Bo]); tris.push([Ao,Ai,Bi]);
+        break;
+      }
+    }
+  };
+
   for(let i=0;i<M-1;i++){
     for(let j=0;j<N;j++){
-      if(!keep[i][j]) continue;
-      kept++;
+      cells++;
       const j2 = (j+1)%N;
-      const Ob=outR[i][j], Ob2=outR[i][j2], Ot=outR[i+1][j], Ot2=outR[i+1][j2];
-      const Ib=inR[i][j],  Ib2=inR[i][j2],  It=inR[i+1][j],  It2=inR[i+1][j2];
-      // face extérieure (normale sortante) et face intérieure (enroulement inversé)
-      tris.push([Ob,Ob2,Ot2]); tris.push([Ob,Ot2,Ot]);
-      tris.push([Ib,It2,Ib2]); tris.push([Ib,It,It2]);
-      // parois de bord : partout où la cellule voisine est un trou (ou le vide,
-      // aux deux extrémités de la coque → ce sont les couronnes plates)
-      if(!has(i,j+1)){ tris.push([Ob2,It2,Ot2]); tris.push([Ob2,Ib2,It2]); }   // côté +θ
-      if(!has(i,j-1)){ tris.push([Ob,Ot,It]);   tris.push([Ob,It,Ib]);   }     // côté −θ
-      if(!has(i+1,j)){ tris.push([Ot,Ot2,It]);  tris.push([It,Ot2,It2]); }     // dessus (+Z)
-      if(!has(i-1,j)){ tris.push([Ob,Ib,Ob2]);  tris.push([Ib,Ib2,Ob2]); }     // dessous (−Z)
+      const f00=F[i][j], f10=F[i][j2], f11=F[i+1][j2], f01=F[i+1][j];
+      // Chemin rapide : une cellule entièrement en matière ou entièrement en
+      // trou n'a aucun contour à découper. Elle représente la grande majorité
+      // des cellules — la traiter d'un bloc divise par deux le nombre de
+      // triangles et le temps de calcul. Ses arêtes de bord sont exactement
+      // celles de la découpe en 4, donc l'étanchéité est préservée.
+      if(f00<=0 && f10<=0 && f11<=0 && f01<=0) continue;
+      if(f00>0 && f10>0 && f11>0 && f01>0){
+        kept++;
+        const Ob=pt(i,j,outerP), Ob2=pt(i,j+1,outerP), Ot=pt(i+1,j,outerP), Ot2=pt(i+1,j+1,outerP);
+        const Ib=pt(i,j,inner),  Ib2=pt(i,j+1,inner),  It=pt(i+1,j,inner),  It2=pt(i+1,j+1,inner);
+        tris.push([Ob,Ob2,Ot2]); tris.push([Ob,Ot2,Ot]);
+        tris.push([Ib,It2,Ib2]); tris.push([Ib,It,It2]);
+        continue;
+      }
+      kept++;
+      const c00={fi:i,   fj:j,   f:f00}, c10={fi:i,   fj:j+1, f:f10};
+      const c11={fi:i+1, fj:j+1, f:f11}, c01={fi:i+1, fj:j,   f:f01};
+      const hm=(outerP[i].h+outerP[i+1].h)/2, thm=((j+0.5)/N)*Math.PI*2;
+      const m={fi:i+0.5, fj:j+0.5, f:perfField(thm, hm, ctx)};
+      marche(c00,c10,m); marche(c10,c11,m); marche(c11,c01,m); marche(c01,c00,m);
     }
   }
-  PERF_ACC.cells += (M-1)*N; PERF_ACC.kept += kept;
+
+  // couronnes plates aux deux extrémités : les bandes y sont pleines par
+  // construction, l'anneau est donc complet
+  const outR0=[], inR0=[], outR1=[], inR1=[];
+  for(let j=0;j<N;j++){
+    outR0.push(pt(0,j,outerP)); inR0.push(pt(0,j,inner));
+    outR1.push(pt(M-1,j,outerP)); inR1.push(pt(M-1,j,inner));
+  }
+  for(let j=0;j<N;j++){
+    const j2=(j+1)%N;
+    tris.push([outR0[j], inR0[j], outR0[j2]]);  tris.push([inR0[j], inR0[j2], outR0[j2]]);
+    tris.push([outR1[j], outR1[j2], inR1[j]]);  tris.push([inR1[j], outR1[j2], inR1[j2]]);
+  }
+  PERF_ACC.cells += cells; PERF_ACC.kept += kept;
   return tris;
 }
 
@@ -1441,7 +1524,10 @@ function meshCentroid(tris){
 }
 // Étanchéité : chaque arête orientée doit avoir exactement une jumelle inverse.
 function meshOpenEdges(tris){
-  const key=(p,q)=>p.map(v=>v.toFixed(3)).join(',')+'|'+q.map(v=>v.toFixed(3)).join(',');
+  // `+0` neutralise le zéro négatif : sans lui, -1e-16 s'écrit « -0.000 » et
+  // passerait pour un sommet différent de « 0.000 ».
+  const q3=v=>((Math.round(v*1000)/1000)+0).toFixed(3);
+  const key=(p,q)=>p.map(q3).join(',')+'|'+q.map(q3).join(',');
   const seen = new Map();
   for(const [a,b,c] of tris){
     [[a,b],[b,c],[c,a]].forEach(([p,q])=>{
@@ -1711,7 +1797,11 @@ function segFor(bi, mode){
   const perf = !!(SURFACE_STYLES[surf.style]||{}).perforated;
   if(perf){
     const {rMean,H} = bodyMetrics(bi);
-    return voroResolution(surf, rMean, H).segments;   // jamais dégradé : le motif bougerait
+    const seg = voroResolution(surf, rMean, H).segments;
+    // Depuis que le contour est découpé sur l'iso-ligne du champ, baisser la
+    // résolution de l'aperçu ne DÉPLACE plus les trous : elle ne fait qu'anguler
+    // un peu leur bord. On peut donc l'alléger sans mentir sur le fichier livré.
+    return (mode==='preview') ? Math.min(seg, 100) : seg;
   }
   const chosen = parseInt(($('stlSegments')||{}).value||'14',10);
   const seg = angularSegments(surf, chosen);
@@ -1733,7 +1823,7 @@ function effectiveStepMm(bi, surf, mode){
   }
   const pos = cand.filter(x=>x>0);
   let step = pos.length ? Math.min(...pos) : 0;
-  if(mode==='preview' && !perf && step>0) step = Math.max(step, 2.0);
+  if(mode==='preview' && step>0) step = Math.max(step, perf ? 2.2 : 2.0);
   return step;
 }
 

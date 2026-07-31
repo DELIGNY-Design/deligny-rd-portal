@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-96QochprPIa4iOcIHrryTjpyldobf1B0AsRew6eIk1c='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-3H6xS2SFUeW4Dy8aHJWAqKUxbn8VZBylkcyTKPNrwS8='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -292,6 +292,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
       <button class="btn" id="rDownload" disabled>⬇ Télécharger le PNG</button>
     </div>
 
+    <div id="blenderBlock" style="margin-top:14px"></div>
     <div id="aiBlock" style="margin-top:14px"></div>
   </div>
 
@@ -2530,6 +2531,50 @@ function aiPrompt(){
     + `clean empty background, absolutely no text, no lettering, no logo, no watermark, no caption`;
 }
 
+/* ── RENDU PHOTO BLENDER ──────────────────────────────────────────────────
+ * Ferme la boucle : plus besoin d'exporter les STL puis de lancer le script à la
+ * main. On envoie au moteur local les pièces AVEC leur position d'assemblage
+ * (le studio a déjà décidé où va chaque corps — Blender ne doit pas les
+ * replacer), et il renvoie une photo de la géométrie réelle.
+ * Le rendu prend 15 à 40 s : c'est du calcul, pas une attente réseau.
+ * ────────────────────────────────────────────────────────────────────────── */
+async function rendreBlender(){
+  const info = $('blInfo'), out = $('blOut'), bouton = $('blGo');
+  if(!MESH.parts.length) return;
+  bouton.disabled = true;
+  info.innerHTML = '<div class="line warn">Rendu Blender en cours… quelques secondes en EEVEE, jusqu\'à une minute et demie en Cycles. La page reste utilisable.</div>';
+  try{
+    // chaque pièce est exportée AVEC sa transformation d'assemblage : c'est la
+    // lampe montée qu'on veut voir, pas les pièces posées à plat côte à côte
+    const stls = MESH.parts.map(p=>{
+      const tris = p.tris.map(t=>t.map(v=>placeVertex(v, p.xf, 0)));
+      const buf = trianglesToSTLBinary(tris, p.label);
+      let bin=''; const oct=new Uint8Array(buf);
+      for(let i=0;i<oct.length;i+=8192) bin += String.fromCharCode.apply(null, oct.subarray(i,i+8192));
+      return btoa(bin);
+    });
+    const t0 = performance.now();
+    const r = await fetch(AI.base+'/api/blender', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ stls,
+        largeur: 1200, hauteur: 1500, samples: parseInt($('blSamples').value,10),
+        moteur: $('blMoteur').value, couleur: bodyColor(0).replace('#',''),
+        fond: RENDER.bg === 'clair' ? 'clair' : 'sombre',
+        allumee: RENDER.lit, translucide: state.material === 'PLA_T',
+        vue: Math.round(view.az*180/Math.PI) % 360, hauteur_vue: Math.round(view.el*180/Math.PI) })});
+    const j = await r.json();
+    if(!j.ok){ info.innerHTML = `<div class="line bad">${j.note||'échec du rendu'}</div>`; }
+    else{
+      info.innerHTML = `<div class="line ok">Rendu Blender en ${(j.ms/1000).toFixed(1)} s — `
+        + `${MESH.parts.length} pièce(s), géométrie exacte, aucune IA.</div>`;
+      out.innerHTML = `<img src="${j.image}" style="width:100%;border-radius:14px;margin-top:10px" alt="Rendu Blender de la lampe">
+        <div class="row-btn"><a class="btn pri" href="${j.image}" download="lampe-rendu.png">⬇ Télécharger le PNG</a></div>`;
+    }
+  }catch(e){
+    info.innerHTML = `<div class="line bad">Moteur local injoignable (${e.name}). Il tourne bien sur le port 4555 ?</div>`;
+  }
+  bouton.disabled = false;
+}
+
 async function detectAI(){
   // Une page servie en HTTPS ne peut PAS appeler http://127.0.0.1 : le navigateur
   // bloque le contenu mixte. Inutile d'essayer et de laisser croire à une panne —
@@ -2544,7 +2589,42 @@ async function detectAI(){
   renderAIBlock();
 }
 
+function renderBlenderBlock(){
+  const box=$('blenderBlock'); if(!box) return;
+  if(AI.mixed || AI.ok === false){
+    box.innerHTML = `<div class="disc-small"><b>Rendu photo Blender — moteur local requis.</b><br>
+      Ce rendu calcule une vraie photo de TA géométrie, sans aucune IA : mêmes triangles que le STL,
+      matériau PLA, éclairage trois points, ombre portée. Il tourne sur ta machine via le moteur
+      General Design Studio (port 4555) et Blender. ${AI.mixed
+        ? "Cette page étant servie en HTTPS, le navigateur interdit d'appeler la machine locale : ouvre-la en local."
+        : "Lance le moteur (<code>python3 server.py</code>) pour l'activer."}</div>`;
+    return;
+  }
+  if(AI.ok !== true) return;
+  box.innerHTML = `<div class="disc-small"><b>📷 Rendu photo Blender — la géométrie réelle, sans IA.</b>
+    Mêmes triangles que le STL exporté, matériau PLA, éclairage trois points, ombre de contact.
+    Rien ne sort de ta machine et rien n'est inventé : c'est la pièce qui sera imprimée.</div>
+    <div class="row-btn" style="align-items:center">
+      <button class="btn pri" id="blGo">📷 Calculer le rendu photo</button>
+      <label style="font-size:12.5px;color:var(--dim2)">Moteur
+        <select id="blMoteur" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
+          <option value="eevee" selected>EEVEE — rapide (~7 s)</option>
+          <option value="cycles">Cycles — qualité (35 s à 1 min 20)</option>
+        </select></label>
+      <label style="font-size:12.5px;color:var(--dim2)">Échantillons
+        <select id="blSamples" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
+          <option value="48">48 — brouillon</option>
+          <option value="96" selected>96 — courant</option>
+          <option value="192">192 — boutique</option>
+        </select></label>
+    </div>
+    <div class="warnbox" id="blInfo"></div>
+    <div id="blOut"></div>`;
+  $('blGo').onclick = rendreBlender;
+}
+
 function renderAIBlock(){
+  renderBlenderBlock();
   const box=$('aiBlock'); if(!box) return;
   if(AI.ok===null){ box.innerHTML='<div class="hint">Recherche du moteur AI local…</div>'; return; }
   if(AI.mixed){

@@ -1,0 +1,93 @@
+{
+  "type": "cartouche-oeuvre/deligny-rd",
+  "oeuvre": {
+    "id": "DLG-ART-2026-0001",
+    "titre": "Révolte en Technicolor",
+    "artiste": "Deligny",
+    "collection": "pop art",
+    "dimensions": "",
+    "support": "",
+    "edition": "Pièce unique (1/1)",
+    "orientation": "Portrait — signature en bas à droite",
+    "lieu": "Paris",
+    "date_creation": {
+      "mode": "exacte",
+      "valeur": "2025-09-23"
+    },
+    "techniques": [
+      {
+        "nom": "collage",
+        "confiance": 0.9,
+        "declaree": false
+      },
+      {
+        "nom": "sérigraphie",
+        "confiance": 0.7,
+        "declaree": false
+      },
+      {
+        "nom": "aérosol",
+        "confiance": 0.6,
+        "declaree": false
+      }
+    ],
+    "mots_cles": [
+      "satire",
+      "consommation",
+      "collage",
+      "surveillance",
+      "pop art"
+    ]
+  },
+  "significations": {
+    "intention_artiste": "Je tisse un univers où le chaos de la consommation et de la surveillance s'entrechoque avec des symboles familiers. Un homme tatoué, armé, émerge d'une spirale de couleurs vives, entouré de billets détournés, de slogans, de chats et de surfeurs. Ces motifs créent une tension entre contrôle et anarchie, inspirée par la saturation des icônes modernes.\n\nMon approche artistique mêle collage et pochoir, où chaque élément possède une texture propre et une précision audacieuse. J'utilise couleurs éclatantes et compositions denses pour évoquer la frénésie du pop art et l'architecture dynamique de la modernité.\n\nJe refuse d'imposer une lecture unique. Je pose des fragments d'un monde en apparente dérive, incitant le spectateur à y trouver son propre écho de liberté ou d'oppression. Chaque détail nourrit une réflexion personnelle et mouvante.",
+    "interpretation_ia": "Composition dense où la figure centrale d'un homme tatoué et armé émerge d'une spirale colorée. L'agencement évoque le pop art, avec l'utilisation de couleurs vives et de motifs reconnaissables. Des éléments iconiques comme le billet dollar, le slogan \"Think different\", et des figures de chats et surfeurs structurent la scène. On perçoit une critique de la société de consommation et de la surveillance, accentuée par des contrastes de noir et couleurs saturées. L'intégration de motifs classiques réinterprétés par un style graphique moderne évoque une satire visuelle du pouvoir et de l'illusion de contrôle.",
+    "analyse_esthetique": "L'œuvre combine des aplats de couleurs vives et des éléments superposés de collage. Les motifs s'entrelacent dans un chaos visuellement contrôlé, entre interventions manuelles et impressions précises. Les textures variées du papier et l'usage de techniques diverses laissent imaginer une création hybride et dynamique."
+  },
+  "contribution": {
+    "triangle": {
+      "auteur": 60,
+      "ia": 20,
+      "cocreateurs": 20
+    },
+    "ia_dans_oeuvre": true,
+    "note": "l'IA de documentation (titre, fiche) n'est pas comptabilisée"
+  },
+  "participants": [],
+  "artiste_reference": {
+    "nom": "Andy Warhol",
+    "confiance": 0.6,
+    "raison": "Utilisation de couleurs vives et motifs pop rappelant le style de Warhol."
+  },
+  "references": [],
+  "medias": [
+    {
+      "fichier": "originale.png",
+      "role": "originale",
+      "mime": "image/jpeg",
+      "sha256": "a07f50a25f7b7ca5cb8c2ee3f11a94e9e66165157e6c698bbcc7e990aa949ac2",
+      "apercu": "originale_apercu.jpg",
+      "kind": "image",
+      "format": "png",
+      "dhash": "cecad4b2d2d2472d"
+    }
+  ],
+  "chronologie": {
+    "creation_oeuvre": {
+      "mode": "exacte",
+      "valeur": "2025-09-23"
+    },
+    "prise_de_vue": null,
+    "generation_document": "2026-07-31 01:34"
+  },
+  "statut": "publié",
+  "verification_url": "https://deligny-rd.fr/art/verify/DLG-ART-2026-0001",
+  "version": 86,
+  "manifeste_precedent_sha256": "95b01b99ccc9e22225d74d5c394adeb27446de2405c5f11c8fcf86a62796634a",
+  "signature": {
+    "algo": "Ed25519 (RFC 8032)",
+    "cle_publique": "74d295def0f077a57770d479a2e12f91ec09580ff0696a812620b8e078fc007f",
+    "valeur_hex": "03bc9cf6ea3fe75ab84b947352ce8e2c57f5b01e661562b9021a6887a6cdd493551028c663487354b3b298f975b60536e48ce26377948b41fce2c8613a3cf004",
+    "manifeste_sha256": "67c92bd26c89fcfbd0e959dec170e8edd2ef73191b1c394f49591ad9b5e628f9"
+  }
+}

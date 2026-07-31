@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-9Mb2l6x2fxwZD5dVw+QZPSIGMtIKzbT8/lzyUHVVniE='; style-src-attr 'unsafe-inline'; script-src 'sha256-LcVKu5j+bdS+fy59W+hvgZhqh69RE4b6tbgca8uDJCw='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-96QochprPIa4iOcIHrryTjpyldobf1B0AsRew6eIk1c='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -103,6 +103,23 @@ table.pts tr.bad td{color:var(--red);}
   background:var(--card2);color:var(--dim);cursor:pointer;transition:.15s;}
 .vtabs button.on{background:var(--blue-cta);color:#fff;border-color:var(--blue-cta);}
 .vpane[hidden]{display:none;}
+/* ── Étapes : une seule ouverte à la fois ─────────────────────────────────
+ * 13 cartes et 52 réglages d'affilée, c'est 5,7 écrans à faire défiler avant
+ * d'atteindre la commande. Les regrouper en 4 étapes ramène la colonne à une
+ * hauteur lisible sans rien retirer : tout reste accessible, à un clic. */
+.stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;position:sticky;top:8px;z-index:5;
+  background:var(--bg);padding:2px 0 10px;}
+.stepper button{font:600 12.5px var(--font);padding:10px 6px;border-radius:12px;border:1px solid var(--sep);
+  background:var(--card2);color:var(--dim);cursor:pointer;transition:.15s;line-height:1.25;text-align:left;}
+.stepper button .n{display:block;font-size:11px;color:var(--dim2);font-weight:600;}
+.stepper button.on{background:var(--blue-cta);color:#fff;border-color:var(--blue-cta);}
+.stepper button.on .n{color:rgba(255,255,255,.75);}
+.stepper button:hover:not(.on){border-color:var(--blue);color:var(--txt);}
+.etape[hidden]{display:none;}
+.etape{display:flex;flex-direction:column;gap:16px;}
+.etape-pied{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:2px;}
+@media(max-width:560px){.stepper{grid-template-columns:repeat(2,1fr);}}
+
 #hud{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;}
 #hud div{background:var(--card2);border-radius:12px;padding:9px 10px;}
 #hud .k{font-size:10px;color:var(--dim2);text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
@@ -3703,7 +3720,78 @@ $('prepEmail').onclick=()=>{
   window.location.href = mailto;
 };
 
+/* ── ÉTAPES ───────────────────────────────────────────────────────────────
+ * Mesuré avant : 13 cartes, 52 réglages, 5,7 écrans à faire défiler, le prix à
+ * 4,4 écrans et la commande à 5,8. Personne ne configure une lampe dans ces
+ * conditions. On regroupe en quatre étapes, une seule ouverte à la fois — rien
+ * n'est retiré, tout est à un clic, et la colonne redevient lisible.
+ * Les cartes sont repérées par un élément stable qu'elles contiennent, pas par
+ * leur position : ajouter une carte ailleurs ne casse pas le regroupement.
+ * ────────────────────────────────────────────────────────────────────────── */
+const ETAPES = [
+  { titre:'Forme',       sous:'silhouette, corps',      ancres:['#type-seg','#presetRow','#bodyCount','#expertOn'] },
+  { titre:'Aspect',      sous:'surface, couleur, rendu', ancres:['#surface-seg','#swatches','#rFinish'] },
+  { titre:'Fabrication', sous:'culot, matière, découpe', ancres:['#socketList','#splitOn','#material'] },
+  { titre:'Commande',    sous:'prix, dossier, envoi',    ancres:['#s-price','#exportStl','#prepEmail'] },
+];
+let etapeActive = 0;
+
+function organiserEnEtapes(){
+  const col = document.querySelector('.controls');
+  if(!col || col.dataset.organise) return;
+  const barre = document.createElement('div');
+  barre.className = 'stepper';
+  const sections = ETAPES.map((e,i)=>{
+    const s = document.createElement('section');
+    s.className = 'etape';
+    e.ancres.forEach(sel=>{
+      const el = document.querySelector(sel);
+      const carte = el && el.closest('.card');
+      if(carte && !carte.dataset.range){ carte.dataset.range = '1'; s.appendChild(carte); }
+    });
+    const b = document.createElement('button');
+    b.innerHTML = `<span class="n">${i+1} / ${ETAPES.length}</span>${e.titre}<br><span class="n">${e.sous}</span>`;
+    b.onclick = ()=> allerEtape(i);
+    barre.appendChild(b);
+    return s;
+  });
+  // toute carte non rattachée (ajoutée depuis) reste visible en fin de parcours
+  document.querySelectorAll('.controls .card:not([data-range])').forEach(c=>sections[sections.length-1].appendChild(c));
+  col.querySelectorAll(':scope > .grid').forEach(g=>{ if(!g.querySelector('.card')) g.remove(); });
+  col.textContent = '';
+  col.appendChild(barre);
+  sections.forEach(s=>col.appendChild(s));
+
+  sections.forEach((s,i)=>{
+    const pied = document.createElement('div');
+    pied.className = 'etape-pied';
+    const prec = document.createElement('button');
+    prec.className = 'btn'; prec.textContent = '← ' + (ETAPES[i-1] ? ETAPES[i-1].titre : '');
+    prec.style.visibility = i ? 'visible' : 'hidden';
+    prec.onclick = ()=> allerEtape(i-1);
+    const suiv = document.createElement('button');
+    suiv.className = 'btn pri';
+    suiv.textContent = (ETAPES[i+1] ? ETAPES[i+1].titre + ' →' : '✓ Terminé');
+    suiv.onclick = ()=> ETAPES[i+1] ? allerEtape(i+1) : window.scrollTo({top:0, behavior:'smooth'});
+    pied.appendChild(prec); pied.appendChild(suiv);
+    s.appendChild(pied);
+  });
+
+  col.dataset.organise = '1';
+  window.__etapes = sections;
+  allerEtape(0);
+}
+function allerEtape(i){
+  etapeActive = Math.max(0, Math.min(ETAPES.length-1, i));
+  (window.__etapes||[]).forEach((s,k)=>{ s.hidden = (k !== etapeActive); });
+  document.querySelectorAll('.stepper button').forEach((b,k)=>b.classList.toggle('on', k===etapeActive));
+  // l'aperçu reste en place : on ne remonte que la colonne des réglages
+  const col=document.querySelector('.controls');
+  if(col && col.getBoundingClientRect().top < 0) col.scrollIntoView({block:'start', behavior:'smooth'});
+}
+
 /* ── Init ─────────────────────────────────────────────────────────────── */
+organiserEnEtapes();
 syncViewInputs();
 setPreset(TYPES[state.type].silhouettes[0]);
 detectAI();

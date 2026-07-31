@@ -4,13 +4,5 @@
   "home_page_url": "https://deligny-rd.fr/art/",
   "feed_url": "https://deligny-rd.fr/art/feed.json",
   "description": "Œuvres certifiées du studio : manifeste signé Ed25519, empreinte SHA-256 et page de vérification publique.",
-  "items": [
-    {
-      "id": "https://deligny-rd.fr/art/verify/DLG-ART-2026-0001/",
-      "url": "https://deligny-rd.fr/art/verify/DLG-ART-2026-0001/",
-      "title": "Révolte en Technicolor — DLG-ART-2026-0001",
-      "summary": "Deligny · 2025-09-23 · empreinte 67C92BD26C89",
-      "image": "https://deligny-rd.fr/art/verify/DLG-ART-2026-0001/oeuvre.jpg"
-    }
-  ]
+  "items": []
 }

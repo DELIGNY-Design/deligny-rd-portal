@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-3H6xS2SFUeW4Dy8aHJWAqKUxbn8VZBylkcyTKPNrwS8='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-FRsp594YVvVEnL2LzkyZQfUr/x3rClWxgPwgc/H4wo4='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -231,7 +231,8 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
       <div class="row-btn" id="bodyTabsTop" style="margin-bottom:10px"></div>
       <div class="row-btn" id="presetRow"></div>
       <div class="row-btn">
-        <button class="btn pri" id="randomShape">🎲 Forme aléatoire</button>
+        <button class="btn pri" id="randomLamp" title="Tire une lampe entière : nombre de corps, agencement, silhouettes, style, sculpture — le tout depuis une seule graine">✨ Lampe complète</button>
+        <button class="btn" id="randomShape">🎲 Forme aléatoire</button>
         <button class="btn" id="randomAll" style="display:none" title="Un tirage différent pour chaque corps, dérivé de la même graine">🎲 Tous les corps</button>
         <input id="seedInput" class="seed" spellcheck="false" maxlength="8"
                title="Graine de la forme : même graine = même forme. Reportée dans le dossier de commande.">
@@ -3427,6 +3428,98 @@ document.querySelectorAll('#type-seg button').forEach(b=>{
   };
 });
 
+/* ── LAMPE COMPLÈTE TIRÉE AU SORT ─────────────────────────────────────────
+ * Tout vient d'UNE graine : nombre de corps, agencement, silhouette de chaque
+ * corps, style de surface, reliefs, sculpture. La même graine redonne donc la
+ * même lampe — c'est ce qui permet à l'atelier de refabriquer une pièce vue une
+ * fois, et au client de la retrouver.
+ * Ce qui n'est PAS tiré au sort, et pourquoi : le type de lampe (c'est ton
+ * besoin, pas un hasard), le culot et la paroi (sécurité et solidité), la
+ * découpe en modules (elle change le prix). L'agencement « libre » est écarté :
+ * sans déplacement, il poserait tous les corps au même endroit et ils se
+ * traverseraient.
+ * ────────────────────────────────────────────────────────────────────────── */
+function lampeAleatoire(graine){
+  const base = String(graine || newSeed()).toUpperCase().replace(/[^0-9A-F]/g,'') || newSeed();
+  state.seed = base;
+  const rng = mulberry32(hashSeed('lampe|'+base));
+  const tire = (liste)=> liste[Math.min(liste.length-1, Math.floor(rng()*liste.length))];
+  const entre = (a,b)=> a + rng()*(b-a);
+  const cfg = TYPES[state.type].compo;
+
+  // Nombre de corps : pondéré vers 1-3. Une lampe reste une lampe ; sept corps
+  // sont possibles mais ne doivent pas sortir une fois sur deux.
+  const poids = [1,1,1,2,2,2,3,3,4,5,6,7].filter(n=>n<=cfg.maxBodies);
+  state.compo.count = tire(poids);
+  state.compo.layout = tire(cfg.layouts.filter(l=>l!=='libre'));
+  state.compo.symmetric = rng() > 0.35;
+  state.compo.jeuImbricationMm = Math.round(entre(5,18));
+  state.linkBodies = state.compo.symmetric && rng() > 0.4;
+  state.expert = false;
+  syncBodies();
+
+  // Style de surface : une base, puis des couches qui peuvent se cumuler
+  const s = state.surface;
+  s.base = rng() > 0.32 ? 'lisse' : 'facette';
+  s.smoothing = Math.round(entre(35, state.compo.count >= 3 ? 65 : 95));
+  s.stries = rng() < 0.45;
+  s.strieCount = Math.round(entre(8, state.compo.count >= 3 ? 22 : 34));
+  s.strieDepthMm = +entre(0.8,3.0).toFixed(1);
+  s.cross = s.stries && rng() < 0.5;
+  s.pitchMm = Math.round(entre(16,60));
+  s.organique = rng() < 0.30;
+  s.orgAmpMm = +entre(1.0,4.0).toFixed(1);
+  s.orgPitchMm = Math.round(entre(28,90));
+  s.ajour = rng() < 0.35;
+  s.voroCells = Math.round(entre(18,220));
+  s.voroStrutMm = +entre(2.0,4.5).toFixed(1);
+  s.voroBandMm = Math.round(entre(8,22));
+  s.voroVariant = 1 + Math.floor(rng()*999);
+  state.bodies.forEach(b=>{ b.surface = null; });   // le style est commun au tirage
+
+  // Sculpture : discrète. Une torsion franche est belle une fois sur trois, pas
+  // à chaque tirage — et la courbure ajoute du surplomb, donc on la borne.
+  const torsion = rng() < 0.35 ? +entre(-0.35,0.35).toFixed(2) : 0;
+  const courbure = rng() < 0.22 ? Math.round(entre(-14,14)) : 0;
+
+  // Silhouettes : une par corps si les corps sont déliés, une seule sinon
+  const b0 = bounds();
+  state.bodies.forEach((corps,i)=>{
+    if(i >= state.compo.count) return;
+    corps.sculpt = { twistDegPerMm: torsion, bendDeg: courbure };
+    corps.scale = 1; corps.rotDeg = 0;
+    corps.offsetXMm = corps.offsetYMm = corps.offsetZMm = 0;
+    if(state.linkBodies && i > 0) return;            // les corps liés partagent la forme
+    const meilleur = drawShape(base + '-corps' + i);
+    corps.shape = meilleur.fam;
+    corps.profile = corps.flipped ? mirrorProfile(meilleur.cand) : meilleur.cand;
+  });
+  if(state.linkBodies){
+    const src = state.bodies[0];
+    state.bodies.forEach((b,i)=>{ if(i){ b.profile = src.profile.map(p=>({h:p.h,r:p.r})); b.shape = src.shape; } });
+  }
+  state.body = 0;
+  state.selected = -1;
+  normalizeProfile();
+
+  /* L'écartement ne peut pas être tiré au hasard : il dépend de la taille des
+   * corps, qu'on ne connaît qu'une fois les silhouettes tirées. Sinon on sort
+   * des lampes impossibles — mesuré sur la graine 70B49 : 4 corps de 120 mm
+   * espacés de 80 mm, soit 39,8 mm d'interpénétration. On le calcule donc, puis
+   * on VÉRIFIE, et on écarte jusqu'à ce que plus rien ne se traverse. */
+  const actifs = state.bodies.slice(0, state.compo.count);
+  const D = 2 * Math.max(...actifs.map(b=>Math.max(...b.profile.map(p=>p.r))));
+  const n = Math.max(2, state.compo.count);
+  state.compo.spacingMm = Math.round(D + entre(10, 70));
+  state.compo.ringRadiusMm = Math.round(Math.max(D*0.55, (D + entre(10,60)) / (2*Math.sin(Math.PI/n))));
+  for(let essai=0; essai<12; essai++){
+    if(!interferences(bodyPlacements()).some(([niveau])=>niveau==='bad')) break;
+    state.compo.spacingMm = Math.round(state.compo.spacingMm * 1.15 + 6);
+    state.compo.ringRadiusMm = Math.round(state.compo.ringRadiusMm * 1.15 + 6);
+  }
+  renderAll();
+}
+
 /* ── Retourner tête en bas ────────────────────────────────────────────── */
 $('flipShape').onclick = ()=>{
   const targets = (state.linkBodies && !state.expert) ? state.bodies : [state.bodies[state.body]];
@@ -3437,6 +3530,7 @@ $('flipShape').onclick = ()=>{
 };
 
 /* ── Tirage aléatoire / graine ────────────────────────────────────────── */
+$('randomLamp').onclick  = ()=> lampeAleatoire();
 $('randomShape').onclick = ()=> randomShape(undefined, 'body');
 $('randomAll').onclick   = ()=> randomShape(undefined, 'all');
 $('seedApply').onclick   = ()=> randomShape($('seedInput').value.trim() || undefined, state.compo.count>1 && !state.linkBodies ? 'all' : 'body');

@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-FRsp594YVvVEnL2LzkyZQfUr/x3rClWxgPwgc/H4wo4='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-y8apTV3Bw9GqrwmMR7horzSD1cqLadpBDyaBLGjBaw8='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -318,6 +318,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
   <div class="card" style="margin-top:16px">
     <h2><span class="n">7</span>Culot électrique — référence standard fermée</h2>
     <div id="socketList"></div>
+    <div class="warnbox" id="connexionBox"></div>
     <div class="hint">La géométrie du culot (bore, épaulement, filetage) n'est <b>jamais générée</b> : ces cotes viennent de pièces mesurées
     à l'atelier ou du standard commercial publié, et servent uniquement à borner le rayon mini du point de fixation du profil.</div>
   </div>
@@ -483,7 +484,9 @@ const PRICE_CONFIG = {
   // sous-estimait le temps d'impression de 36 %.
   PRINT_CM3_PER_HOUR: 10.5,
   HOURLY_RATE_EUR: 9,              // machine + temps atelier (élec, usure, supervision) — à ajuster par Baptiste
-  SOCKET_KIT_EUR: { E14: 4, E27: 5 },   // prix pièce du commerce (douille + bague CE) + temps d'assemblage électrique pro
+  // douille du commerce + temps d'assemblage électrique pro pour E14/E27 ;
+  // pour le module USB c'est le module + 2 vis M3 et leurs inserts, sans intervention secteur
+  SOCKET_KIT_EUR: { E14: 4, E27: 5, USB_BAMBU: 14 },
   BASE_HARDWARE_EUR: 3,            // visserie, câble, passe-câble, gaine
   PART_SETUP_EUR: 6,               // lancement machine supplémentaire par module imprimé en plus
   JOINT_HARDWARE_EUR: 2.5,         // visserie de liaison par plan de coupe (option multi-pièces)
@@ -523,6 +526,25 @@ const SOCKETS = {
     maxWattageW: 7,
     measured: true,
     source: "Mesuré atelier : «Douille et ampoule frigo E14.ipt» (déc. 2022) — corps Ø27.5, épaulement Ø32, section basse Ø26. Corroboré par harvest_parts.py (parts_library).",
+  },
+  USB_BAMBU: {
+    label: 'Module lampe USB Bambu Lab — 5 V, sans culot',
+    type: 'module',
+    // Pas de culot, donc pas d'alésage : le module se VISSE. Ce qu'il faut
+    // prévoir dans la pièce imprimée, et qui part dans le dossier :
+    visM3: 2,                 // 2 vis M3 + inserts laiton (règle atelier)
+    entraxeVisMm: 30,         // ⚠️ PROVISOIRE — à mesurer sur le module réel
+    platineDiaMm: 40,         // ⚠️ PROVISOIRE — encombrement de la platine
+    cableDiaMm: 4.5,          // passage du câble USB-C — ⚠️ PROVISOIRE
+    dechargeTraction: true,   // serre-câble obligatoire, cf. norme atelier
+    // rayon mini = demi-entraxe + distance au bord des vis + paroi
+    housingMinRadiusMm: 22,
+    maxWattageW: 5,           // 5 V USB : très basse tension de sécurité
+    tensionV: 5,
+    measured: false,
+    source: "Module USB Bambu Lab — AUCUNE cote mesurée à l'atelier au 30/07. Entraxe, "
+          + "platine et diamètre de câble ci-dessus sont des ordres de grandeur : les mesurer "
+          + "au pied à coulisse sur le module réel AVANT de percer ou de lancer une série.",
   },
   E27: {
     label: 'E27 — gros culot (standard)',
@@ -2751,10 +2773,40 @@ function renderSockets(){
     div.className='socket-opt'+(state.socket===key?' on':'');
     div.innerHTML = `<input type="radio" name="socket" value="${key}" ${state.socket===key?'checked':''}>
       <div><div class="t">${s.label} <span class="tag ${s.measured?'measured':'standard'}">${s.measured?'MESURÉ ATELIER':'STANDARD PUBLIÉ'}</span></div>
-      <div class="d">Alésage ${s.boreDiaMm}mm · épaulement Ø${s.shoulderDiaMm}mm · rayon mini point de fixation ${s.housingMinRadiusMm}mm · LED ≤${s.maxWattageW}W<br>${s.source}</div></div>`;
+      <div class="d">${s.type==='module'
+        ? `${s.visM3} vis M3 (inserts laiton), entraxe ${s.entraxeVisMm} mm · platine Ø${s.platineDiaMm} mm · `
+          + `passage câble USB Ø${s.cableDiaMm} mm · décharge de traction obligatoire · `
+          + `rayon mini point de fixation ${s.housingMinRadiusMm} mm · ${s.tensionV} V, ≤${s.maxWattageW} W`
+        : `Alésage ${s.boreDiaMm}mm · épaulement Ø${s.shoulderDiaMm}mm · rayon mini point de fixation ${s.housingMinRadiusMm}mm · LED ≤${s.maxWattageW}W`
+      }<br>${s.source}</div></div>`;
     div.querySelector('input').onchange=()=>{ state.socket=key; normalizeProfile(); renderAll(); };
     el.appendChild(div);
   });
+}
+
+/* Ce que la pièce doit prévoir pour la connexion choisie, et le régime de
+ * sécurité qui s'applique VRAIMENT. Un module USB 5 V n'est pas du secteur :
+ * garder l'avertissement « assemblage par un professionnel » serait faux, et un
+ * avertissement faux abîme ceux qui sont vrais. */
+function renderConnexion(){
+  const box=$('connexionBox'); if(!box) return;
+  const s=SOCKETS[state.socket], lignes=[];
+  if(s.type === 'module'){
+    lignes.push(['ok', `À prévoir dans la pièce imprimée : ${s.visM3} vis M3 avec inserts laiton `
+      + `(entraxe ${s.entraxeVisMm} mm), un passage de câble USB Ø${s.cableDiaMm} mm, `
+      + `et une décharge de traction — serre-câble ou chicane — pour que le câble ne tire jamais sur le module.`]);
+    lignes.push(['ok', `${s.tensionV} V par USB : très basse tension de sécurité. Pas de secteur dans la lampe, `
+      + `donc pas d'intervention d'un professionnel de l'électricité — le montage se fait à la main, deux vis.`]);
+    lignes.push(['warn', `Les cotes de ce module ne sont PAS mesurées à l'atelier. Mesure l'entraxe, la platine `
+      + `et le câble au pied à coulisse avant de percer ou de lancer une série.`]);
+  } else {
+    lignes.push(['warn', `Culot ${state.socket} : la lampe est reliée au SECTEUR. L'assemblage électrique est `
+      + `réalisé par un professionnel ou l'atelier, jamais par le client. Douille marquée CE, `
+      + `décharge de traction, connexions démontables donc inspectables.`]);
+    lignes.push(['ok', `LED ≤ ${s.maxWattageW} W réels, jamais halogène ni incandescent : le PLA ramollit vers 55 °C.`]);
+  }
+  box.innerHTML='';
+  lignes.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
 }
 
 /* ── Swatches ─────────────────────────────────────────────────────────── */
@@ -3398,6 +3450,7 @@ function renderAll(){
   renderTable();
   renderWarnings();
   renderSockets();
+  renderConnexion();
   renderSwatches();
   renderPresets();
   renderSurface();
@@ -3710,6 +3763,13 @@ function buildDossier(){
     profil_mm: state.profile.map(p=>({hauteur:+p.h.toFixed(1), rayon:+p.r.toFixed(1)})),
     hauteur_totale_mm: +state.profile[state.profile.length-1].h.toFixed(1),
     rayon_max_mm: +Math.max(...state.profile.map(p=>p.r)).toFixed(1),
+    connexion: { ref: state.socket, ...sock,
+      a_prevoir_dans_la_piece: sock.type === 'module'
+        ? `${sock.visM3} vis M3 + inserts laiton (entraxe ${sock.entraxeVisMm} mm), passage câble USB Ø${sock.cableDiaMm} mm, décharge de traction`
+        : "logement de douille percé par l'atelier, décharge de traction, connexions démontables",
+      regime_electrique: sock.type === 'module'
+        ? `${sock.tensionV} V USB — très basse tension de sécurité, pas de secteur dans la lampe`
+        : "secteur — assemblage électrique par un professionnel obligatoire" },
     culot: { ref: state.socket, ...sock },
     materiau: MATERIALS[state.material],
     epaisseur_paroi_mm: +state.wall,
@@ -3834,10 +3894,12 @@ $('exportTxt').onclick=()=>{
     ...d.profil_mm.map((p,i)=>`  point ${i+1} : h=${p.hauteur}mm  r=${p.rayon}mm`),
     `Hauteur totale : ${d.hauteur_totale_mm}mm — Rayon max : ${d.rayon_max_mm}mm`,
     '',
-    '--- Culot électrique (référence standard fermée) ---',
-    `Référence : ${d.culot.ref} — ${d.culot.label}`,
-    `Source cotes : ${d.culot.source}`,
-    `Puissance LED max : ${d.culot.maxWattageW}W`,
+    '--- Connexion électrique (référence standard fermée) ---',
+    `Référence : ${d.connexion.ref} — ${d.connexion.label}`,
+    `À PRÉVOIR DANS LA PIÈCE : ${d.connexion.a_prevoir_dans_la_piece}`,
+    `Régime électrique : ${d.connexion.regime_electrique}`,
+    `Puissance max : ${d.connexion.maxWattageW}W`,
+    `Source cotes : ${d.connexion.source}`,
     '',
     '',
     '--- Matière & paroi ---',
@@ -3878,7 +3940,10 @@ $('prepEmail').onclick=()=>{
     `Composition : ${state.compo.count} corps — ${LAYOUT_LABELS[state.compo.layout]} — ${state.compo.symmetric?'symétrique':'organique'}`,
     `Pièces à imprimer : ${MESH.parts.length>1?`${MESH.parts.length} (${MESH.parts.map(p=>p.label).join(' + ')})`:'1 (monobloc)'}`,
     `Hauteur totale : ${state.profile[state.profile.length-1].h.toFixed(0)}mm — Rayon max : ${Math.max(...state.profile.map(p=>p.r)).toFixed(0)}mm`,
-    `Culot : ${state.socket} (${sock.label})`,
+    `Connexion : ${state.socket} — ${sock.label}`,
+    `À prévoir : ${sock.type==='module'
+       ? sock.visM3+' vis M3 (entraxe '+sock.entraxeVisMm+' mm), passage câble USB Ø'+sock.cableDiaMm+' mm, décharge de traction'
+       : 'logement de douille + décharge de traction, assemblage par un professionnel'}`,
     `Matériau : ${MATERIALS[state.material]} — paroi ${state.wall}mm`,
     `Couleur : ${state.compo.count>1 && !state.linkBodies ? state.bodies.slice(0,state.compo.count).map((b,i)=>`corps ${i+1} ${bodyColor(i)}`).join(', ') : state.color}`,
     `Volume estimé : ${s.volumeCm3.toFixed(1)} cm³ — Temps impr. estimé : ${s.printHours.toFixed(1)}h`,

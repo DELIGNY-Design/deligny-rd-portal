@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-J4/zqfBc+Q2XkldzRonkHbPMDVHPeCnbFRjA07w96q0='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-62HKOsvNCAX8GoMBtL4IbOaVOie5APhYmXloCmY1NGs='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -161,12 +161,13 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     <span class="free">aucun compte · tout se calcule dans ton navigateur</span></div>
 
     <details class="safety">
-      <summary>⚠️ <b>Gate de sécurité — non négociable.</b> Culot en liste fermée, assemblage électrique par un professionnel</summary>
+      <summary>⚠️ <b>Gate de sécurité — non négociable.</b> Très basse tension 5 V uniquement, connexion en liste fermée</summary>
       <div class="d">Ce configurateur laisse le <b>profil de la structure/abat-jour</b> libre dans des bornes d'impression réalistes.
-      Il ne permet <b>jamais</b> de dessiner librement le circuit électrique, le culot ou le câblage : le point de connexion électrique
-      est choisi parmi une <b>liste fermée de références standards du commerce</b> (E14 / E27), non modifiables.
-      L'<b>assemblage électrique final est réalisé par un professionnel / l'atelier</b>, jamais par le client — ce dossier n'est pas
-      une autorisation de câblage soi-même.</div>
+      Il ne permet <b>jamais</b> de dessiner librement le circuit électrique ou le câblage : le point de connexion est choisi dans une
+      <b>liste fermée</b>, et cette liste ne contient plus qu'une seule référence — le <b>module lampe USB Bambu Lab, 5 V</b>.
+      <br><b>Aucune lampe vendue n'est reliée au secteur.</b> Le 5 V par USB est une très basse tension de sécurité : le montage se fait
+      à la main, deux vis, sans intervention d'un professionnel de l'électricité. La géométrie du culot, de l'alésage ou d'un filetage
+      de douille n'est <b>jamais générée</b> — le studio ne produit que la coque et ses fixations.</div>
     </details>
   </header>
 
@@ -316,7 +317,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
 
   <!-- 6. CULOT -->
   <div class="card" style="margin-top:16px">
-    <h2><span class="n">7</span>Culot électrique — référence standard fermée</h2>
+    <h2><span class="n">7</span>Connexion électrique — liste fermée, 5 V seulement</h2>
     <div id="socketList"></div>
     <div class="warnbox" id="connexionBox"></div>
 
@@ -390,10 +391,13 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
       <label class="socket-opt" id="splitToggleRow">
         <input type="checkbox" id="splitOn">
         <div><div class="t">Lampe séparable en modules empilables <span class="tag standard">PLUS CHER</span></div>
-        <div class="d">La lampe est tranchée horizontalement en plusieurs modules imprimés séparément, réunis par un
-        <b>collier d'emboîtement</b> (Ø repris du rayon intérieur au plan de coupe, jeu 0,3 mm au rayon — cote du précédent
-        atelier). Intérêt : pièce plus haute que le plateau, transport, remplacement d'un seul module abîmé, mélange de
-        couleurs. Coût : <b>un lancement machine par module</b> + la visserie de liaison.</div></div>
+        <div class="d">La liaison se fait <b>ENTRE LES CORPS</b> : chaque corps est un module, imprimé à part, et il se
+        visse à son voisin par un <b>manchon</b> logé à leur interface (Ø repris du rayon intérieur le plus étroit des
+        deux corps, jeu 0,3 mm au rayon — cote du précédent atelier). Intérêt : lampe plus haute que le plateau,
+        transport, remplacement d'un seul module abîmé, mélange de couleurs. Coût : <b>un lancement machine par
+        module</b> + la visserie de liaison.
+        <br><span style="opacity:.75">Si la lampe n'a qu'UN corps, il n'y a pas d'interface : le corps est alors tranché
+        horizontalement, faute d'autre moyen de dépasser la hauteur du plateau.</span></div></div>
       </label>
       <div class="field" id="splitCountField" style="display:none">
         <label>Nombre de modules (bas = base, haut = abat-jour) : <b id="splitCountVal"></b></label>
@@ -534,7 +538,7 @@ const PRICE_CONFIG = {
   // sous-estimait le temps d'impression de 36 %.
   PRINT_CM3_PER_HOUR: 10.5,
   HOURLY_RATE_EUR: 9,              // machine + temps atelier (élec, usure, supervision) — à ajuster par Baptiste
-  // douille du commerce + temps d'assemblage électrique pro pour E14/E27 ;
+  // E14/E27 retirés du catalogue le 05/08 (tarifs conservés pour mémoire) ;
   // pour le module USB c'est le module + 2 vis M3 et leurs inserts, sans intervention secteur
   SOCKET_KIT_EUR: { E14: 4, E27: 5, USB_BAMBU: 14 },
   BASE_HARDWARE_EUR: 3,            // visserie, câble, passe-câble, gaine
@@ -567,8 +571,16 @@ const OVERHANG = { WARN_DEG: 45, HARD_DEG: 55 };
  * géométries : ce sont des références standards du commerce, l'atelier ou le
  * professionnel qui assemble s'appuie dessus, pas une pièce sortie du navigateur.
  * ========================================================================== */
+/* ── Connexions ───────────────────────────────────────────────────────────
+ * `dispo:false` = la référence n'est PLUS PROPOSÉE au client, mais ses cotes
+ * restent ici. Elles ont été mesurées à l'atelier ; les effacer perdrait un
+ * relevé qu'il faudrait refaire si l'offre secteur revenait un jour.
+ * Depuis le 05/08 le studio ne vend que du 5 V : plus aucune lampe reliée au
+ * secteur, donc plus d'intervention électrique obligatoire.
+ */
 const SOCKETS = {
   E14: {
+    dispo: false,
     label: 'E14 — petit culot (bougie)',
     boreDiaMm: 28.8,       // 27.8 nominal + 0.3 compensation FDM alésage vertical 10-40 (cf. atelier)
     shoulderDiaMm: 32,     // mesuré atelier
@@ -605,6 +617,7 @@ const SOCKETS = {
           + "11,00 mm d'entraxe, gorge 5,22 × 1,33 mm.",
   },
   E27: {
+    dispo: false,
     label: 'E27 — gros culot (standard)',
     boreDiaMm: 34.0,       // standard IEC 60061, corps plastique lampholder courant — NON mesuré atelier
     shoulderDiaMm: 40,     // estimation à partir du standard commercial — NON mesuré atelier
@@ -824,7 +837,7 @@ function openEndR(b){ const bd=b||state.bodies[state.body]; return bd.profile[op
 
 let state = {
   type: 'suspension',
-  socket: 'E14',
+  socket: 'USB_BAMBU',
   material: 'PLA',
   wall: 1.8,        // défaut atelier — cf. la note sous le sélecteur
   color: COLORS[0],
@@ -985,6 +998,13 @@ function clampPoint(p, isSocketEnd){
 }
 
 function normalizeProfile(){
+  // Si une référence a été retirée du catalogue, un état ancien (preset,
+  // tirage, session précédente) pourrait encore la porter : on retombe sur la
+  // première disponible plutôt que de mailler pour une connexion qui n'est
+  // plus vendue.
+  if(SOCKETS[state.socket] && SOCKETS[state.socket].dispo === false){
+    state.socket = Object.keys(SOCKETS).find(k => SOCKETS[k].dispo !== false) || state.socket;
+  }
   const b = bounds();
   state.profile.sort((a,b2)=>a.h-b2.h);
   // enforce min gap between consecutive heights
@@ -2424,9 +2444,18 @@ function project3d(x,y,z){
 let MESH = { parts:[], preview:[], stats:{} };
 
 function profileTopH(prof){ const p=prof||state.profile; return p.length ? p[p.length-1].h : 0; }
+/* ⚠️ Les modules empilables, ce sont les CORPS — la liaison se fait à leur
+ * interface, pas en tranchant un corps au milieu. On ne tranche un corps que
+ * s'il est SEUL : là, c'est la seule façon de dépasser la hauteur du plateau. */
+function decoupeInterne(){
+  return state.split.on && !corpsEmpiles();
+}
+function corpsEmpiles(){
+  return state.compo.count > 1 && state.compo.layout === 'vertical';
+}
 function cutPlanesFor(prof){
   const top = profileTopH(prof);
-  const n = state.split.on ? Math.max(2, Math.min(JOINT.maxModules, state.split.count)) : 1;
+  const n = decoupeInterne() ? Math.max(2, Math.min(JOINT.maxModules, state.split.count)) : 1;
   return Array.from({length:n+1},(_,i)=> top*i/n);
 }
 function partLabel(i, n){
@@ -2603,12 +2632,45 @@ function effectiveStepMm(bi, surf, mode){
   return step;
 }
 
+/* Rayon intérieur au PIED et au SOMMET d'un corps, à son échelle d'assemblage :
+ * c'est ce qui borne le manchon commun à deux corps voisins. Le manchon doit
+ * tenir dans le plus étroit des deux, sinon il perce une paroi. */
+function interfaceRayonBas(bi, wall){
+  const b = state.bodies[bi]; if(!b || b.profile.length<2) return Infinity;
+  const pl = bodyPlacements()[bi] || {scale:1};
+  const prof = profilAvecJupe(b.profile.map(p=>({h:p.h*pl.scale, r:p.r*pl.scale})));
+  const inner = offsetMeridianInward(prof, wall).inner;
+  let m = Infinity;
+  for(let z=inner[0].h; z<=inner[0].h+12; z+=1){
+    for(let k=0;k<inner.length-1;k++){
+      if(z<=inner[k+1].h){ const d=inner[k+1].h-inner[k].h, u=d>1e-9?(z-inner[k].h)/d:0;
+        m=Math.min(m, inner[k].r+u*(inner[k+1].r-inner[k].r)); break; }
+    }
+  }
+  return m;
+}
+function interfaceRayonHaut(bi, wall){
+  const b = state.bodies[bi]; if(!b || b.profile.length<2) return Infinity;
+  const pl = bodyPlacements()[bi] || {scale:1};
+  const prof = profilAvecJupe(b.profile.map(p=>({h:p.h*pl.scale, r:p.r*pl.scale})));
+  const inner = offsetMeridianInward(prof, wall).inner;
+  const top = inner[inner.length-1].h;
+  let m = Infinity;
+  for(let z=top-12; z<=top; z+=1){
+    for(let k=0;k<inner.length-1;k++){
+      if(z<=inner[k+1].h){ const d=inner[k+1].h-inner[k].h, u=d>1e-9?(z-inner[k].h)/d:0;
+        m=Math.min(m, inner[k].r+u*(inner[k+1].r-inner[k].r)); break; }
+    }
+  }
+  return m;
+}
+
 function buildParts(segList, mode){
   const wall = parseFloat(state.wall);
   const places = bodyPlacements();
   const topMin = SOCKETS[state.socket].housingMinRadiusMm;
   const parts = [];
-  MESH.clamped = []; MESH.platine = null; MESH.socle = null; MESH.bague = null;
+  MESH.clamped = []; MESH.platine = null; MESH.socle = null; MESH.bague = null; MESH.liaisons = [];
   places.forEach((pl, bi)=>{
     const body = state.bodies[bi];
     if(!body || body.profile.length < 2) return;
@@ -2657,27 +2719,52 @@ function buildParts(segList, mode){
       meshes[i]   = meshes[i].concat(J.male);
       meshes[i+1] = meshes[i+1].concat(J.female);
     });
+    /* LIAISON ENTRE CORPS. Deux corps empilés se touchent : le manchon MÂLE
+     * coiffe le sommet du corps du bas, le FEMELLE est taraudé sous le corps
+     * du haut. Chaque corps reste imprimé à part et se visse à son voisin. */
+    if(state.split.on && corpsEmpiles()){
+      const rInt = (poly, z)=> rAt(poly, z);
+      if(bi < places.length-1){                       // mâle au sommet
+        const top = profileTopH(profJ);
+        let rMin = Infinity;
+        for(let z=top-12; z<=top; z+=1) rMin = Math.min(rMin, rInt(inners[n-1], z));
+        const rSuiv = interfaceRayonBas(bi+1, wall);
+        rMin = Math.min(rMin, rSuiv);
+        const rOutAt = (z)=> rInt(inners[n-1], Math.min(z, top)) + wall;
+        const J = buildJointMeshes(rMin, top, segments, JOINT, body.sculpt, hRef, wall, rOutAt);
+        meshes[n-1] = meshes[n-1].concat(J.male);
+        MESH.liaisons.push({ entre:[bi+1, bi+2], rMin:+rMin.toFixed(2), ...J.info });
+      }
+      if(bi > 0){                                     // femelle sous la base
+        let rMin = Infinity;
+        for(let z=0; z<=12; z+=1) rMin = Math.min(rMin, rInt(inners[0], z));
+        rMin = Math.min(rMin, interfaceRayonHaut(bi-1, wall));
+        const rOutAt = (z)=> rInt(inners[0], Math.max(0, z)) + wall;
+        const J = buildJointMeshes(rMin, 0, segments, JOINT, body.sculpt, hRef, wall, rOutAt);
+        meshes[0] = meshes[0].concat(J.female);
+      }
+    }
+    /* FUSION AVANT EXPORT. Le socle kit LED et la bague ne sont pas des pièces
+     * à part : ils s'impriment d'un seul tenant avec le corps du bas. Les
+     * laisser dans des STL séparés obligeait l'atelier à les recombiner à la
+     * main — et un client qui n'ouvre qu'un fichier imprimait une lampe sans
+     * son support. Ils vont donc dans le MÊME maillage (primitives qui se
+     * chevauchent, le trancheur fusionne). */
+    if(socleActif() && bi === socketEndBodyIdx()){
+      const S = buildSocleMeshes(bi, wall, segments, body.sculpt, hRef);
+      MESH.socle = { R:S.R, z0:S.z0, z1:S.z1, fusionne:true };
+      meshes[0] = meshes[0].concat(S.tris);
+    }
+    if(bagueActive() && bi === socketEndBodyIdx()){
+      const B = buildBagueAbatJour(segments, body.sculpt, hRef);
+      MESH.bague = { diaExtMm: BAGUE.diaExtMm, hautMm: BAGUE.hautMm, pasMm: BAGUE.pasMm, fusionne:true };
+      meshes[0] = meshes[0].concat(B);
+    }
     for(let i=0;i<n;i++){
       const lbl = (places.length>1 ? pl.role : '') + (n>1 ? (places.length>1?' · ':'')+partLabel(i,n) : '');
       parts.push({ tris:meshes[i], h0:cuts[i], h1:cuts[i+1], index:i, nslice:n,
                    joint: joints[i]||null, body:bi, xf:pl, perfore:isPerforated(surf),
                    refVolMm3:pappusShellVolMm3(slices[i], wall), label: lbl || 'monobloc' });
-    }
-    // bague filetée : fusionnée sous l'abat-jour, elle EST la pièce du bas
-    if(bagueActive() && bi === socketEndBodyIdx()){
-      const B = buildBagueAbatJour(segments, body.sculpt, hRef);
-      MESH.bague = { diaExtMm: BAGUE.diaExtMm, hautMm: BAGUE.hautMm, pasMm: BAGUE.pasMm };
-      parts.push({ tris: B, h0:0, h1:BAGUE.hautMm, index:0, nslice:1, joint:null,
-                   body:bi, xf:pl, perfore:false, refVolMm3:0, bague:true,
-                   label:'bague filetée (fusionnée à l\'abat-jour)' });
-    }
-    // équipement du socle : plancher + colonnettes, sur le corps posé au sol
-    if(socleActif() && bi === socketEndBodyIdx()){
-      const S = buildSocleMeshes(bi, wall, segments, body.sculpt, hRef);
-      MESH.socle = { R:S.R, z0:S.z0, z1:S.z1 };
-      parts.push({ tris: S.tris, h0:S.z0, h1:SOCLE.ledHautMm, index:0, nslice:1,
-                   joint:null, body:bi, xf:pl, perfore:false, refVolMm3:0,
-                   socle:true, label:'socle — plancher et colonnettes' });
     }
     // platine du module USB : une seule, sur le corps qui porte la connexion
     // ⚠️ Pas de platine avec la bague : le module LED se monte sur le SUPPORT
@@ -3457,9 +3544,12 @@ function renderWarnings(){
 }
 
 /* ── Sockets UI ───────────────────────────────────────────────────────── */
+function socketsDispo(){
+  return Object.entries(SOCKETS).filter(([,s])=>s.dispo !== false);
+}
 function renderSockets(){
   const el=$('socketList'); el.innerHTML='';
-  Object.entries(SOCKETS).forEach(([key,s])=>{
+  socketsDispo().forEach(([key,s])=>{
     const div=document.createElement('label');
     div.className='socket-opt'+(state.socket===key?' on':'');
     div.innerHTML = `<input type="radio" name="socket" value="${key}" ${state.socket===key?'checked':''}>
@@ -3473,6 +3563,12 @@ function renderSockets(){
     div.querySelector('input').onchange=()=>{ state.socket=key; normalizeProfile(); renderAll(); };
     el.appendChild(div);
   });
+  if(socketsDispo().length === 1){
+    const d=document.createElement('div'); d.className='hint'; d.style.marginTop='8px';
+    d.textContent = "Une seule connexion proposée : le module USB 5 V. Les culots secteur E14 et E27 ne sont "
+      + "plus au catalogue — leurs cotes restent dans le moteur, mais aucune lampe vendue n'est reliée au secteur.";
+    el.appendChild(d);
+  }
 }
 
 /* Ce que la pièce doit prévoir pour la connexion choisie, et le régime de

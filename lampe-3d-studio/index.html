@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-y8apTV3Bw9GqrwmMR7horzSD1cqLadpBDyaBLGjBaw8='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-Cl+GGBAAUGRcv0vbVPaBaH3R/wERCKobYs2+tG9H7kI='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -319,6 +319,46 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     <h2><span class="n">7</span>Culot électrique — référence standard fermée</h2>
     <div id="socketList"></div>
     <div class="warnbox" id="connexionBox"></div>
+
+    <!-- Socle kit LED : lampe à poser monobloc -->
+    <div id="socleCard" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+      <label class="socket-opt" style="margin-bottom:8px">
+        <input type="checkbox" id="socleOn" checked>
+        <div><b>Socle kit LED intégré</b>
+        <div class="hint" style="margin:2px 0 0">La peau descend d'un seul trait jusqu'à l'extrémité : pas de
+        ressaut entre abat-jour et base. Le plancher, les colonnettes du kit LED et les perçages du serre-câble
+        sont générés dedans.</div></div>
+      </label>
+      <div id="socleParams">
+        <label class="lbl">Diamètre à l'extrémité — <b id="socleDiaTxt">99,5</b> mm</label>
+        <input type="range" id="socleDia" min="76" max="220" step="0.5" value="99.5">
+      </div>
+      <div class="warnbox" id="socleBox" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Sortie de câble : n'apparaît que pour un module basse tension -->
+    <div id="cableCard" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+      <label class="socket-opt" style="margin-bottom:8px">
+        <input type="checkbox" id="cableOn" checked>
+        <div><b>Percer le passage de câble dans la pièce</b>
+        <div class="hint" style="margin:2px 0 0">Le trou est dans le maillage livré : l'atelier ne perce rien après coup.</div></div>
+      </label>
+      <div id="cableParams">
+        <label class="lbl">Diamètre du passage — <b id="cableDiaTxt">6,0</b> mm</label>
+        <input type="range" id="cableDia" min="4" max="12" step="0.5" value="6">
+        <label class="lbl">Recul depuis l'extrémité qui porte le module — <b id="cableReculTxt">22</b> mm</label>
+        <input type="range" id="cableRecul" min="8" max="120" step="1" value="22">
+        <label class="lbl">Orientation autour de l'axe — <b id="cableAngTxt">180</b>°</label>
+        <input type="range" id="cableAng" min="0" max="359" step="1" value="180">
+        <label class="socket-opt" style="margin-top:10px">
+          <input type="checkbox" id="cablePlatine" checked>
+          <div><b>Générer la platine de raccordement</b>
+          <div class="hint" style="margin:2px 0 0">Pièce plate séparée qui porte les 4 trous d'insert M3 — 2 pour le module, 2 pour le serre-câble.</div></div>
+        </label>
+      </div>
+      <div class="warnbox" id="cableBox" style="margin-top:10px"></div>
+    </div>
+
     <div class="hint">La géométrie du culot (bore, épaulement, filetage) n'est <b>jamais générée</b> : ces cotes viennent de pièces mesurées
     à l'atelier ou du standard commercial publié, et servent uniquement à borner le rayon mini du point de fixation du profil.</div>
   </div>
@@ -374,13 +414,16 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
         </select>
       </div>
       <div class="field">
-        <label>Épaisseur de paroi (multiple de buse 0.4mm, cf. atelier)</label>
+        <label>Épaisseur de paroi (buse 0.4 mm)</label>
         <select id="wall">
           <option value="0.8">0.8 mm — 2 périmètres, fin, non recommandé structurel</option>
-          <option value="1.2" selected>1.2 mm — 3 périmètres, diffusant recommandé (abat-jour translucide)</option>
+          <option value="1.2">1.2 mm — 3 périmètres, très diffusant</option>
           <option value="1.6">1.6 mm — 4 périmètres</option>
-          <option value="2.0">2.0 mm — 5 périmètres, structurel recommandé</option>
+          <option value="1.8" selected>1.8 mm — défaut atelier (4 périmètres élargis)</option>
+          <option value="2.0">2.0 mm — 5 périmètres, structurel</option>
         </select>
+        <div class="hint">1,8 mm n'est pas un multiple de 0,4 : le trancheur ne pose pas 4,5 périmètres, il
+        <b>élargit</b> les 4 périmètres. Vérifié au tranchage — voir la note d'atelier.</div>
       </div>
       <div class="disc-small">Sécurité lampe (non négociable, cf. doctrine atelier FIRST_PRINT_TEST) : LED ≤ 7 W réels, jamais halogène ni
       incandescent dans du PLA ; paroi ≥ 12 mm de l'ampoule ; ouverture haute + sortie câble pour tirage d'air ; douille du commerce
@@ -530,21 +573,29 @@ const SOCKETS = {
   USB_BAMBU: {
     label: 'Module lampe USB Bambu Lab — 5 V, sans culot',
     type: 'module',
-    // Pas de culot, donc pas d'alésage : le module se VISSE. Ce qu'il faut
-    // prévoir dans la pièce imprimée, et qui part dans le dossier :
-    visM3: 2,                 // 2 vis M3 + inserts laiton (règle atelier)
-    entraxeVisMm: 30,         // ⚠️ PROVISOIRE — à mesurer sur le module réel
-    platineDiaMm: 40,         // ⚠️ PROVISOIRE — encombrement de la platine
-    cableDiaMm: 4.5,          // passage du câble USB-C — ⚠️ PROVISOIRE
-    dechargeTraction: true,   // serre-câble obligatoire, cf. norme atelier
-    // rayon mini = demi-entraxe + distance au bord des vis + paroi
+    // Cotes RELEVÉES SUR LES MAILLAGES FOURNIS (AUTRES/, 30/07), pas estimées :
+    // perçages détectés par analyse des parois verticales du modèle.
+    visM3: 2,
+    entraxeVisMm: 28.00,      // 2 perçages Ø4,00 aux points (0,+14) et (0,−14)
+    trouInsertMm: 4.00,       // Ø4,00 = trou d'insert M3 à chaud
+    platineDiaMm: 59.50,      // disque du module
+    epaisseurMm: 8.20,
+    debordMm: 14.50,          // languette qui dépasse du disque (connecteur)
+    // Serre-câble « Bloque Cable VF 2 » : 17 × 6,06 × 7 mm, 2 perçages Ø3,50
+    // à 11,00 mm d'entraxe, gorge de câble 5,22 × 1,33 mm.
+    serreCable: { entraxeMm: 11.00, trouMm: 3.50, emprise: '17 × 6 × 7 mm' },
+    cableLargeurMm: 5.22, cableEpaisseurMm: 1.33,   // câble PLAT, pas rond
+    cableDiaMm: 6.0,          // passage circulaire qui laisse passer ce plat
+    dechargeTraction: true,
+    // rayon mini = demi-entraxe + distance au bord de l'insert + paroi
     housingMinRadiusMm: 22,
-    maxWattageW: 5,           // 5 V USB : très basse tension de sécurité
+    maxWattageW: 5,
     tensionV: 5,
-    measured: false,
-    source: "Module USB Bambu Lab — AUCUNE cote mesurée à l'atelier au 30/07. Entraxe, "
-          + "platine et diamètre de câble ci-dessus sont des ordres de grandeur : les mesurer "
-          + "au pied à coulisse sur le module réel AVANT de percer ou de lancer une série.",
+    measured: true,
+    source: "Mesuré le 30/07 sur les maillages fournis (AUTRES/KIT LAMPE BAMBULAB.obj et "
+          + "Bloque Cable VF 2.obj) : module 74,00 × 8,20 × 59,50 mm, 2 perçages Ø4,00 à "
+          + "28,00 mm d'entraxe ; serre-câble 17 × 6,06 × 7,00 mm, 2 perçages Ø3,50 à "
+          + "11,00 mm d'entraxe, gorge 5,22 × 1,33 mm.",
   },
   E27: {
     label: 'E27 — gros culot (standard)',
@@ -566,6 +617,65 @@ const COLORS = ['#e8e2d5','#f5f5f7','#2c2c2e','#c88a52','#8fa6b2','#b23a3a'];
  * famille de silhouettes proposées, et déclenche ses propres vérifications
  * (ouverture de sortie de lumière, assise réelle, saillie murale).
  * ========================================================================== */
+/* ── SOCLE KIT LED (lampe à poser monobloc) ───────────────────────────────
+ * Cotes RELEVÉES sur « AUTRES/3D/BASE SIMPLE LED KIT.obj » (Ø99,50 × 36,20 mm,
+ * axe Y, un seul corps). Hauteurs converties en h depuis le dessous (h = Y+20).
+ *
+ * Le socle n'est PAS une pièce rapportée : il devient le bas du profil dessiné.
+ * La peau extérieure descend d'un seul trait jusqu'à l'extrémité — pas de
+ * ressaut entre un abat-jour et une base. Ce qu'on génère en plus, c'est ce
+ * qu'il y a DEDANS : le plancher, les colonnettes du kit LED, les perçages du
+ * serre-câble et la sortie de câble.
+ */
+const SOCLE = {
+  diaRefMm: 99.50,        // Ø relevé — sert de référence, pas de valeur imposée
+  hautRefMm: 36.20,
+  /* JUPE : sur l'assemblage de référence (« assemblage monobloc test.obj »),
+   * l'abat-jour démarre à Y=-12 au rayon 47,750 → 49,750 (paroi 2,0 mm), c'est-
+   * à-dire posé sur le PLAT à Y=-12 (anneau r 45,75→49,75), juste au-dessus de
+   * la sortie de câble à Y=-15,7. Sous lui, la base garde une jupe DROITE au
+   * Ø nominal sur 8 mm. C'est cette jupe qui fait la continuité : le dessin du
+   * client reprend exactement là où elle s'arrête, au même rayon. */
+  jupeHMm: 8.0,           // Y = -20 → -12
+  paroiRefMm: 2.0,        // paroi de l'abat-jour sur la pièce de référence
+  solHMm: 3.0,            // plancher intérieur (Y = -17)
+  epauleHMm: 15.5,        // épaulement au-dessus des trous de câble (Y = -4,5)
+  epauleR1Mm: 28.0, epauleR2Mm: 33.5,
+  ledEntraxeMm: 28.00,    // kit LED Bambu — mêmes cotes que SOCKETS.USB_BAMBU
+  ledTrouMm: 4.00,
+  ledHautMm: 20.0,        // sommet des colonnettes (Y = 0)
+  serreEntraxeMm: 11.00,  // serre-câble « Bloque Cable VF 2 »
+  serreTrouMm: 4.00,
+  sortieDiaMm: 8.40,      // sortie de câble latérale (Y = -15,7)
+  sortieHMm: 4.30,
+  colonneDiaMm: 9.0,      // matière autour du perçage Ø4
+  planchierEpMm: 3.0,
+  source: "AUTRES/3D/BASE SIMPLE LED KIT.obj — 178 310 sommets, mesuré le 04/08",
+};
+// Le socle est-il actif ? Lampe à poser + module basse tension + option cochée.
+function socleActif(){
+  return state.type === 'poser' && SOCKETS[state.socket]
+      && SOCKETS[state.socket].type === 'module' && state.socle && state.socle.on;
+}
+// Rayon d'extrémité imposé au bas du profil : c'est LUI le « Ø de la base ».
+function socleRayonMm(){
+  // borné par le type de lampe ET le plateau d'impression — un Ø réglé au
+  // curseur ne doit pas pouvoir sortir de ce qui est imprimable.
+  const b = bounds();
+  const r = (state.socle ? state.socle.diaMm : SOCLE.diaRefMm) / 2;
+  return Math.min(r, b.maxR, (PRINT_BOUNDS.PLATE_XY_MM - 10) / 2);
+}
+/* Profil RÉELLEMENT maillé quand le socle est actif : la jupe droite au Ø
+ * nominal, puis le dessin du client repris au même rayon. Le dessin n'est pas
+ * déformé, il est POSÉ 8 mm plus haut — c'est la hauteur de la jupe. */
+function profilAvecJupe(prof){
+  if(!socleActif() || prof.length < 2) return prof;
+  const R = socleRayonMm(), J = SOCLE.jupeHMm;
+  const haut = prof.map(p=>({ h:p.h + J, r:p.r }));
+  haut[0] = { h:J, r:R };
+  return [{ h:0, r:R }, ...haut];
+}
+
 const TYPES = {
   suspension: {
     label: 'Suspension',
@@ -680,13 +790,19 @@ let state = {
   type: 'suspension',
   socket: 'E14',
   material: 'PLA',
-  wall: 1.2,
+  wall: 1.8,        // défaut atelier — cf. la note sous le sélecteur
   color: COLORS[0],
   selected: -1,
   seed: null,        // graine du dernier tirage aléatoire (null si preset/édition manuelle)
   bodies: [newBody('cloche')],
   body: 0,           // corps en cours d'édition dans la coupe 2D
   compo: { count:1, layout:'vertical', symmetric:true, spacingMm:120, ringRadiusMm:90, jeuImbricationMm:8 },
+  /* Sortie de câble — n'a de sens que pour un module basse tension (USB), où
+   * c'est un câble qui sort de la pièce et non un culot vissé. Le passage est
+   * PERCÉ DANS LE MAILLAGE : l'atelier ne perce rien après coup. */
+  cable: { on:true, diaMm:6.0, reculMm:22, angleDeg:180, platine:true },
+  // socle kit LED : le bas du profil se termine à ce Ø, et l'intérieur est équipé
+  socle: { on:true, diaMm: 99.5 },
   // couches combinables : une base + des reliefs additifs + un ajourage
   surface: { base:'facette', smoothing:45,
              stries:false, strieCount:18, strieDepthMm:1.6, cross:false, pitchMm:34,
@@ -711,10 +827,71 @@ Object.defineProperty(state,'shape',{ enumerable:false,
  *            réglages ne touchent que le corps sélectionné.
  * (« Symétrique » ne concerne que la régularité de l'AGENCEMENT, pas les formes.) */
 function sculptTargets(){ return (state.linkBodies && !state.expert) ? state.bodies : [state.bodies[state.body]]; }
+/* ── Trous fonctionnels ───────────────────────────────────────────────────
+ * Une cote, pas un motif : ils sont percés dans le maillage livré, quelle que
+ * soit l'orientation, et ils traversent les bandes pleines.
+ *
+ * ⚠️ SEUL le passage de câble est dans la COQUE. Les perçages d'insert M3 n'y
+ * sont PAS : un insert laiton M3 fait 5 mm de long et la paroi 1,2 mm — il n'y
+ * aurait rien pour le tenir. Ils vont dans la platine (pièce épaisse), voir
+ * buildPlatineUSB(). Percer un Ø4 dans 1,2 mm de paroi ne donnerait qu'un trou
+ * traversant inutile, et un client le découvrirait à l'assemblage. */
+function trousCorps(bi){
+  const sock = SOCKETS[state.socket];
+  if(!sock || sock.type !== 'module' || !state.cable.on) return [];
+  if(bi !== socketEndBodyIdx()) return [];
+  /* Socle : la sortie de câble est EN BAS, dans la jupe. Sur la pièce de
+   * référence elle est à h=4,3 et débouche presque sur le dessous ; ici on la
+   * remonte pour qu'elle ne coupe pas la couronne plate du bas, sinon la pièce
+   * ne ferme plus. L'écart est annoncé dans l'interface. */
+  if(socleActif()){
+    const r = SOCLE.sortieDiaMm/2;
+    const vise = SOCLE.sortieHMm, mini = r + 2.5;
+    const h = Math.max(vise, mini);
+    return [{ angleDeg: state.cable.angleDeg, hMm: h, diaMm: SOCLE.sortieDiaMm,
+              role: 'sortie câble socle',
+              ajuste: (h > vise + 0.01) ? { de: vise, vers: h } : null }];
+  }
+  const body = state.bodies[bi];
+  if(!body || body.profile.length < 2) return [];
+  const pl = bodyPlacements()[bi] || {scale:1};
+  const prof = body.profile.map(p=>({h:p.h*pl.scale, r:p.r*pl.scale}));
+  const top = profileTopH(prof), r = Math.max(1, state.cable.diaMm/2);
+  // « recul » = distance depuis l'extrémité qui porte le module
+  const cotéHaut = !body.flipped;
+  let h = cotéHaut ? top - state.cable.reculMm : state.cable.reculMm;
+  // le trou ne doit croiser ni une couronne d'extrémité ni un plan de coupe :
+  // la couronne plate y serait interrompue et la pièce ne fermerait plus.
+  const marge = r + 3;
+  h = Math.max(marge, Math.min(top - marge, h));
+  for(const c of cutPlanesFor(prof)){
+    if(Math.abs(h - c) < marge) h = (h < c) ? c - marge : c + marge;
+  }
+  h = Math.max(marge, Math.min(top - marge, h));
+  /* La platine barrerait l'entrée du câble si le trou tombait dans sa bande :
+   * on le descend sous elle, côté ouverture, et on le DIT (renderCable) plutôt
+   * que de livrer une configuration fausse par défaut. */
+  let ajuste = null;
+  if(state.cable.platine){
+    const a = assisePlatine(bi, +state.wall);
+    const zb = a.h, zt = a.h + PLATINE.epaisMm;
+    if(h + r > zb && h - r < zt){
+      const vise = zb - r - 1;                        // juste sous l'anneau
+      ajuste = { de:h, vers: Math.max(marge, Math.min(top - marge, vise)) };
+      h = ajuste.vers;
+    }
+  }
+  return [{ angleDeg: state.cable.angleDeg, hMm: h, diaMm: state.cable.diaMm, role: 'câble', ajuste }];
+}
+// Corps qui porte la connexion : celui du haut en agencement vertical, sinon le 1ᵉʳ.
+function socketEndBodyIdx(){ return 0; }
+
 // Style de surface effectif d'un corps (pour mailler).
 function bodySurface(i){
   const b = state.bodies[i];
-  return (!state.linkBodies && b && b.surface) ? b.surface : state.surface;
+  const base = (!state.linkBodies && b && b.surface) ? b.surface : state.surface;
+  const tr = trousCorps(i);
+  return tr.length ? {...base, trous: tr} : base;
 }
 // Style de surface à MODIFIER quand on touche aux réglages.
 function bodySurfaceForEdit(){
@@ -786,6 +963,14 @@ function normalizeProfile(){
   }
   const se = socketEndIdx();
   state.profile.forEach((p,i)=>clampPoint(p, i===se));
+  /* Le socle impose le rayon de l'EXTRÉMITÉ basse : la peau descend jusqu'à
+   * Ø99,5 (ou le Ø réglé) au lieu de s'arrêter avant et de laisser un ressaut.
+   * On ne touche qu'au point du bas — le dessin au-dessus reste celui du client. */
+  if(socleActif() && state.profile.length){
+    const bas = state.profile[0];
+    const r = socleRayonMm();
+    if(Math.abs(bas.r - r) > 0.01) bas.r = r;
+  }
 }
 
 // Corps LIÉS : un preset ou un tirage s'applique à tous les corps.
@@ -934,7 +1119,10 @@ const RELIEF_STEP = {
   organique: { stepMax:4.2, stepMin:1.2 },
 };
 const hasRelief    = s => !!(s.stries || s.organique);
-const isPerforated = s => !!s.ajour;
+/* Un ajourage Voronoï et un passage de câble sont le MÊME problème : percer une
+ * coque en la gardant étanche. On passe donc par le même chemin — découpe du
+ * contour sur un champ signé — au lieu d'inventer une seconde mécanique. */
+const isPerforated = s => !!s.ajour || !!(s.trous && s.trous.length);
 const isSmoothMesh = s => (s.base==='lisse') || hasRelief(s) || isPerforated(s);
 
 function styleLabel(s){
@@ -1082,32 +1270,340 @@ function voroResolution(surf, rMean, H){
  * exact du trou. C'est parce qu'il est CONTINU qu'on peut découper le contour
  * là où il passe vraiment, au lieu de garder ou jeter des cellules entières —
  * ce qui donnait des trous en escalier. */
+/* Trous fonctionnels : passage de câble et perçages du serre-câble. Ils sont
+ * soustraits du champ comme les cellules de Voronoï — donc bord refermé,
+ * maillage étanche, et ils traversent aussi bien une paroi pleine qu'un
+ * ajourage. Contrairement au motif, ils sont PERCÉS MÊME DANS LES BANDES
+ * PLEINES : c'est là qu'ils doivent être. */
+function champTrous(th, h, ctx){
+  if(!ctx.trous || !ctx.trous.length) return 1e6;
+  const TWO = Math.PI*2;
+  let f = 1e6;
+  for(const t of ctx.trous){
+    // Distance mesurée SUR LA SURFACE, au rayon local du trou et le long de la
+    // génératrice. Le déroulé au rayon moyen (celui du Voronoï) donnerait un
+    // trou elliptique sur un corps conique : mesuré 5,05 mm au lieu de 6,00.
+    let dth = Math.abs(th - t.th) % TWO; if(dth > Math.PI) dth = TWO - dth;
+    f = Math.min(f, Math.hypot(dth*t.rLoc, (h - t.h)*t.pente) - t.r);
+  }
+  return f;
+}
+
 function perfField(th, h, ctx){
-  if(h <= ctx.bandBottom || h >= ctx.bandTop) return 1e6;     // bandes pleines imposées
+  const tr = champTrous(th, h, ctx);
+  if(tr < 0) return tr;                                        // un trou fonctionnel prime
+  if(h <= ctx.bandBottom || h >= ctx.bandTop) return Math.min(1e6, tr);  // bandes pleines imposées
   const dBand = Math.min(h - ctx.bandBottom, ctx.bandTop - h);
   const t = Math.min(1, dBand/ctx.transition);
   const strutLocal = ctx.strut * (1 + 2.2*(1-t)*(1-t));       // fondu dans la bande
+  if(!ctx.ix.K) return Math.min(1e6, tr);                     // pas d'ajourage : seuls les trous percent
   const {d1,d2} = voroD1D2(ctx.ix, (th/(2*Math.PI))*ctx.ix.W, h - ctx.h0);
-  return strutLocal - (d2 - d1);                              // marge de nervure
+  return Math.min(strutLocal - (d2 - d1), tr);                // nervure ET trous
 }
 function perfKeep(th, h, ctx){ return perfField(th, h, ctx) > 0; }
 
+/* Grille angulaire : uniforme, plus une densification locale autour de chaque
+ * trou fonctionnel. Le pas local vise ~8 échantillons sur le diamètre du trou,
+ * ce qui suffit à le lire comme rond sans toucher au reste du tour. */
+function angularGrid(N, ctx){
+  const base = [];
+  for(let j=0;j<N;j++) base.push((j/N)*Math.PI*2);
+  if(!ctx.trous || !ctx.trous.length) return base;      // cas Voronoï pur : inchangé
+  const TWO = Math.PI*2, W = ctx.ix.W;
+  const wrap = a => ((a % TWO) + TWO) % TWO;
+  const add = [];
+  for(const t of ctx.trous){
+    const thc = wrap(t.th);
+    const span = (t.r*1.8) / t.rLoc;                    // un peu au-delà du bord
+    const step = (t.r/8)   / t.rLoc;                    // ≈ 16 pas sur le diamètre
+    for(let a=-span; a<=span+1e-12; a+=step) add.push(wrap(thc + a));
+  }
+  const all = base.concat(add).sort((a,b)=>a-b);
+  const minGap = Math.min(...ctx.trous.map(t=>(t.r/8)/t.rLoc/2), TWO/N/8);
+  const out = [];
+  for(const a of all){ if(!out.length || a - out[out.length-1] > minGap) out.push(a); }
+  // la couture : si le dernier échantillon touche presque 2π, il doublonne le 0
+  while(out.length > 1 && TWO - out[out.length-1] < minGap) out.pop();
+  return out;
+}
+
+/* ── PLATINE DE RACCORDEMENT (module USB) ─────────────────────────────────
+ * Pourquoi une pièce en plus plutôt que des perçages dans la coque :
+ *  · un insert laiton M3 mesure 5 mm de long, la paroi 1,2 mm — rien ne le tient ;
+ *  · les 2 vis du module Bambu sont à 14 mm de son axe, donc AU-DESSUS DU VIDE :
+ *    la couronne haute de la coque est un simple liseré de 1,2 mm à r ≥ 22 mm,
+ *    il n'y a littéralement pas de matière à cet endroit.
+ * La platine apporte les deux : de l'épaisseur, et de la matière au centre.
+ *
+ * Elle est faite de primitives fermées qui se CHEVAUCHENT (anneau + barre +
+ * bossages), jamais d'une découpe booléenne : c'est déjà la méthode des
+ * manchons de liaison, et le trancheur fusionne des volumes qui s'interpénètrent
+ * sans broncher. Chaque primitive est étanche prise seule.
+ */
+const PLATINE = { epaisMm:6.0, anneauMm:3.5, barreMm:17, brasMm:8.0, bossDiaMm:10.0, jeuMm:0.3 };
+
+function transTris(tris, dx, dy, dz){
+  return tris.map(t=>t.map(v=>[v[0]+dx, v[1]+dy, v[2]+dz]));
+}
+// Pavé droit fermé (12 triangles), orienté normales vers l'extérieur.
+function buildBox(x0,x1,y0,y1,z0,z1){
+  const V=(x,y,z)=>[x,y,z];
+  const a=V(x0,y0,z0),b=V(x1,y0,z0),c=V(x1,y1,z0),d=V(x0,y1,z0);
+  const e=V(x0,y0,z1),f=V(x1,y0,z1),g=V(x1,y1,z1),h=V(x0,y1,z1);
+  return [[a,c,b],[a,d,c],[e,f,g],[e,g,h],
+          [a,b,f],[a,f,e],[b,c,g],[b,g,f],
+          [c,d,h],[c,h,g],[d,a,e],[d,e,h]];
+}
+
+/* Hauteur d'assise : on descend depuis l'extrémité qui porte le module jusqu'à
+ * trouver un rayon intérieur qui accepte le disque du module. La platine se
+ * coince alors toute seule dans le cône — pas de gorge à imprimer. */
+/* Mémo : assisePlatine balaie 400 hauteurs, et trousCorps l'appelle à chaque
+ * fois que bodySurface() est demandé — soit des dizaines de fois par rendu. */
+let _assise = { cle:null, val:null };
+function assisePlatine(bi, wall){
+  const cle = bi+'|'+wall+'|'+state.socket+'|'+state.bodies[bi].flipped+'|'
+            + JSON.stringify(state.bodies[bi].profile)+'|'+JSON.stringify(state.compo);
+  if(_assise.cle === cle) return _assise.val;
+  const val = assisePlatineCalc(bi, wall);
+  _assise = { cle, val };
+  return val;
+}
+function assisePlatineCalc(bi, wall){
+  const body = state.bodies[bi];
+  const pl = bodyPlacements()[bi] || {scale:1};
+  const prof = body.profile.map(p=>({h:p.h*pl.scale, r:p.r*pl.scale}));
+  const inner = offsetMeridianInward(prof, wall).inner;
+  const sock = SOCKETS[state.socket];
+  const besoin = sock.platineDiaMm/2 + 1.5;           // disque du module + marge
+  const cotéHaut = !body.flipped;
+  const pts = cotéHaut ? inner.slice().reverse() : inner.slice();
+  /* La platine n'est pas un disque sans épaisseur : elle fait PLATINE.epaisMm de
+   * haut, et la coque se resserre sur cette hauteur. On la dimensionne donc sur
+   * le rayon intérieur MINI rencontré sur toute sa bande — mesuré : sans ça, le
+   * bord haut dépassait de la paroi et la pièce n'entrait pas. */
+  const rIntAt = (z)=>{
+    if(z <= inner[0].h) return inner[0].r;
+    for(let k=0;k<inner.length-1;k++){
+      if(z <= inner[k+1].h){
+        const d = inner[k+1].h - inner[k].h;
+        const u = d>1e-9 ? (z-inner[k].h)/d : 0;
+        return inner[k].r + u*(inner[k+1].r - inner[k].r);
+      }
+    }
+    return inner[inner.length-1].r;
+  };
+  const e = PLATINE.epaisMm;
+  const rMinBande = (h)=>{
+    let m = Infinity;
+    for(let z=h; z<=h+e+1e-9; z+=e/6) m = Math.min(m, rIntAt(z));
+    return m;
+  };
+  const h0 = inner[0].h, h1 = inner[inner.length-1].h - e;
+  const pas = Math.max(0.5, (h1-h0)/400);
+  let best = { h:h0, r:-1 };
+  for(let k=0;k<=400;k++){
+    const h = cotéHaut ? (h1 - k*pas) : (h0 + k*pas);   // on part de l'extrémité du module
+    if(h < h0 || h > h1) continue;
+    const r = rMinBande(h);
+    if(r > best.r) best = { h, r };
+    if(r >= besoin) return { h, rInt:r, ok:true, besoin };
+  }
+  return { h:best.h, rInt:best.r, ok:false, besoin };
+}
+
+/* ── Équipement intérieur du socle ────────────────────────────────────────
+ * Primitives fermées qui se chevauchent, comme les manchons de liaison et la
+ * platine USB : le trancheur fusionne, on ne fait AUCUN booléen dans le STL.
+ * Rappel du piège de la platine : on ne peut qu'AJOUTER de la matière — un
+ * perçage doit donc être le vide central d'un tube, jamais un trou « posé »
+ * sur du plein.
+ */
+function buildSocleMeshes(bi, wall, segments, sculpt, hRef){
+  const body = state.bodies[bi];
+  const pl = bodyPlacements()[bi] || {scale:1};
+  const prof = body.profile.map(p=>({h:p.h*pl.scale, r:p.r*pl.scale}));
+  const inner = offsetMeridianInward(prof, wall).inner;
+  const rIntAt = (z)=>{
+    if(z <= inner[0].h) return inner[0].r;
+    for(let k=0;k<inner.length-1;k++){
+      if(z <= inner[k+1].h){
+        const d = inner[k+1].h - inner[k].h;
+        const u = d>1e-9 ? (z-inner[k].h)/d : 0;
+        return inner[k].r + u*(inner[k+1].r - inner[k].r);
+      }
+    }
+    return inner[inner.length-1].r;
+  };
+  const seg = Math.max(48, Math.min(160, segments|0));
+  const z0 = SOCLE.solHMm, ep = SOCLE.planchierEpMm, z1 = z0 + ep;
+  // le plancher est dimensionné sur le rayon MINI de sa bande (même règle que
+  // la platine USB : la paroi bouge sur l'épaisseur de la pièce)
+  let rMin = Infinity;
+  for(let z=z0; z<=z1+1e-9; z+=ep/6) rMin = Math.min(rMin, rIntAt(z));
+  const R = Math.max(12, rMin - 0.3);
+  const tris = [];
+  tris.push(...buildTube(z0, z1, ()=>10, ()=>R, seg, ep/2, null, hRef));   // plancher ajouré au centre
+
+  const rTrou = SOCLE.ledTrouMm/2, rCol = SOCLE.colonneDiaMm/2;
+  const colonne = (cx, cy, hHaut)=>{
+    const t = buildTube(z1 - 1.0, hHaut, ()=>rTrou, ()=>rCol, seg, 2.0, null, hRef);
+    tris.push(...transTris(t, cx, cy, 0));
+  };
+  const eL = SOCLE.ledEntraxeMm/2;
+  colonne(-eL, 0, SOCLE.ledHautMm); colonne(eL, 0, SOCLE.ledHautMm);   // kit LED
+  const eS = SOCLE.serreEntraxeMm/2;
+  colonne(0, -eS, SOCLE.epauleHMm - 1); colonne(0, eS, SOCLE.epauleHMm - 1);  // serre-câble
+
+  const placees = tris.map(t=>t.map(v=>{
+    const [x,y] = sculptXY(v[0], v[1], v[2], sculpt, hRef);
+    return [x, y, v[2]];
+  }));
+  return { tris: placees, R, z0, z1, rMin };
+}
+
+function buildPlatineUSB(bi, wall, segments, sculpt, hRef){
+  const sock = SOCKETS[state.socket];
+  const a = assisePlatine(bi, wall);
+  /* Jeu : le jeu nominal, plus une marge liée à la flexion. Une platine est
+   * rigide, une coque fléchie ne l'est pas : mesuré 0,61 mm d'écart d'axe à 25°
+   * de flexion, donc on rend le jeu proportionnel. */
+  const bend = Math.abs((sculpt && sculpt.bendDeg) || 0);
+  const R = Math.max(8, a.rInt - PLATINE.jeuMm - bend*0.03);
+  // Construite À SA HAUTEUR D'ASSISE, puis passée dans la même sculpture que la
+  // coque : sinon une flexion décale la coque latéralement et la platine reste
+  // sur l'axe — elle sortirait à travers la paroi.
+  const e = PLATINE.epaisMm, z0 = a.h, z1 = a.h + e;
+  const seg = Math.max(48, Math.min(160, segments|0));
+  const tris = [];
+
+  /* ⚠️ ON NE PEUT QU'AJOUTER de la matière avec des primitives qui se
+   * chevauchent, jamais en RETIRER. Un bossage percé posé sur une barre pleine
+   * donne donc une barre pleine : le premier rendu Blender l'a montré, la
+   * platine n'avait aucun trou. La barre est donc découpée en TRONÇONS qui
+   * s'arrêtent avant chaque perçage, et ce sont les anneaux des bossages qui
+   * assurent la continuité. Le vide reste vide. */
+  const rTrou = sock.trouInsertMm/2;
+  const xs = [ -sock.entraxeVisMm/2, sock.entraxeVisMm/2 ];
+  const sc = sock.serreCable;
+  if(sc && state.cable.on){ xs.push(-sc.entraxeMm/2, sc.entraxeMm/2); }
+  xs.sort((a,b)=>a-b);
+  const demiBras = PLATINE.brasMm/2, demi = Math.max(demiBras, PLATINE.barreMm/2);
+  /* Le bossage doit déborder le bras, sinon le tronçon de barre laisse un
+   * ressaut à l'angle (vu au rendu). Il faut donc rBoss ≥ √(demiBras² + marge²).
+   * Garde-fou : il ne doit JAMAIS mordre sur le perçage voisin. */
+  let ecartMini = Infinity;
+  for(let k=0;k<xs.length-1;k++) ecartMini = Math.min(ecartMini, xs[k+1]-xs[k]);
+  const rBoss = Math.min(PLATINE.bossDiaMm/2, Math.max(0, ecartMini - rTrou - 0.3));
+  // anneau d'assise
+  tris.push(...buildTube(z0, z1, ()=>Math.max(2, R-PLATINE.anneauMm), ()=>R, seg, e/2, null, hRef));
+  // un anneau percé par trou (Ø extérieur bossage, Ø intérieur = trou d'insert)
+  for(const cx of xs){
+    tris.push(...transTris(buildTube(z0, z1, ()=>rTrou, ()=>rBoss, seg, e/2, null, hRef), cx, 0, 0));
+  }
+  // tronçons de barre : dans les intervalles LIBRES, en chevauchant les anneaux
+  const marge = rTrou + 0.5;                       // on s'arrête avant le perçage
+  const bornes = [ -(R - PLATINE.anneauMm/2), ...xs, (R - PLATINE.anneauMm/2) ];
+  for(let k=0;k<bornes.length-1;k++){
+    const a0 = (k===0)                 ? bornes[0]   : bornes[k]   + marge;
+    const a1 = (k===bornes.length-2)   ? bornes[k+1] : bornes[k+1] - marge;
+    if(a1 - a0 < 0.4) continue;                    // trous trop serrés : l'anneau suffit
+    tris.push(...buildBox(a0, a1, -demiBras, demiBras, z0, z1));
+  }
+  // ailettes larges au droit du serre-câble, pour qu'il ait de quoi s'appuyer
+  if(sc && state.cable.on && demi > demiBras){
+    const x0 = -sc.entraxeMm/2 - rBoss, x1 = sc.entraxeMm/2 + rBoss;
+    tris.push(...buildBox(x0, x1, -demi, -demiBras+0.2, z0, z1));
+    tris.push(...buildBox(x0, x1,  demiBras-0.2,  demi, z0, z1));
+  }
+  const placees = tris.map(t=>t.map(v=>{
+    const [x,y] = sculptXY(v[0], v[1], v[2], sculpt, hRef);
+    return [x, y, v[2]];
+  }));
+  return { tris: placees, seat:a, R, e };
+}
+
+/* Densification LOCALE du méridien autour des trous — le pendant vertical de
+ * angularGrid(). Sans elle, un trou de 6 mm n'est traversé que par 5 rangs et
+ * ressort 16 % trop petit (mesuré) ; avec un pas fin GLOBAL il ressort juste,
+ * mais le maillage triple pour un seul trou. On ne paie donc la finesse que là
+ * où le trou se trouve. */
+function densifierAutourDesTrous(prof, trous){
+  if(!trous || !trous.length) return prof;
+  const hs = prof.map(p=>p.h), out = hs.slice();
+  for(const t of trous){
+    const r = t.diaMm/2, pas = Math.max(0.25, r/8);
+    for(let h = t.hMm - r*2.0; h <= t.hMm + r*2.0 + 1e-9; h += pas) out.push(h);
+  }
+  const h0 = hs[0], h1 = hs[hs.length-1];
+  const uniq = out.filter(h=>h>=h0 && h<=h1).sort((a,b)=>a-b)
+                  .filter((h,i,a)=> i===0 || h-a[i-1] > 1e-6);
+  const rAt = (h)=>{
+    for(let k=0;k<prof.length-1;k++){
+      if(h <= prof[k+1].h){
+        const d = prof[k+1].h - prof[k].h;
+        const u = d>1e-9 ? (h-prof[k].h)/d : 0;
+        return prof[k].r + u*(prof[k+1].r - prof[k].r);
+      }
+    }
+    return prof[prof.length-1].r;
+  };
+  return uniq.map(h=>({h, r:rAt(h)}));
+}
+
+/* Rayon local et pente du méridien à une hauteur donnée — c'est la métrique de
+ * la surface à cet endroit, celle qui rend un trou vraiment rond. */
+function geomLocale(prof, h){
+  for(let k=0;k<prof.length-1;k++){
+    if(h <= prof[k+1].h || k === prof.length-2){
+      const dh = prof[k+1].h - prof[k].h;
+      const u  = dh>1e-9 ? Math.max(0,Math.min(1,(h-prof[k].h)/dh)) : 0;
+      const dr = prof[k+1].r - prof[k].r;
+      return { r: prof[k].r + u*dr,
+               pente: dh>1e-9 ? Math.hypot(1, dr/dh) : 1 };   // ds/dh
+    }
+  }
+  return { r: prof[prof.length-1].r, pente: 1 };
+}
+
 function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
-  const outerP = profile.map(p=>({h:p.h, r:p.r}));
+  const outerP = densifierAutourDesTrous(profile, surf.trous).map(p=>({h:p.h, r:p.r}));
   const { inner } = offsetMeridianInward(outerP, wallMm);
   const N = Math.max(12, segments|0), M = outerP.length;
   if(M < 3) return buildShellMesh(profile, wallMm, segments, {...surf, ajour:false}, sculpt, hRef);
   const H = outerP[M-1].h - outerP[0].h;
   const band = Math.max(2, Math.min(H/2 - 2, surf.voroBandMm||12));
   const rMean = outerP.reduce((s,p)=>s+p.r,0)/M;
+  const ix = surf.ajour ? buildVoroIndex(surf, rMean, Math.max(1,H))
+                       : { W: Math.max(1, 2*Math.PI*rMean), K: 0, cellMm: 0, seeds: [], buckets: [], nu:1, nv:1, bw:1, bh:1 };
   const ctx = {
-    ix: buildVoroIndex(surf, rMean, Math.max(1,H)), H, h0: outerP[0].h, rMean,
+    ix, H, h0: outerP[0].h, rMean,
+    trous: (surf.trous||[]).map(t=>{
+      const g = geomLocale(outerP, t.hMm);
+      return { th: ((t.angleDeg%360)+360)%360 * Math.PI/180, h: t.hMm, r: t.diaMm/2,
+               rLoc: Math.max(1, g.r), pente: g.pente };
+    }),
     strut: Math.max(0.6, surf.voroStrutMm||2.4),
     bandBottom: outerP[0].h + band, bandTop: outerP[M-1].h - band,
     transition: Math.max(4, band*1.6),
   };
   PERF_ACC.cellMm = ctx.ix.cellMm;
   const Hq = hRef || outerP[M-1].h;
+
+  /* Grille angulaire NON UNIFORME. Un trou de 6 mm sur un corps de 120 mm ne
+   * représente que 1,6 % du tour : le rendre rond en montant la résolution
+   * globale multiplierait le maillage par cinq pour trois trous. On densifie
+   * donc UNIQUEMENT la fenêtre angulaire qui contient chaque trou. Sans trou,
+   * la grille reste exactement uniforme — le Voronoï ne change pas d'un iota. */
+  const TH = angularGrid(N, ctx);
+  const NT = TH.length;
+  const thetaAt = (fj)=>{
+    const j0 = ((Math.floor(fj) % NT) + NT) % NT;
+    const t  = fj - Math.floor(fj);
+    if(t === 0) return TH[j0];                       // couture exacte, pas d'epsilon
+    const a = TH[j0], b = (j0+1 < NT) ? TH[j0+1] : TH[0] + 2*Math.PI;
+    return a + t*(b - a);
+  };
 
   /* Un point de la surface, repéré en coordonnées de grille FRACTIONNAIRES :
    * fi = position le long du méridien, fj = position sur le tour. C'est ce qui
@@ -1120,7 +1616,7 @@ function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
     const r  = poly[i0].r + t*(poly[i0+1].r - poly[i0].r);
     // fj = N doit redonner EXACTEMENT le sommet fj = 0 : sinon sin(2π) vaut
     // −2,4e−16 et la couture du tour laisse deux sommets distincts.
-    const th = ((fj % N + N) % N / N)*Math.PI*2;
+    const th = thetaAt(fj);
     const rr = Math.max(0.4, r + surfaceDisplacement(surf, th, h));
     const [x,y] = sculptXY(rr*Math.cos(th), rr*Math.sin(th), h, sculpt, Hq);
     return [x,y,h];
@@ -1129,8 +1625,8 @@ function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
   // champ signé aux nœuds de la grille
   const F = [];
   for(let i=0;i<M;i++){
-    const row = new Float64Array(N);
-    for(let j=0;j<N;j++) row[j] = perfField((j/N)*Math.PI*2, outerP[i].h, ctx);
+    const row = new Float64Array(NT);
+    for(let j=0;j<NT;j++) row[j] = perfField(TH[j], outerP[i].h, ctx);
     F.push(row);
   }
 
@@ -1182,9 +1678,9 @@ function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
   };
 
   for(let i=0;i<M-1;i++){
-    for(let j=0;j<N;j++){
+    for(let j=0;j<NT;j++){
       cells++;
-      const j2 = (j+1)%N;
+      const j2 = (j+1)%NT;
       const f00=F[i][j], f10=F[i][j2], f11=F[i+1][j2], f01=F[i+1][j];
       // Chemin rapide : une cellule entièrement en matière ou entièrement en
       // trou n'a aucun contour à découper. Elle représente la grande majorité
@@ -1203,7 +1699,7 @@ function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
       kept++;
       const c00={fi:i,   fj:j,   f:f00}, c10={fi:i,   fj:j+1, f:f10};
       const c11={fi:i+1, fj:j+1, f:f11}, c01={fi:i+1, fj:j,   f:f01};
-      const hm=(outerP[i].h+outerP[i+1].h)/2, thm=((j+0.5)/N)*Math.PI*2;
+      const hm=(outerP[i].h+outerP[i+1].h)/2, thm=thetaAt(j+0.5);
       const m={fi:i+0.5, fj:j+0.5, f:perfField(thm, hm, ctx)};
       marche(c00,c10,m); marche(c10,c11,m); marche(c11,c01,m); marche(c01,c00,m);
     }
@@ -1212,12 +1708,12 @@ function buildPerforatedShell(profile, wallMm, segments, surf, sculpt, hRef){
   // couronnes plates aux deux extrémités : les bandes y sont pleines par
   // construction, l'anneau est donc complet
   const outR0=[], inR0=[], outR1=[], inR1=[];
-  for(let j=0;j<N;j++){
+  for(let j=0;j<NT;j++){
     outR0.push(pt(0,j,outerP)); inR0.push(pt(0,j,inner));
     outR1.push(pt(M-1,j,outerP)); inR1.push(pt(M-1,j,inner));
   }
-  for(let j=0;j<N;j++){
-    const j2=(j+1)%N;
+  for(let j=0;j<NT;j++){
+    const j2=(j+1)%NT;
     tris.push([outR0[j], inR0[j], outR0[j2]]);  tris.push([inR0[j], inR0[j2], outR0[j2]]);
     tris.push([outR1[j], outR1[j2], inR1[j]]);  tris.push([inR1[j], outR1[j2], inR1[j2]]);
   }
@@ -1975,6 +2471,14 @@ function segFor(bi, mode){
   const perf = isPerforated(surf);
   if(perf){
     const {rMean,H} = bodyMetrics(bi);
+    if(!surf.ajour){
+      // Trous fonctionnels seuls : la résolution du TOUR reste celle du style —
+      // angularGrid() ajoute ses échantillons uniquement dans la fenêtre du trou.
+      const chosenT = parseInt(($('stlSegments')||{}).value||'14',10);
+      const segT = angularSegments(surf, chosenT);
+      if(mode==='draft')   return Math.min(segT, 44);
+      return (mode==='preview') ? Math.min(segT, 76) : segT;
+    }
     const seg = voroResolution(surf, rMean, H).segments;
     // Depuis que le contour est découpé sur l'iso-ligne du champ, baisser la
     // résolution de l'aperçu ne DÉPLACE plus les trous : elle ne fait qu'anguler
@@ -1999,12 +2503,14 @@ function effectiveStepMm(bi, surf, mode){
   const cand = [styleStepMm(surf), twistStepMm(b && b.sculpt)];
   if(perf){
     const {rMean,H} = bodyMetrics(bi);
-    cand.push(voroResolution(surf, rMean, H).stepMm);
+    if(surf.ajour) cand.push(voroResolution(surf, rMean, H).stepMm);
   }
   const pos = cand.filter(x=>x>0);
   let step = pos.length ? Math.min(...pos) : 0;
   if(mode==='preview' && step>0) step = Math.max(step, perf ? 2.2 : 2.0);
   if(mode==='draft'   && step>0) step = Math.max(step, perf ? 5.5 : 3.5);
+  // Pas de forçage global pour les trous : buildPerforatedShell densifie
+  // localement le méridien autour de chacun (densifierAutourDesTrous).
   return step;
 }
 
@@ -2013,7 +2519,7 @@ function buildParts(segList, mode){
   const places = bodyPlacements();
   const topMin = SOCKETS[state.socket].housingMinRadiusMm;
   const parts = [];
-  MESH.clamped = [];
+  MESH.clamped = []; MESH.platine = null; MESH.socle = null;
   places.forEach((pl, bi)=>{
     const body = state.bodies[bi];
     if(!body || body.profile.length < 2) return;
@@ -2025,9 +2531,10 @@ function buildParts(segList, mode){
       MESH.clamped.push({ body:bi+1, from:+prof[prof.length-1].r.toFixed(1), to:topMin });
       prof[prof.length-1].r = topMin;
     }
-    const hRef = profileTopH(prof);
-    const base = resampleMeridian(prof, surf, effectiveStepMm(bi, surf, mode));
-    const cuts = cutPlanesFor(prof);
+    const profJ = profilAvecJupe(prof);
+    const hRef = profileTopH(profJ);
+    const base = resampleMeridian(profJ, surf, effectiveStepMm(bi, surf, mode));
+    const cuts = cutPlanesFor(profJ);   // la jupe fait partie de la pièce à découper
     const n = cuts.length-1;
     const slices = Array.from({length:n},(_,i)=> (n===1) ? base : sliceProfile(base, cuts[i], cuts[i+1]));
     const inners = slices.map(sp=>offsetMeridianInward(sp, wall).inner);
@@ -2066,6 +2573,22 @@ function buildParts(segList, mode){
       parts.push({ tris:meshes[i], h0:cuts[i], h1:cuts[i+1], index:i, nslice:n,
                    joint: joints[i]||null, body:bi, xf:pl, perfore:isPerforated(surf),
                    refVolMm3:pappusShellVolMm3(slices[i], wall), label: lbl || 'monobloc' });
+    }
+    // équipement du socle : plancher + colonnettes, sur le corps posé au sol
+    if(socleActif() && bi === socketEndBodyIdx()){
+      const S = buildSocleMeshes(bi, wall, segments, body.sculpt, hRef);
+      MESH.socle = { R:S.R, z0:S.z0, z1:S.z1 };
+      parts.push({ tris: S.tris, h0:S.z0, h1:SOCLE.ledHautMm, index:0, nslice:1,
+                   joint:null, body:bi, xf:pl, perfore:false, refVolMm3:0,
+                   socle:true, label:'socle — plancher et colonnettes' });
+    }
+    // platine du module USB : une seule, sur le corps qui porte la connexion
+    if(!socleActif() && SOCKETS[state.socket].type === 'module' && state.cable.platine && bi === socketEndBodyIdx()){
+      const P = buildPlatineUSB(bi, wall, segments, body.sculpt, hRef);
+      MESH.platine = { seat:P.seat, R:P.R };
+      parts.push({ tris: P.tris, h0:P.seat.h, h1:P.seat.h+P.e,
+                   index:0, nslice:1, joint:null, body:bi, xf:pl, perfore:false,
+                   refVolMm3:0, platine:true, label:'platine USB' });
     }
   });
   return parts;
@@ -2583,6 +3106,11 @@ async function rendreBlender(){
         moteur: $('blMoteur').value, couleur: bodyColor(0).replace('#',''),
         fond: RENDER.bg === 'clair' ? 'clair' : 'sombre',
         allumee: RENDER.lit, translucide: state.material === 'PLA_T',
+        couche: parseFloat(($('blCouche')||{value:'0.20'}).value),
+        buse: 0.40,
+        fini: ($('blFini')||{value:'mat'}).value,
+        zoom: parseFloat(($('blZoom')||{value:'1'}).value),
+        cible: 0.58,
         vue: Math.round(view.az*180/Math.PI) % 360, hauteur_vue: Math.round(view.el*180/Math.PI) })});
     const j = await r.json();
     if(!j.ok){ info.innerHTML = `<div class="line bad">${j.note||'échec du rendu'}</div>`; }
@@ -2640,7 +3168,29 @@ function renderBlenderBlock(){
           <option value="96" selected>96 — courant</option>
           <option value="192">192 — boutique</option>
         </select></label>
+      <label style="font-size:12.5px;color:var(--dim2)">Couche imprimée
+        <select id="blCouche" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
+          <option value="0.12">0,12 mm — fine</option>
+          <option value="0.20" selected>0,20 mm — courante</option>
+          <option value="0.28">0,28 mm — rapide</option>
+          <option value="0">lisse (pièce idéalisée)</option>
+        </select></label>
+      <label style="font-size:12.5px;color:var(--dim2)">Filament
+        <select id="blFini" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
+          <option value="mat" selected>PLA mat</option>
+          <option value="satine">PLA satiné</option>
+          <option value="soie">filament soie</option>
+        </select></label>
+      <label style="font-size:12.5px;color:var(--dim2)">Cadrage
+        <select id="blZoom" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
+          <option value="1" selected>pièce entière</option>
+          <option value="2">détail — on voit les strates</option>
+          <option value="4">macro — surface</option>
+        </select></label>
     </div>
+    <div class="hint" style="margin-top:6px">La hauteur de couche est celle du trancheur : le relief des strates
+    est à la vraie cote (période mesurée exacte au banc d'essai). À 0,20 mm sur une pièce de 155 mm, une strate
+    fait moins d'un pixel — c'est le cadrage <b>détail</b> qui les montre.</div>
     <div class="warnbox" id="blInfo"></div>
     <div id="blOut"></div>`;
   $('blGo').onclick = rendreBlender;
@@ -2792,13 +3342,26 @@ function renderConnexion(){
   const box=$('connexionBox'); if(!box) return;
   const s=SOCKETS[state.socket], lignes=[];
   if(s.type === 'module'){
-    lignes.push(['ok', `À prévoir dans la pièce imprimée : ${s.visM3} vis M3 avec inserts laiton `
-      + `(entraxe ${s.entraxeVisMm} mm), un passage de câble USB Ø${s.cableDiaMm} mm, `
-      + `et une décharge de traction — serre-câble ou chicane — pour que le câble ne tire jamais sur le module.`]);
+    const c = state.cable;
     lignes.push(['ok', `${s.tensionV} V par USB : très basse tension de sécurité. Pas de secteur dans la lampe, `
       + `donc pas d'intervention d'un professionnel de l'électricité — le montage se fait à la main, deux vis.`]);
-    lignes.push(['warn', `Les cotes de ce module ne sont PAS mesurées à l'atelier. Mesure l'entraxe, la platine `
-      + `et le câble au pied à coulisse avant de percer ou de lancer une série.`]);
+    lignes.push(['ok', `Cotes RELEVÉES sur les maillages du module et du serre-câble : module Ø${fr(s.platineDiaMm,2)} × `
+      + `${fr(s.epaisseurMm,2)} mm, 2 perçages Ø${fr(s.trouInsertMm,2)} à ${fr(s.entraxeVisMm,2)} mm d'entraxe ; `
+      + `serre-câble ${s.serreCable.emprise}, 2 perçages Ø${fr(s.serreCable.trouMm,2)} à `
+      + `${fr(s.serreCable.entraxeMm,2)} mm ; gorge de câble ${fr(s.cableLargeurMm,2)} × ${fr(s.cableEpaisseurMm,2)} mm `
+      + `(câble PLAT, pas rond).`]);
+    if(c.on) lignes.push(['ok', `Le passage de câble Ø${fr(c.diaMm,1)} mm est PERCÉ DANS LE MAILLAGE livré `
+      + `— rien à percer à l'atelier. Il traverse la bande pleine et le bord est refermé, la pièce reste étanche.`]);
+    else     lignes.push(['warn', `Passage de câble désactivé : la pièce sort pleine et le câble devra être percé à l'atelier.`]);
+    if(c.platine) lignes.push(['ok', `Platine de raccordement générée comme pièce séparée : elle porte les 4 trous `
+      + `d'insert M3 (2 pour le module à ${s.entraxeVisMm} mm, 2 pour le serre-câble à ${s.serreCable.entraxeMm} mm) `
+      + `et vient se coincer dans le cône de la coque.`]);
+    else lignes.push(['warn', `Sans platine, il n'y a AUCUN trou d'insert dans le fichier : ni le module ni le serre-câble `
+      + `n'ont de point de fixation.`]);
+    lignes.push(['warn', `Pourquoi les inserts ne sont pas dans la coque : un insert laiton M3 fait 5 mm de long et la `
+      + `paroi ${(+state.wall).toFixed(1)} mm — il n'aurait rien pour tenir. Et les 2 vis du module sont à `
+      + `${(s.entraxeVisMm/2).toFixed(0)} mm de son axe, donc au-dessus du VIDE de l'ouverture. `
+      + `C'est la platine qui apporte l'épaisseur et la matière au centre.`]);
   } else {
     lignes.push(['warn', `Culot ${state.socket} : la lampe est reliée au SECTEUR. L'assemblage électrique est `
       + `réalisé par un professionnel ou l'atelier, jamais par le client. Douille marquée CE, `
@@ -2807,6 +3370,103 @@ function renderConnexion(){
   }
   box.innerHTML='';
   lignes.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
+}
+
+/* ── Sortie de câble ──────────────────────────────────────────────────── */
+const fr = (v,d)=>Number(v).toFixed(d).replace('.',',');
+
+/* ── Socle ────────────────────────────────────────────────────────────── */
+function renderSocle(){
+  const card=$('socleCard'); if(!card) return;
+  const dispo = state.type==='poser' && SOCKETS[state.socket] && SOCKETS[state.socket].type==='module';
+  card.style.display = dispo ? '' : 'none';
+  if(!dispo) return;
+  $('socleOn').checked = state.socle.on;
+  $('socleDia').value = state.socle.diaMm;
+  $('socleDiaTxt').textContent = fr(state.socle.diaMm,1);
+  $('socleParams').style.opacity = state.socle.on ? 1 : 0.45;
+  $('socleDia').disabled = !state.socle.on;
+
+  const box=$('socleBox'); box.innerHTML=''; const L=[];
+  if(state.socle.on){
+    const R2 = socleRayonMm();
+    L.push(['ok', `Jupe droite Ø${fr(2*R2,1)} mm sur ${fr(SOCLE.jupeHMm,1)} mm, puis le dessin repris `
+      + `EXACTEMENT au même rayon : la peau descend d'un seul trait jusqu'à l'extrémité, aucun ressaut. `
+      + `La lampe est donc ${fr(SOCLE.jupeHMm,1)} mm plus haute que le profil dessiné.`]);
+    if(Math.abs(R2 - state.socle.diaMm/2) > 0.01)
+      L.push(['warn', `Ø ramené de ${fr(state.socle.diaMm,1)} à ${fr(2*R2,1)} mm : borné par le type de lampe `
+        + `et par le plateau d'impression (${PRINT_BOUNDS.PLATE_XY_MM} mm).`]);
+    // on n'alerte que si l'écart vaut plus d'un périmètre : 1,8 contre 2,0 ne
+    // change rien de structurel, le signaler serait du bruit.
+    if(Math.abs(+state.wall - SOCLE.paroiRefMm) > 0.35)
+      L.push(['warn', `Paroi réglée à ${fr(+state.wall,1)} mm ; l'assemblage de référence est à `
+        + `${fr(SOCLE.paroiRefMm,1)} mm — soit ${Math.round(Math.abs(+state.wall-SOCLE.paroiRefMm)/0.4)} périmètre(s) d'écart.`]);
+    if(MESH.socle) L.push(['ok', `Plancher Ø${fr(2*MESH.socle.R,1)} mm à h = ${MESH.socle.z0}–${MESH.socle.z1} mm, `
+      + `2 colonnettes kit LED (entraxe ${fr(SOCLE.ledEntraxeMm,2)} mm, perçage Ø${fr(SOCLE.ledTrouMm,2)}) `
+      + `montant à h = ${SOCLE.ledHautMm} mm, et 2 bossages serre-câble (entraxe ${fr(SOCLE.serreEntraxeMm,2)} mm).`]);
+    const tr = trousCorps(0)[0];
+    if(tr && tr.ajuste) L.push(['warn', `Sortie de câble remontée de h ${fr(tr.ajuste.de,1)} à ${fr(tr.ajuste.vers,1)} mm : `
+      + `à la cote de la pièce d'origine, le trou coupait la couronne plate du dessous et la pièce ne fermait plus. `
+      + `Sur la pièce d'origine c'est une encoche ouverte sous la jupe, pas un trou fermé.`]);
+    const rMini = SOCLE.ledEntraxeMm/2 + SOCLE.colonneDiaMm/2 + 4;
+    if(state.socle.diaMm/2 < rMini)
+      L.push(['bad', `Ø trop petit : il faut au moins Ø${fr(2*rMini,0)} mm pour loger les colonnettes du kit LED `
+        + `(entraxe ${fr(SOCLE.ledEntraxeMm,2)} mm).`]);
+    L.push(['warn', `Cotes reprises de ${SOCLE.source}. L'intérieur généré est fonctionnel (plancher, colonnettes, `
+      + `perçages) — il ne reprend pas les nervures ni les évidements de la pièce d'origine.`]);
+  }
+  L.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
+}
+
+function renderCable(){
+  const card=$('cableCard'); if(!card) return;
+  const s=SOCKETS[state.socket], mod = s.type==='module';
+  card.style.display = mod ? '' : 'none';
+  if(!mod) return;
+  const c=state.cable;
+  $('cableOn').checked = c.on;
+  $('cablePlatine').checked = c.platine;
+  $('cableDia').value = c.diaMm;      $('cableDiaTxt').textContent = c.diaMm.toFixed(1).replace('.',',');
+  $('cableRecul').value = c.reculMm;  $('cableReculTxt').textContent = c.reculMm;
+  $('cableAng').value = c.angleDeg;   $('cableAngTxt').textContent = c.angleDeg;
+  $('cableParams').style.opacity = c.on ? 1 : 0.45;
+  ['cableDia','cableRecul','cableAng'].forEach(id=>{ $(id).disabled = !c.on; });
+
+  const box=$('cableBox'); box.innerHTML='';
+  const L=[];
+  const tr = trousCorps(socketEndBodyIdx())[0];
+  if(c.on && tr){
+    L.push(['ok', `Passage percé à h = ${tr.hMm.toFixed(0)} mm sur le corps ${socketEndBodyIdx()+1}, à ${c.angleDeg}° — `
+      + `largeur utile mesurée sur le maillage ≈ ${fr(c.diaMm*0.998,2)} mm, le câble plat `
+      + `${fr(s.cableLargeurMm,2)} × ${fr(s.cableEpaisseurMm,2)} mm passe.`]);
+    L.push(['ok', `Le trou est écarté d'office des couronnes d'extrémité et des plans de coupe : sinon la couronne plate `
+      + `serait interrompue et la pièce ne fermerait plus.`]);
+    if(tr.ajuste) L.push(['warn', `Trou descendu de h ${tr.ajuste.de.toFixed(0)} à ${tr.ajuste.vers.toFixed(0)} mm : `
+      + `au recul demandé, il tombait dans la bande de la platine, qui aurait barré l'arrivée du câble.`]);
+  }
+  if(c.platine && MESH.platine){
+    const P=MESH.platine;
+    if(P.seat.ok) L.push(['ok', `Platine Ø${fr(2*P.R,1)} mm × ${fr(PLATINE.epaisMm,1)} mm, assise à h = ${P.seat.h.toFixed(0)} mm `
+      + `— c'est la première hauteur où la coque accepte le disque Ø${fr(s.platineDiaMm,1)} du module.`]);
+    else L.push(['bad', `Le corps est trop étroit pour le module : il faudrait un rayon intérieur de `
+      + `${fr(P.seat.besoin,1)} mm et le maximum atteint est ${fr(P.seat.rInt,1)} mm. `
+      + `Élargis le corps, ou ce module ne rentre pas.`]);
+    if(P.seat.ok){
+      L.push(['ok', `Le module se visse SOUS la platine, LED vers l'ouverture : au-dessus, la coque s'est déjà `
+        + `resserrée sous le Ø${fr(s.platineDiaMm,1)} du disque. Les 4 trous sont traversants, l'insert `
+        + `s'enfonce donc par la face qu'on veut.`]);
+      // l'anneau d'assise ne doit pas barrer l'arrivée du câble
+      if(c.on && tr){
+        const hb = tr.hMm - tr.diaMm/2, ht = tr.hMm + tr.diaMm/2;
+        if(ht > P.seat.h && hb < P.seat.h + PLATINE.epaisMm){
+          L.push(['bad', `L'anneau de la platine (h ${P.seat.h.toFixed(0)} → ${(P.seat.h+PLATINE.epaisMm).toFixed(0)} mm) `
+            + `passe juste devant le trou de câble (h ${hb.toFixed(0)} → ${ht.toFixed(0)} mm) : le câble buterait dessus. `
+            + `Change le recul d'au moins ${Math.ceil(ht - P.seat.h)} mm.`]);
+        }
+      }
+    }
+  }
+  L.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
 }
 
 /* ── Swatches ─────────────────────────────────────────────────────────── */
@@ -3451,6 +4111,8 @@ function renderAll(){
   renderWarnings();
   renderSockets();
   renderConnexion();
+  renderSocle();
+  renderCable();
   renderSwatches();
   renderPresets();
   renderSurface();
@@ -3463,6 +4125,25 @@ function renderAll(){
   renderHud();
   const ex=$('vExplodeWrap'); if(ex) ex.style.display = MESH.parts.length>1 ? '' : 'none';
   $('type-hint').textContent = TYPES[state.type].hint;
+}
+
+/* ── Socle : commandes ────────────────────────────────────────────────── */
+{
+  const on=$('socleOn');
+  if(on) on.onchange = e=>{ state.socle.on = e.target.checked; normalizeProfile(); renderAll(); };
+  const d=$('socleDia');
+  if(d) d.oninput = e=>{ state.socle.diaMm = parseFloat(e.target.value); normalizeProfile(); renderSoon(); };
+}
+
+/* ── Sortie de câble : commandes ──────────────────────────────────────── */
+{
+  const c = ()=>state.cable;
+  const on = $('cableOn');       if(on)  on.onchange  = e=>{ c().on = e.target.checked; renderAll(); };
+  const pl = $('cablePlatine');  if(pl)  pl.onchange  = e=>{ c().platine = e.target.checked; renderAll(); };
+  const bind = (id, key, f)=>{ const el=$(id); if(el) el.oninput = e=>{ c()[key] = f(e.target.value); renderSoon(); }; };
+  bind('cableDia',   'diaMm',    parseFloat);
+  bind('cableRecul', 'reculMm',  parseFloat);
+  bind('cableAng',   'angleDeg', parseFloat);
 }
 
 /* ── Type toggle — le type re-borne le profil existant ─────────────────── */
@@ -3764,8 +4445,23 @@ function buildDossier(){
     hauteur_totale_mm: +state.profile[state.profile.length-1].h.toFixed(1),
     rayon_max_mm: +Math.max(...state.profile.map(p=>p.r)).toFixed(1),
     connexion: { ref: state.socket, ...sock,
+      // Ce qui est DÉJÀ dans le fichier livré, distingué de ce qui reste à faire :
+      // c'est la ligne que l'atelier lit en premier.
+      genere_dans_le_maillage: sock.type === 'module'
+        ? [ state.cable.on ? `passage de câble Ø${state.cable.diaMm} mm percé dans la coque` : null,
+            state.cable.platine ? `platine de raccordement : 4 trous d'insert M3 Ø${sock.trouInsertMm} mm `
+              + `(${sock.entraxeVisMm} mm pour le module, ${sock.serreCable.entraxeMm} mm pour le serre-câble)` : null,
+          ].filter(Boolean)
+        : [],
+      quincaillerie_a_fournir: sock.type === 'module'
+        ? [`${sock.visM3} inserts laiton M3 + 2 vis M3 (module)`,
+           `2 inserts laiton M3 + 2 vis M3 (serre-câble ${sock.serreCable.emprise})`,
+           'module lampe USB Bambu Lab', 'serre-câble imprimé « Bloque Cable VF 2 »']
+        : ['douille marquée CE', 'câble + décharge de traction'],
       a_prevoir_dans_la_piece: sock.type === 'module'
-        ? `${sock.visM3} vis M3 + inserts laiton (entraxe ${sock.entraxeVisMm} mm), passage câble USB Ø${sock.cableDiaMm} mm, décharge de traction`
+        ? (state.cable.on && state.cable.platine
+            ? "rien à percer : passage de câble et trous d'insert sont dans les fichiers"
+            : "⚠️ une partie des perçages est désactivée dans la configuration — voir genere_dans_le_maillage")
         : "logement de douille percé par l'atelier, décharge de traction, connexions démontables",
       regime_electrique: sock.type === 'module'
         ? `${sock.tensionV} V USB — très basse tension de sécurité, pas de secteur dans la lampe`
@@ -3778,7 +4474,9 @@ function buildDossier(){
       : state.color,
     imprimante_cible: { modele: "Creality Ender-3 S1 (vérifié atelier)", plateau_mm: `${PRINT_BOUNDS.PLATE_XY_MM}×${PRINT_BOUNDS.PLATE_XY_MM}×${PRINT_BOUNDS.PLATE_Z_MM}`, buse_mm: 0.4 },
     estimation: { volume_cm3: +s.volumeCm3.toFixed(1), masse_g: +s.massG.toFixed(0), temps_impression_h: +s.printHours.toFixed(1), prix_eur: +s.price.toFixed(0) },
-    securite: "Assemblage électrique réalisé par un professionnel/l'atelier, jamais par le client. LED ≤7W réels, jamais halogène/incandescent. Culot standard du commerce marqué CE.",
+    securite: sock.type === 'module'
+      ? `${sock.tensionV} V par USB : très basse tension de sécurité, aucun secteur dans la lampe — le montage se fait à la main, sans électricien. LED du module uniquement, jamais d'ampoule ajoutée.`
+      : "Assemblage électrique réalisé par un professionnel/l'atelier, jamais par le client. LED ≤7W réels, jamais halogène/incandescent. Culot standard du commerce marqué CE.",
     avertissement: "Dossier de commande/specs indicatif, PAS un fichier STL/3D prêt à imprimer. Dimensions et prix à valider par l'atelier avant fabrication.",
   };
 }

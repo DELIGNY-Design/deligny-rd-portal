@@ -123,6 +123,23 @@ a {
   border-bottom-color: var(--accent);
 }
 
+.nav-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--ink-dim);
+  opacity: .3;
+}
+
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-dim);
+  opacity: .6;
+  white-space: nowrap;
+}
+
 main {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;

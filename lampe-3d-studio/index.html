@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-R/EfxUGGs9FwTYPh3Vulluzy1+RDZLAGXDFSfX0sw6c='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-ZR1nKwgsPRA1+AYlc6qhbIk+61+MnZ2AXmfCxnmQGW8='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -667,6 +667,14 @@ const SOCLE = {
    * client reprend exactement là où elle s'arrête, au même rayon. */
   jupeHMm: 8.0,           // Y = -20 → -12
   paroiRefMm: 2.0,        // paroi de l'abat-jour sur la pièce de référence
+  /* TRANCHE D'APPUI — relevée à Y=-12 (h=8) : un anneau plat de 4 mm de large,
+   * r 45,750 → 49,750. C'est SUR ELLE que l'abat-jour se pose ; sur l'assemblage
+   * de référence il y démarre au rayon 47,750 → 49,750 (paroi 2,0), à fleur du
+   * bord extérieur. ⚠️ Quand la vraie pièce est là, on ne génère AUCUNE jupe :
+   * elle porterait la sienne au même Ø99,5, deux surfaces confondues — et le tri
+   * en profondeur de l'aperçu, ne sachant plus laquelle est devant, laissait voir
+   * l'intérieur par transparence. */
+  trancheHMm: 8.0, trancheRIntMm: 45.750, trancheRExtMm: 49.750,
   solHMm: 3.0,            // plancher intérieur (Y = -17)
   epauleHMm: 15.5,        // épaulement au-dessus des trous de câble (Y = -4,5)
   epauleR1Mm: 28.0, epauleR2Mm: 33.5,
@@ -704,6 +712,14 @@ function socleRayonMm(){
  * nominal, puis le dessin du client repris au même rayon. Le dessin n'est pas
  * déformé, il est POSÉ 8 mm plus haut — c'est la hauteur de la jupe. */
 function profilAvecJupe(prof){
+  /* Vraie pièce d'atelier : elle APPORTE la jupe. L'abat-jour est simplement
+   * posé sur sa tranche, au même rayon extérieur — rien n'est dupliqué. */
+  if(socleActif() && BASE_KIT.etat === 'ok' && prof.length >= 2){
+    const J = SOCLE.trancheHMm, R = SOCLE.trancheRExtMm;
+    const haut = prof.map(p=>({ h:p.h + J, r:p.r }));
+    haut[0] = { h:J, r:R };
+    return haut;                       // pas de point à h=0 : la base l'occupe
+  }
   if(bagueActive() && prof.length >= 2){
     // la bague occupe les 10 premiers mm : l'abat-jour est POSÉ dessus, au même
     // rayon extérieur, exactement comme la jupe du socle
@@ -1126,7 +1142,8 @@ function normalizeProfile(){
    * On ne touche qu'au point du bas — le dessin au-dessus reste celui du client. */
   if(socleActif() && state.profile.length){
     const bas = state.profile[0];
-    const r = socleRayonMm();
+    // avec la vraie pièce c'est SA tranche qui impose le rayon, pas le curseur
+    const r = (BASE_KIT.etat === 'ok') ? SOCLE.trancheRExtMm : socleRayonMm();
     if(Math.abs(bas.r - r) > 0.01) bas.r = r;
   }
   if(bagueActive() && state.profile.length){

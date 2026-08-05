@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-CrtgfN8UQz9cwC+ym0iubH5nfyFBwBkvxIMWf3LX8ac='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-3iS8iuAwK3FO+o9srqA0/O3P4ERJP/+cb39K65VKfQ0='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -1262,6 +1262,15 @@ function normalizeProfile(){
   }
   const se = socketEndIdx();
   state.profile.forEach((p,i)=>clampPoint(p, i===se));
+  // plus aucun contrôle ne pilote la rotation propre d'un corps : un état
+  // ancien qui en porterait une (ex. -153°) serait ingérable — on la purge.
+  // Même sort pour les décalages d'une lampe à UN corps : ils ne servent
+  // qu'à séparer plusieurs corps, et une lampe vissée est centrée.
+  state.bodies.forEach(b=>{ if(b.rotDeg) b.rotDeg = 0; });
+  if(state.compo.count === 1 && state.bodies[0]){
+    const b0 = state.bodies[0];
+    b0.offsetXMm = b0.offsetYMm = b0.offsetZMm = 0;
+  }
   /* Le socle impose le rayon de l'EXTRÉMITÉ basse : la peau descend jusqu'à
    * Ø99,5 (ou le Ø réglé) au lieu de s'arrêter avant et de laisser un ressaut.
    * On ne touche qu'au point du bas — le dessin au-dessus reste celui du client. */
@@ -4721,9 +4730,10 @@ function renderExpert(){
   add('Échelle du corps', b,'scale', 0.35, 2.2, 0.01, '×');
   add('Torsion', b.sculpt,'twistDegPerMm', -1.2, 1.2, 0.02, '°/mm');
   add('Courbure', b.sculpt,'bendDeg', -35, 35, 1, '°');
-  add('Rotation autour de l\'axe vertical', b,'rotDeg', -180, 180, 1, '°');
-  add('Décalage horizontal', b,'offsetXMm', -150, 150, 1, 'mm');
-  add('Décalage vertical', b,'offsetZMm', -150, 150, 1, 'mm');
+  /* Rotation et décalages retirés du panneau expert (05/08, « ne met pas ») :
+   * une lampe vissée sur sa base est centrée par construction — tourner ou
+   * décaler le corps ne faisait que désaligner la bague. Les déplacements
+   * multi-corps restent dans leur propre panneau. */
   const hh=document.createElement('div'); hh.className='hint';
   hh.textContent = "L'échelle est cuite dans la géométrie exportée (c'est une pièce physiquement différente) ; rotation et décalages ne servent qu'au plan d'assemblage — chaque corps est exporté à son propre origine, posé à plat.";
   box.appendChild(hh);

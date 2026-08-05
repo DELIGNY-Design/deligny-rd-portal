@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-yTaJyyxIUJLcMJKgcrPRnCCEBzV338vOqLTx/Z+CSaE='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-my+47Gm/qM789qGEcmIRVgeBYkC0Z1aMm+geQEQPfh0='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -674,6 +674,18 @@ const SOCLE = {
    * en profondeur de l'aperçu, ne sachant plus laquelle est devant, laissait voir
    * l'intérieur par transparence. */
   trancheHMm: 8.0, trancheRIntMm: 45.750, trancheRExtMm: 49.750,
+  /* ⚠️ RECOUVREMENT, pas contact. Poser l'abat-jour EXACTEMENT sur la tranche
+   * met sa couronne de fond et le plat de la base dans le MÊME plan. Deux
+   * conséquences, et la seconde est la vraie :
+   *  · à l'écran, l'aperçu trie les triangles par profondeur et ne peut pas
+   *    départager deux faces coplanaires → les moucherons noirs sur le bord ;
+   *  · au tranchage, un contact face-à-face sans recouvrement donne une
+   *    soudure d'épaisseur nulle — deux pièces qui se touchent, pas une seule.
+   * On fait donc DESCENDRE l'abat-jour de 0,6 mm dans la tranche : elle fait
+   * 4 mm de large et la base est pleine en dessous, il n'y a rien à percer.
+   * C'est la doctrine appliquée partout ailleurs dans ce moteur — des solides
+   * qui s'interpénètrent, jamais des solides qui s'effleurent. */
+  recouvrementMm: 0.6,
   solHMm: 3.0,            // plancher intérieur (Y = -17)
   epauleHMm: 15.5,        // épaulement au-dessus des trous de câble (Y = -4,5)
   epauleR1Mm: 28.0, epauleR2Mm: 33.5,
@@ -714,7 +726,7 @@ function profilAvecJupe(prof){
   /* Vraie pièce d'atelier : elle APPORTE la jupe. L'abat-jour est simplement
    * posé sur sa tranche, au même rayon extérieur — rien n'est dupliqué. */
   if(socleActif() && BASE_KIT.etat === 'ok' && prof.length >= 2){
-    const J = SOCLE.trancheHMm, R = SOCLE.trancheRExtMm;
+    const J = SOCLE.trancheHMm - SOCLE.recouvrementMm, R = SOCLE.trancheRExtMm;
     const haut = prof.map(p=>({ h:p.h + J, r:p.r }));
     haut[0] = { h:J, r:R };
     return haut;                       // pas de point à h=0 : la base l'occupe
@@ -823,6 +835,68 @@ function trianglesBaseKit(){
   }
   _baseTris = out;
   return out;
+}
+
+/* ── ÎLOTS DE DÉPART (« floating regions ») ───────────────────────────────
+ * Bambu Studio a signalé « floating regions » sur une lampe ajourée. Un îlot,
+ * au sens du trancheur, c'est un intervalle de matière dans une couche qui ne
+ * recouvre AUCUN intervalle de la couche d'en dessous : la buse pose du
+ * plastique dans le vide.
+ *
+ * ⚠️ Ne pas confondre avec « de la matière repart au-dessus d'un trou » : sur
+ * un ajourage, une nervure qui reprend au-dessus d'une cellule est tenue
+ * LATÉRALEMENT par ses voisines dans la même couche. Ma première mesure
+ * comptait ces reprises et annonçait 10 281 problèmes — il y en a 23.
+ * Le témoin qui valide la méthode : une coque pleine donne 0.
+ */
+function analyseIlots(tris, pasMm){
+  const pas = pasMm || 0.4, buse = 0.4;
+  let zMin = Infinity, zMax = -Infinity;
+  for(const t of tris) for(const v of t){ if(v[2]<zMin) zMin=v[2]; if(v[2]>zMax) zMax=v[2]; }
+  if(!isFinite(zMin)) return { ilots:0, larges:0, premierH:null };
+  // rangement par tranche : sans ça on relit les 56 000 triangles à chaque couche
+  const nb = Math.max(1, Math.ceil((zMax-zMin)/pas));
+  const seaux = Array.from({length:nb+1}, ()=>[]);
+  for(const t of tris){
+    const lo = Math.min(t[0][2],t[1][2],t[2][2]), hi = Math.max(t[0][2],t[1][2],t[2][2]);
+    const a = Math.max(0, Math.floor((lo-zMin)/pas)), b = Math.min(nb, Math.ceil((hi-zMin)/pas));
+    for(let k=a;k<=b;k++) seaux[k].push(t);
+  }
+  const rMoy = (()=>{ let s=0,n=0; for(const t of tris) for(const v of t){ s+=Math.hypot(v[0],v[1]); n++; } return n?s/n:40; })();
+  const inter = (z, k)=>{
+    const segs=[];
+    for(const [a,b,c] of seaux[k]){
+      const lo=Math.min(a[2],b[2],c[2]), hi=Math.max(a[2],b[2],c[2]);
+      if(lo>z || hi<z) continue;
+      const th=[a,b,c].map(v=>Math.atan2(v[1],v[0]));
+      let x=Math.min(...th), y=Math.max(...th);
+      if(y-x>Math.PI){ const t2=th.map(q=>q<0?q+2*Math.PI:q); x=Math.min(...t2); y=Math.max(...t2); }
+      segs.push([x,y]);
+    }
+    segs.sort((p,q)=>p[0]-q[0]);
+    const out=[];
+    for(const sg of segs){
+      if(out.length && sg[0] <= out[out.length-1][1]+1e-6) out[out.length-1][1]=Math.max(out[out.length-1][1],sg[1]);
+      else out.push([sg[0],sg[1]]);
+    }
+    return out;
+  };
+  let prev=null, ilots=0, larges=0, premierH=null;
+  for(let k=0;k<=nb;k++){
+    const z = zMin + k*pas + pas/2;
+    if(z > zMax) break;
+    const cur = inter(z, k);
+    if(prev){
+      for(const [lo,hi] of cur){
+        if(!prev.some(([a,b])=> hi>a && lo<b)){
+          ilots++;
+          if((hi-lo)*rMoy > buse){ larges++; if(premierH===null) premierH=z; }
+        }
+      }
+    }
+    prev=cur;
+  }
+  return { ilots, larges, premierH };
 }
 
 function volumeIndexe(V, F){
@@ -2963,6 +3037,15 @@ function rebuildMesh(){
   } else {
     MESH.draft = MESH.preview;
   }
+  /* Îlots de départ : seulement pour un ajourage (une coque pleine n'en a
+   * jamais — vérifié, le témoin donne 0) et seulement sur le maillage
+   * d'export, celui qui part au trancheur. */
+  MESH.ilots = null;
+  if(Array.from({length:n}).some((_,i)=>isPerforated(bodySurface(i)))){
+    const t0 = performance.now();
+    const tous = MESH.parts.flatMap(p=>p.tris);
+    MESH.ilots = { ...analyseIlots(tous, 0.4), ms: Math.round(performance.now()-t0) };
+  }
   const segExport = Math.max(...segsExport), segPreview = Math.max(...segsPreview);
   const volMm3 = MESH.parts.reduce((s,p)=>s+meshVolumeMm3(p.tris), 0);
   const tris   = MESH.parts.reduce((s,p)=>s+p.tris.length, 0);
@@ -4495,6 +4578,26 @@ function renderChecks(){
   const s=MESH.stats, pr=state.profile, lines=[];
   if(!pr.length) return;
   lines.push(['ok', `Maillage exporté : ${s.tris} triangles · ${(s.volMm3/1000).toFixed(1)} cm³ de matière · ${MESH.parts.length>1?MESH.parts.length+' pièces à imprimer':'1 pièce'} · paroi ${state.wall} mm`]);
+  /* Îlots de départ — c'est ce que Bambu Studio appelle « floating regions ».
+   * On le dit AVANT le tranchage, avec un chiffre, plutôt que de laisser le
+   * client découvrir un bandeau orange. */
+  if(MESH.ilots){
+    const I = MESH.ilots;
+    if(I.larges === 0){
+      lines.push(['ok', `Aucun îlot de départ : à chaque couche, la matière repose sur celle d'en dessous. `
+        + `Le trancheur ne signalera pas de « floating regions ». (analyse ${I.ms} ms)`]);
+    } else {
+      lines.push(['warn', `${I.larges} îlot(s) de départ plus larges que la buse`
+        + (I.premierH!=null ? `, le premier à h = ${I.premierH.toFixed(1)} mm` : '')
+        + ` : à ces endroits la matière commence en l'air. C'est ce que Bambu Studio appelle `
+        + `« floating regions ». Ça s'imprime — les couches suivantes rattrapent sur les nervures `
+        + `voisines — mais on peut voir un léger affaissement au départ.`]);
+      lines.push(['ok', `Deux leviers pour les réduire : épaissir les nervures, ou baisser le nombre de `
+        + `cellules. Le compte ci-dessus se met à jour à chaque réglage — essaie et regarde.`]);
+      lines.push(['warn', `Analyse faite tous les 0,4 mm : elle peut manquer un îlot qui apparaît et se `
+        + `referme à l'intérieur de deux couches de 0,2 mm. C'est un plancher, pas un compte exact.`]);
+    }
+  }
   if(s.perf){
     lines.push(['ok', `Ajourage Voronoï : ${s.perf.savedPct.toFixed(0)} % de matière en moins que la coque pleine `
       + `(${(s.volMm3/1000).toFixed(1)} au lieu de ${(s.perf.refVolMm3/1000).toFixed(1)} cm³) — ${(100*s.perf.kept/Math.max(1,s.perf.cells)).toFixed(0)} % de la paroi conservée en nervures. `

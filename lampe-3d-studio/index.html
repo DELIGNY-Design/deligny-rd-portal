@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-/RdpxtFLOrRbmuGDBn18p2X6ZTCJL3q0vEe/mpsmtVM='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-b0ubPoHQQksSvCV4MiibhqYT26raVMgaI5aDfs0VxE4='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -341,6 +341,14 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
         <label class="lbl">Diamètre à l'extrémité — <b id="socleDiaTxt">99,5</b> mm</label>
         <input type="range" id="socleDia" min="76" max="220" step="0.5" value="99.5">
       </div>
+      <label class="socket-opt" id="socleMontrerRow" style="margin-top:10px;display:none">
+        <input type="checkbox" id="socleMontrer">
+        <div><b>Afficher la pièce d'atelier dans l'aperçu</b>
+        <div class="hint" style="margin:2px 0 0">Mesuré : <b>1,8 s une fois</b> à l'activation (dépliage
+        des 356 632 triangles), puis <b>≈40 ms par image</b> — la plupart des triangles sont cachés ou
+        hors champ. Elle est À L'INTÉRIEUR de l'abat-jour : on ne l'aperçoit que par l'ouverture du bas.
+        Le fichier STL la contient dans tous les cas.</div></div>
+      </label>
       <div class="warnbox" id="socleBox" style="margin-top:10px"></div>
     </div>
 
@@ -784,6 +792,22 @@ async function chargerBaseKit(){
 
 // Volume d'un maillage indexé (théorème de la divergence), sans le déplier en
 // tableaux de triangles : 356 632 triangles, on ne veut pas 1 M d'objets JS.
+/* Déplie le maillage indexé en triangles — uniquement pour l'AFFICHAGE, et
+ * seulement si on le demande : 356 632 triangles font plus d'un million de
+ * tableaux JS. L'export, lui, écrit directement depuis les tableaux typés. */
+let _baseTris = null;
+function trianglesBaseKit(){
+  if(_baseTris) return _baseTris;
+  if(BASE_KIT.etat !== 'ok') return [];
+  const V = BASE_KIT.verts, F = BASE_KIT.faces, out = [];
+  for(let i=0;i<F.length;i+=3){
+    const a=F[i]*3,b=F[i+1]*3,c=F[i+2]*3;
+    out.push([[V[a],V[a+1],V[a+2]],[V[b],V[b+1],V[b+2]],[V[c],V[c+1],V[c+2]]]);
+  }
+  _baseTris = out;
+  return out;
+}
+
 function volumeIndexe(V, F){
   let v6 = 0;
   for(let i=0;i<F.length;i+=3){
@@ -922,7 +946,7 @@ let state = {
    * PERCÉ DANS LE MAILLAGE : l'atelier ne perce rien après coup. */
   cable: { on:true, diaMm:6.0, reculMm:22, angleDeg:180, platine:true },
   // socle kit LED : le bas du profil se termine à ce Ø, et l'intérieur est équipé
-  socle: { on:true, diaMm: 99.5 },
+  socle: { on:true, diaMm: 99.5, montrer:false },
   poser: { variante: 'monobloc' },
   // couches combinables : une base + des reliefs additifs + un ajourage
   surface: { base:'facette', smoothing:45,
@@ -965,6 +989,11 @@ function trousCorps(bi){
    * référence elle est à h=4,3 et débouche presque sur le dessous ; ici on la
    * remonte pour qu'elle ne coupe pas la couronne plate du bas, sinon la pièce
    * ne ferme plus. L'écart est annoncé dans l'interface. */
+  /* ⚠️ AUCUN TROU dans l'abat-jour quand la vraie base est là : elle porte
+   * DÉJÀ sa sortie de câble latérale (Ø≈8,4 à Y=−15,7 sur la pièce mesurée).
+   * En percer une seconde dans la peau ferait deux sorties pour un seul câble.
+   * L'abat-jour n'a donc rien à recevoir — il se fusionne, point. */
+  if(socleActif() && BASE_KIT.etat === 'ok') return [];
   if(socleActif()){
     const r = SOCLE.sortieDiaMm/2;
     const vise = SOCLE.sortieHMm, mini = r + 2.5;
@@ -2828,8 +2857,25 @@ function buildParts(segList, mode){
        * rendu logiciel) — elle est écrite directement dans le STL. C'est la
        * SEULE exception à « l'aperçu montre les triangles du STL », et elle est
        * annoncée dans l'interface. */
-      if(BASE_KIT.etat === 'ok'){
+      const reelle = (BASE_KIT.etat === 'ok');
+      /* ⚠️ RÉGRESSION CORRIGÉE : quand la vraie pièce se chargeait, je cessais
+       * de générer l'équivalent — l'aperçu ne montrait alors plus RIEN à
+       * l'intérieur, et sélectionner « monobloc » ne se voyait pas. L'aperçu
+       * garde donc toujours un socle à afficher ; c'est seulement à l'EXPORT
+       * que l'équivalent s'efface devant la vraie pièce d'atelier. */
+      if(reelle){
+        // « il faut juste fusionner » : la pièce d'atelier apporte tout —
+        // plancher, colonnettes, serre-câble, sortie de câble. On ne génère
+        // plus rien : ni plancher, ni colonnettes, ni trou de câble.
         MESH.socle = { reelle:true, nTri:BASE_KIT.nTri, volMm3:BASE_KIT.volMm3 };
+        /* Coût MESURÉ de l'affichage : 1,8 s une fois (dépliage en tableaux JS,
+         * mis en cache), puis ≈40 ms par image — mon extrapolation à 1 s par
+         * image était fausse, la plupart des triangles sont cachés ou hors
+         * champ. On ne l'impose quand même pas : la pièce est DANS l'abat-jour,
+         * on ne l'aperçoit que par l'ouverture du bas. */
+        if(state.socle.montrer && mode === 'preview'){
+          meshes[0] = meshes[0].concat(trianglesBaseKit());
+        }
       } else {
         const S = buildSocleMeshes(bi, wall, segments, body.sculpt, hRef);
         MESH.socle = { R:S.R, z0:S.z0, z1:S.z1, fusionne:true, reelle:false };
@@ -2874,7 +2920,13 @@ function rebuildMesh(){
   const n = Math.max(1, state.compo.count);
   const segsExport  = Array.from({length:n},(_,i)=>segFor(i,'export'));
   const segsPreview = Array.from({length:n},(_,i)=>segFor(i,'preview'));
-  const same = segsExport.every((v,i)=>v===segsPreview[i])
+  /* ⚠️ L'aperçu réutilise le maillage d'export quand les résolutions coïncident.
+   * Mais si on demande à VOIR la pièce d'atelier, les deux diffèrent : elle est
+   * dans l'aperçu et pas dans l'export (où elle est écrite directement depuis
+   * ses tableaux typés). Il faut donc forcer une construction séparée. */
+  const montreBase = !!(state.socle && state.socle.montrer) && BASE_KIT.etat === 'ok' && socleActif();
+  const same = !montreBase
+    && segsExport.every((v,i)=>v===segsPreview[i])
     && Array.from({length:n}).every((_,i)=>effectiveStepMm(i,bodySurface(i),'export')===effectiveStepMm(i,bodySurface(i),'preview'));
   PERF_ACC = { cells:0, kept:0 };
   MESH.parts   = buildParts(segsExport, 'export');
@@ -3750,6 +3802,11 @@ function renderSocle(){
   $('socleDia').disabled = !state.socle.on;
 
   if(baseKitUtile() && BASE_KIT.etat === 'absent') chargerBaseKit();
+  const rowM = $('socleMontrerRow');
+  if(rowM){
+    rowM.style.display = (BASE_KIT.etat === 'ok' && state.socle.on) ? '' : 'none';
+    $('socleMontrer').checked = !!state.socle.montrer;
+  }
   const box=$('socleBox'); box.innerHTML=''; const L=[];
   if(state.socle.on){
     if(BASE_KIT.etat === 'ok'){
@@ -4521,6 +4578,8 @@ function renderAll(){
   if(on) on.onchange = e=>{ state.socle.on = e.target.checked; normalizeProfile(); renderAll(); };
   const d=$('socleDia');
   if(d) d.oninput = e=>{ state.socle.diaMm = parseFloat(e.target.value); normalizeProfile(); renderSoon(); };
+  const m=$('socleMontrer');
+  if(m) m.onchange = e=>{ state.socle.montrer = e.target.checked; renderAll(); };
 }
 
 /* ── Sortie de câble : commandes ──────────────────────────────────────── */

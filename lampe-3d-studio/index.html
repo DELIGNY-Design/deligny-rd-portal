@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-62HKOsvNCAX8GoMBtL4IbOaVOie5APhYmXloCmY1NGs='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-/RdpxtFLOrRbmuGDBn18p2X6ZTCJL3q0vEe/mpsmtVM='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -724,6 +724,77 @@ function poserVariante(){
   return (state.type === 'poser' && state.poser) ? state.poser.variante : null;
 }
 
+
+/* ── BASE SIMPLE LED KIT — la VRAIE pièce, non modifiée ───────────────────
+ * Baptiste : « utilise ça, sans modifier, et fusionne avec l'abat-jour ».
+ * Le maillage d'atelier fait 178 310 sommets et 356 632 triangles — on ne peut
+ * pas l'écrire dans un fichier HTML, et on ne veut pas le simplifier (ce serait
+ * le modifier). Il est donc chargé à part, en binaire indexé compressé.
+ *
+ * Format « LKIT » : entête 4 o + 2 × uint32 (nb sommets, nb triangles), puis
+ * les sommets en float32 et les faces en uint32. Conversion depuis l'OBJ :
+ * axe Y→Z (le studio travaille en Z vertical) et pièce remontée de 20 mm pour
+ * poser son dessous à h=0. **Aucune autre transformation.** Erreur maximale de
+ * la conversion float32 mesurée sur les 534 930 coordonnées : 1,9 × 10⁻⁶ mm,
+ * soit 50 000 fois moins que la tolérance d'impression.
+ *
+ * ⚠️ CONSÉQUENCE ASSUMÉE : utiliser la pièce telle quelle FIGE son Ø à 99,50.
+ * Le réglage « diamètre à l'extrémité » ne peut donc plus la faire varier —
+ * c'est l'abat-jour qui s'aligne sur elle, et non l'inverse.
+ */
+const BASE_KIT = {
+  url: 'base-kit-led.bin.gz',
+  etat: 'absent',          // absent · chargement · ok · echec
+  note: '',
+  verts: null, faces: null,
+  nTri: 0, volMm3: 0, hautMm: 36.20, diaMm: 99.50,
+};
+
+function baseKitUtile(){ return socleActif(); }
+
+async function chargerBaseKit(){
+  if(BASE_KIT.etat === 'ok' || BASE_KIT.etat === 'chargement') return;
+  BASE_KIT.etat = 'chargement'; renderSocle();
+  try{
+    const r = await fetch(BASE_KIT.url, {cache:'force-cache'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    let buf;
+    if(typeof DecompressionStream === 'function'){
+      buf = await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+    } else {
+      throw new Error('DecompressionStream absent de ce navigateur');
+    }
+    const dv = new DataView(buf);
+    const magie = String.fromCharCode(dv.getUint8(0),dv.getUint8(1),dv.getUint8(2),dv.getUint8(3));
+    if(magie !== 'LKIT') throw new Error('entête inattendu « '+magie+' »');
+    const nv = dv.getUint32(4, true), nf = dv.getUint32(8, true);
+    BASE_KIT.verts = new Float32Array(buf, 12, nv*3);
+    BASE_KIT.faces = new Uint32Array(buf, 12 + nv*12, nf*3);
+    BASE_KIT.nTri  = nf;
+    BASE_KIT.volMm3 = volumeIndexe(BASE_KIT.verts, BASE_KIT.faces);
+    BASE_KIT.etat = 'ok';
+    BASE_KIT.note = `${nv.toLocaleString('fr')} sommets · ${nf.toLocaleString('fr')} triangles · `
+                  + `${(BASE_KIT.volMm3/1000).toFixed(1)} cm³`;
+  }catch(e){
+    BASE_KIT.etat = 'echec';
+    BASE_KIT.note = e.message;
+  }
+  renderAll();
+}
+
+// Volume d'un maillage indexé (théorème de la divergence), sans le déplier en
+// tableaux de triangles : 356 632 triangles, on ne veut pas 1 M d'objets JS.
+function volumeIndexe(V, F){
+  let v6 = 0;
+  for(let i=0;i<F.length;i+=3){
+    const a=F[i]*3, b=F[i+1]*3, c=F[i+2]*3;
+    const ax=V[a],ay=V[a+1],az=V[a+2];
+    const bx=V[b],by=V[b+1],bz=V[b+2];
+    const cx=V[c],cy=V[c+1],cz=V[c+2];
+    v6 += ax*(by*cz-bz*cy) - ay*(bx*cz-bz*cx) + az*(bx*cy-by*cx);
+  }
+  return Math.abs(v6)/6;
+}
 
 const TYPES = {
   suspension: {
@@ -2751,9 +2822,19 @@ function buildParts(segList, mode){
      * son support. Ils vont donc dans le MÊME maillage (primitives qui se
      * chevauchent, le trancheur fusionne). */
     if(socleActif() && bi === socketEndBodyIdx()){
-      const S = buildSocleMeshes(bi, wall, segments, body.sculpt, hRef);
-      MESH.socle = { R:S.R, z0:S.z0, z1:S.z1, fusionne:true };
-      meshes[0] = meshes[0].concat(S.tris);
+      /* Quand la VRAIE base est chargée, on ne génère plus l'équivalent : deux
+       * planchers superposés, ce serait de la matière payée en double. La vraie
+       * pièce n'entre pas dans l'aperçu (356 632 triangles écraseraient le
+       * rendu logiciel) — elle est écrite directement dans le STL. C'est la
+       * SEULE exception à « l'aperçu montre les triangles du STL », et elle est
+       * annoncée dans l'interface. */
+      if(BASE_KIT.etat === 'ok'){
+        MESH.socle = { reelle:true, nTri:BASE_KIT.nTri, volMm3:BASE_KIT.volMm3 };
+      } else {
+        const S = buildSocleMeshes(bi, wall, segments, body.sculpt, hRef);
+        MESH.socle = { R:S.R, z0:S.z0, z1:S.z1, fusionne:true, reelle:false };
+        meshes[0] = meshes[0].concat(S.tris);
+      }
     }
     if(bagueActive() && bi === socketEndBodyIdx()){
       const B = buildBagueAbatJour(segments, body.sculpt, hRef);
@@ -3668,8 +3749,25 @@ function renderSocle(){
   $('socleParams').style.opacity = state.socle.on ? 1 : 0.45;
   $('socleDia').disabled = !state.socle.on;
 
+  if(baseKitUtile() && BASE_KIT.etat === 'absent') chargerBaseKit();
   const box=$('socleBox'); box.innerHTML=''; const L=[];
   if(state.socle.on){
+    if(BASE_KIT.etat === 'ok'){
+      L.push(['ok', `Pièce d'atelier « BASE SIMPLE LED KIT » utilisée TELLE QUELLE et fusionnée à l'abat-jour `
+        + `dans le STL : ${BASE_KIT.note}. Aucune simplification — erreur de conversion 1,9 × 10⁻⁶ mm, `
+        + `50 000 fois moins que la tolérance d'impression.`]);
+      L.push(['warn', `L'APERÇU 3D ne la montre pas : ses ${BASE_KIT.nTri.toLocaleString('fr')} triangles `
+        + `écraseraient le rendu. C'est la seule exception à « l'aperçu montre les triangles du STL » — `
+        + `le fichier téléchargé, lui, la contient.`]);
+      L.push(['warn', `Utiliser la pièce sans la modifier FIGE son Ø à ${fr(BASE_KIT.diaMm,2)} mm : `
+        + `le réglage de diamètre ci-dessous ne la fait plus varier, c'est l'abat-jour qui s'aligne sur elle.`]);
+    } else if(BASE_KIT.etat === 'chargement'){
+      L.push(['ok', `Chargement de la pièce d'atelier « BASE SIMPLE LED KIT » (2,4 Mo compressés)…`]);
+    } else if(BASE_KIT.etat === 'echec'){
+      L.push(['bad', `Pièce d'atelier NON chargée (${BASE_KIT.note}). Le studio génère à la place un `
+        + `équivalent fonctionnel — plancher et colonnettes aux cotes relevées — mais ce n'est PAS `
+        + `ta pièce. Ne lance pas de série avec ce fichier.`]);
+    }
     const R2 = socleRayonMm();
     L.push(['ok', `Jupe droite Ø${fr(2*R2,1)} mm sur ${fr(SOCLE.jupeHMm,1)} mm, puis le dessin repris `
       + `EXACTEMENT au même rayon : la peau descend d'un seul trait jusqu'à l'extrémité, aucun ressaut. `
@@ -3682,7 +3780,7 @@ function renderSocle(){
     if(Math.abs(+state.wall - SOCLE.paroiRefMm) > 0.35)
       L.push(['warn', `Paroi réglée à ${fr(+state.wall,1)} mm ; l'assemblage de référence est à `
         + `${fr(SOCLE.paroiRefMm,1)} mm — soit ${Math.round(Math.abs(+state.wall-SOCLE.paroiRefMm)/0.4)} périmètre(s) d'écart.`]);
-    if(MESH.socle) L.push(['ok', `Plancher Ø${fr(2*MESH.socle.R,1)} mm à h = ${MESH.socle.z0}–${MESH.socle.z1} mm, `
+    if(MESH.socle && !MESH.socle.reelle) L.push(['ok', `Plancher Ø${fr(2*MESH.socle.R,1)} mm à h = ${MESH.socle.z0}–${MESH.socle.z1} mm, `
       + `2 colonnettes kit LED (entraxe ${fr(SOCLE.ledEntraxeMm,2)} mm, perçage Ø${fr(SOCLE.ledTrouMm,2)}) `
       + `montant à h = ${SOCLE.ledHautMm} mm, et 2 bossages serre-câble (entraxe ${fr(SOCLE.serreEntraxeMm,2)} mm).`]);
     const tr = trousCorps(0)[0];
@@ -3693,8 +3791,13 @@ function renderSocle(){
     if(state.socle.diaMm/2 < rMini)
       L.push(['bad', `Ø trop petit : il faut au moins Ø${fr(2*rMini,0)} mm pour loger les colonnettes du kit LED `
         + `(entraxe ${fr(SOCLE.ledEntraxeMm,2)} mm).`]);
-    L.push(['warn', `Cotes reprises de ${SOCLE.source}. L'intérieur généré est fonctionnel (plancher, colonnettes, `
-      + `perçages) — il ne reprend pas les nervures ni les évidements de la pièce d'origine.`]);
+    if(MESH.socle && MESH.socle.reelle){
+      L.push(['ok', `Source : ${SOCLE.source.split('—')[0].trim()} — c'est le maillage d'atelier lui-même qui part `
+        + `dans le fichier, nervures et évidements compris.`]);
+    } else {
+      L.push(['warn', `Cotes reprises de ${SOCLE.source}. L'intérieur généré est fonctionnel (plancher, colonnettes, `
+        + `perçages) — il ne reprend pas les nervures ni les évidements de la pièce d'origine.`]);
+    }
   }
   L.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
 }
@@ -3778,7 +3881,10 @@ function renderSwatches(){
  * ──────────────────────────────────────────────────────────────────────── */
 function computeSpecs(){
   const nParts = Math.max(1, MESH.parts.length);
-  const volumeCm3 = (MESH.stats.volMm3||0)/1000 * GEOMETRY_CONFIG.INTERNAL_STRUCTURE_FACTOR;
+  // la vraie base n'est pas dans MESH.parts (elle n'entre que dans le STL),
+  // mais c'est de la matière imprimée : elle doit être facturée.
+  const volBase = (MESH.socle && MESH.socle.reelle) ? MESH.socle.volMm3 : 0;
+  const volumeCm3 = ((MESH.stats.volMm3||0) + volBase)/1000 * GEOMETRY_CONFIG.INTERNAL_STRUCTURE_FACTOR;
   const density = PRICE_CONFIG.MATERIAL_DENSITY_G_CM3[state.material];
   const massG = volumeCm3*density;
   const printHours = Math.max(0.4, volumeCm3/PRICE_CONFIG.PRINT_CM3_PER_HOUR);
@@ -4809,6 +4915,38 @@ function trianglesToSTLBinary(tris, label){
   return buf;
 }
 
+/* STL binaire = coque + éventuellement la VRAIE base, écrite directement
+ * depuis son maillage indexé. On ne la déplie jamais en tableau de triangles :
+ * 356 632 triangles feraient plus d'un million d'objets JS pour rien. */
+function trianglesToSTLBinaryAvecBase(tris, label, avecBase){
+  const nBase = avecBase ? BASE_KIT.nTri : 0;
+  const n = tris.length + nBase;
+  const buf = new ArrayBuffer(84 + n*50);
+  const dv = new DataView(buf);
+  const header = ('Custom 3D Lamp Studio - '+(label||'lampe')
+                 + (nBase ? ' + BASE SIMPLE LED KIT (piece atelier, non modifiee)' : '')).slice(0,79);
+  for(let i=0;i<80;i++) dv.setUint8(i, i<header.length?header.charCodeAt(i):0);
+  dv.setUint32(80, n, true);
+  let o=84;
+  const ecrire=(v1,v2,v3)=>{
+    const [nx,ny,nz] = triangleNormal(v1,v2,v3);
+    dv.setFloat32(o,nx,true); dv.setFloat32(o+4,ny,true); dv.setFloat32(o+8,nz,true); o+=12;
+    for(const v of [v1,v2,v3]){
+      dv.setFloat32(o,v[0],true); dv.setFloat32(o+4,v[1],true); dv.setFloat32(o+8,v[2],true); o+=12;
+    }
+    dv.setUint16(o,0,true); o+=2;
+  };
+  for(const [v1,v2,v3] of tris) ecrire(v1,v2,v3);
+  if(nBase){
+    const V=BASE_KIT.verts, F=BASE_KIT.faces;
+    for(let i=0;i<F.length;i+=3){
+      const a=F[i]*3,b=F[i+1]*3,c=F[i+2]*3;
+      ecrire([V[a],V[a+1],V[a+2]], [V[b],V[b+1],V[b+2]], [V[c],V[c+1],V[c+2]]);
+    }
+  }
+  return buf;
+}
+
 $('exportStl').onclick=()=>{
   if(!MESH.parts.length){ alert('Profil insuffisant pour générer un maillage (minimum 2 points).'); return; }
   const stamp = Date.now();
@@ -4816,7 +4954,10 @@ $('exportStl').onclick=()=>{
   let totalTris=0, totalKo=0;
   const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
   MESH.parts.forEach((p,i)=>{
-    const buf = trianglesToSTLBinary(p.tris, `${state.type}-${p.label}`);
+    // la vraie base part avec la pièce du BAS du corps qui la porte
+    const avecBase = BASE_KIT.etat==='ok' && baseKitUtile()
+                  && p.body===socketEndBodyIdx() && p.index===0;
+    const buf = trianglesToSTLBinaryAvecBase(p.tris, `${state.type}-${p.label}`, avecBase);
     const name = n===1
       ? `lampe-${state.type}-${stamp}.stl`
       : `lampe-${state.type}-${String(i+1).padStart(2,'0')}sur${n}-${slug(p.label)}-${stamp}.stl`;

@@ -633,9 +633,6 @@ h3 {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 360px;
-  object-fit: cover;
-  object-position: center 30%;
 }
 
 .footer-scene figcaption {

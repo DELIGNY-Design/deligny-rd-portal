@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-b0ubPoHQQksSvCV4MiibhqYT26raVMgaI5aDfs0VxE4='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-mrsAPAQkW4uBIZuvwleDlpa4ZW9I7gNROdF1Mnza8Yo='; style-src-attr 'unsafe-inline'; script-src 'sha256-R/EfxUGGs9FwTYPh3Vulluzy1+RDZLAGXDFSfX0sw6c='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -334,8 +334,9 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
         <input type="checkbox" id="socleOn" checked>
         <div><b>Socle kit LED intégré</b>
         <div class="hint" style="margin:2px 0 0">La peau descend d'un seul trait jusqu'à l'extrémité : pas de
-        ressaut entre abat-jour et base. Le plancher, les colonnettes du kit LED et les perçages du serre-câble
-        sont générés dedans.</div></div>
+        ressaut entre abat-jour et base. C'est la pièce d'atelier <b>BASE SIMPLE LED KIT</b> elle-même qui est
+        fusionnée à l'abat-jour — plancher, colonnettes, serre-câble et sortie de câble compris. Le studio ne
+        génère rien à l'intérieur, et ne perce aucun trou dans l'abat-jour.</div></div>
       </label>
       <div id="socleParams">
         <label class="lbl">Diamètre à l'extrémité — <b id="socleDiaTxt">99,5</b> mm</label>
@@ -343,7 +344,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
       </div>
       <label class="socket-opt" id="socleMontrerRow" style="margin-top:10px;display:none">
         <input type="checkbox" id="socleMontrer">
-        <div><b>Afficher la pièce d'atelier dans l'aperçu</b>
+        <div><b>Afficher BASE SIMPLE LED KIT dans l'aperçu</b>
         <div class="hint" style="margin:2px 0 0">Mesuré : <b>1,8 s une fois</b> à l'activation (dépliage
         des 356 632 triangles), puis <b>≈40 ms par image</b> — la plupart des triangles sont cachés ou
         hors champ. Elle est À L'INTÉRIEUR de l'abat-jour : on ne l'aperçoit que par l'ouverture du bas.
@@ -946,7 +947,7 @@ let state = {
    * PERCÉ DANS LE MAILLAGE : l'atelier ne perce rien après coup. */
   cable: { on:true, diaMm:6.0, reculMm:22, angleDeg:180, platine:true },
   // socle kit LED : le bas du profil se termine à ce Ø, et l'intérieur est équipé
-  socle: { on:true, diaMm: 99.5, montrer:false },
+  socle: { on:true, diaMm: 99.5, montrer:true },
   poser: { variante: 'monobloc' },
   // couches combinables : une base + des reliefs additifs + un ajourage
   surface: { base:'facette', smoothing:45,
@@ -3785,7 +3786,9 @@ function renderPoser(){
       L.push(['ok', `Découpe active : ${state.split.on?state.split.count+' modules':'à activer plus bas'}. `
         + `Le socle reste sur le module du bas.`]);
   }
-  L.push(['warn', `Cotes reprises de ${BAGUE.source.split('—')[0].trim()} et de l'assemblage ALL.obj.`]);
+  L.push(['warn', state.poser.variante==='bague'
+    ? `Cotes reprises de ${BAGUE.source.split('—')[0].trim()} et de l'assemblage ALL.obj.`
+    : `Pièce d'atelier : AUTRES/3D/BASE SIMPLE LED KIT.obj — utilisée telle quelle, sans simplification.`]);
   L.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
 }
 

@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-aZxDmu5mLUFQhnvHlCEhg5dfdc6ZNaEFgHEbTOm4U84='; style-src-attr 'unsafe-inline'; script-src 'sha256-SvceB/E4E9KrQo+1Y9QBSdN9/zHckBfESiOxKEeeid8='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-8oVWbCBjzoAEhBARfifzqU0M0kl8GGvaGwlXxU0Ow7I='; style-src-attr 'unsafe-inline'; script-src 'sha256-4Ws82sgDvv3LDDWokvZ756ONr4THz+SLi0ruMsyk1IQ='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -37,7 +37,7 @@ h1 .g{background:linear-gradient(90deg,#a8ccff,#4da3ff 55%,#6fd6ff);-webkit-back
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
 .grid.full{grid-template-columns:1fr;}
 @media(max-width:900px){.grid{grid-template-columns:1fr;}}
-.card{background:var(--card);border:1px solid var(--sep);border-radius:16px;padding:22px;}
+.card{background:var(--card);border:1px solid var(--sep);border-radius:16px;padding:24px;}
 .card h2{font-size:11px;font-weight:600;color:var(--dim2);margin:0 0 16px;letter-spacing:.12em;text-transform:uppercase;}
 .card h2 .n{display:inline-block;width:18px;height:18px;line-height:17px;text-align:center;border-radius:50%;border:1px solid rgba(77,163,255,.55);color:var(--blue);background:transparent;font-size:10px;letter-spacing:0;margin-right:8px;}
 
@@ -48,6 +48,13 @@ h1 .g{background:linear-gradient(90deg,#a8ccff,#4da3ff 55%,#6fd6ff);-webkit-back
 
 .hint{margin-top:10px;font-size:12.5px;color:var(--dim2);line-height:1.6;}
 .hint b{color:var(--dim);}
+/* Épure : les longues notes se replient sur 2 lignes — un clic les déplie.
+ * Tout le texte reste là, il ne s'impose plus. */
+.clamp{cursor:pointer;}
+.clamp:not(.open){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg,#000 55%,rgba(0,0,0,.25));mask-image:linear-gradient(180deg,#000 55%,rgba(0,0,0,.25));}
+.clamp.open{-webkit-mask-image:none;mask-image:none;}
+.clamp:hover{color:var(--dim);}
 
 canvas{display:block;background:#0a0b0e;border-radius:12px;border:1px solid var(--sep);width:100%;height:auto;touch-action:none;cursor:crosshair;}
 .canvas-row{display:flex;gap:14px;flex-wrap:wrap;}
@@ -95,7 +102,7 @@ table.pts tr.bad td{color:var(--red);}
 /* ── App-shell : les visuels restent à l'écran, les réglages défilent ───── */
 .app{display:grid;grid-template-columns:minmax(0,1.32fr) minmax(360px,.88fr);gap:16px;align-items:start;margin-top:12px;}
 .viewer{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto;min-width:0;}
-.controls{min-width:0;display:flex;flex-direction:column;gap:16px;}
+.controls{min-width:0;display:flex;flex-direction:column;gap:18px;}
 .controls .card{margin-top:0 !important;}
 .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 @media(max-width:1240px){.vgrid{grid-template-columns:1fr;}}
@@ -122,7 +129,7 @@ table.pts tr.bad td{color:var(--red);}
 .stepper button.on .n{color:rgba(168,204,255,.80);}
 .stepper button:hover:not(.on){border-color:rgba(255,255,255,.24);color:var(--txt);}
 .etape[hidden]{display:none;}
-.etape{display:flex;flex-direction:column;gap:16px;}
+.etape{display:flex;flex-direction:column;gap:18px;}
 .etape-pied{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:2px;}
 @media(max-width:560px){.stepper{grid-template-columns:repeat(2,1fr);}}
 
@@ -164,7 +171,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
 <div class="wrap">
   <header>
     <h1><span class="g">Custom 3D Lamp Studio</span></h1>
-    <div class="sub">Lampe imprimée 3D sur mesure — profil libre dans des bornes réalistes, culot standard fermé, prix automatique, dossier de fabrication.
+    <div class="sub">Dessine la forme — le prix, les contrôles d'imprimabilité et le dossier de fabrication se calculent en direct.
     <span class="free">aucun compte · tout se calcule dans ton navigateur</span></div>
 
     <details class="safety">
@@ -5154,6 +5161,21 @@ function syncBodies(){
   while(state.bodies.length < state.compo.count) state.bodies.push(newBodyLike(state.bodies.length));
   if(state.body >= state.compo.count) state.body = state.compo.count-1;
 }
+/* Épure (06/08) : le studio explique beaucoup — c'est voulu, mais 30 notes de
+ * 4 lignes rendent la colonne illisible. Les notes longues (>170 caractères)
+ * se replient sur 2 lignes avec un fondu, un clic les déplie. RIEN n'est
+ * supprimé. Jamais dans un <label> : le clic y actionne la case à cocher. */
+function epurerNotes(){
+  document.querySelectorAll('.hint, .disc-small').forEach(el=>{
+    if(el.dataset.epure !== undefined) return;          // déjà traité (idempotent)
+    if(el.closest('label') || el.closest('#blInfo')){ el.dataset.epure='0'; return; }
+    if((el.textContent||'').trim().length > 170){
+      el.dataset.epure='1'; el.classList.add('clamp');
+      el.title='Cliquer pour déplier / replier';
+      el.addEventListener('click', ()=>el.classList.toggle('open'));
+    } else el.dataset.epure='0';
+  });
+}
 function renderAll(){
   syncBodies();
   rebuildMesh();
@@ -5178,6 +5200,7 @@ function renderAll(){
   renderHud();
   const ex=$('vExplodeWrap'); if(ex) ex.style.display = MESH.parts.length>1 ? '' : 'none';
   $('type-hint').textContent = TYPES[state.type].hint;
+  epurerNotes();                                    // replie les notes longues (cartes re-rendues comprises)
   planifierLive();                                  // live EEVEE : relance après chaque modification
 }
 

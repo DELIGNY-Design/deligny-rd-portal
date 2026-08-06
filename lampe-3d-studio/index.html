@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-8oVWbCBjzoAEhBARfifzqU0M0kl8GGvaGwlXxU0Ow7I='; style-src-attr 'unsafe-inline'; script-src 'sha256-4Ws82sgDvv3LDDWokvZ756ONr4THz+SLi0ruMsyk1IQ='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-8oVWbCBjzoAEhBARfifzqU0M0kl8GGvaGwlXxU0Ow7I='; style-src-attr 'unsafe-inline'; script-src 'sha256-anYHaMb0N9rSGhVF0tIuDWxlm2eoj3iIJNXpy0uDgWk='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -906,47 +906,31 @@ function chargerDeco(){
  * TRANSPARENCE. Remède d'affichage : subdiviser les grands triangles des
  * pièces d'atelier (arête max ~8 mm) pour que les profondeurs se comparent à
  * la même échelle. L'export n'est jamais subdivisé. */
-function subdiviserAffichage(tris, areteMax){
-  const aMax2 = (areteMax||8)*(areteMax||8);
-  let cur = tris, passes = 0;
-  while(passes++ < 5){
-    let coupe = false;
-    const nxt = [];
-    for(const [a,b,c] of cur){
-      const l2 = [[a,b],[b,c],[c,a]].map(([p,q])=>
-        (p[0]-q[0])**2 + (p[1]-q[1])**2 + (p[2]-q[2])**2);
-      const iMax = l2.indexOf(Math.max(...l2));
-      if(l2[iMax] <= aMax2){ nxt.push([a,b,c]); continue; }
-      coupe = true;
-      const paires = [[a,b,c],[b,c,a],[c,a,b]][iMax];
-      const [p,q,r] = paires;
-      const m = [(p[0]+q[0])/2, (p[1]+q[1])/2, (p[2]+q[2])/2];
-      nxt.push([p,m,r]); nxt.push([m,q,r]);
-    }
-    cur = nxt;
-    if(!coupe) break;
-  }
-  return cur;
-}
-let _bagueDisp = null;
-function bagueAffichage(){
-  if(_bagueDisp) return _bagueDisp;
-  _bagueDisp = subdiviserAffichage(trianglesBaseKit(), 8);
-  return _bagueDisp;
-}
-/* SUBSTITUTS du geste : pendant qu'on tourne, personne ne lit le filet de la
- * bague ni les nervures de la base — un anneau et un disque suffisent, et le
- * budget triangles passe de ~14 000 à ~500. La vraie pièce revient 170 ms
- * après le dernier geste, avec la passe de qualité. */
+/* (La subdivision d'affichage 8 mm a vécu ici : elle atténuait le tri du
+ * peintre sans le corriger — remplacée par les substituts fermés ci-dessous.) */
+/* SUBSTITUTS D'AFFICHAGE — bague et base sont montrées SIMPLIFIÉES à l'écran,
+ * en permanence (06/08). La subdivision 8 mm ne suffisait pas : le tri du
+ * peintre par centroïde ne peut PAS ordonner un filet sub-millimétrique et des
+ * nervures internes derrière une paroi fine — à chaque angle rasant, l'intérieur
+ * « perçait » (vu trois fois : filet à travers le mur, base à travers le pied,
+ * blocs blancs sous le socle). Un anneau et un fût FERMÉS n'ont aucun intérieur
+ * à laisser fuir, et le budget passe de ~20 000 triangles à ~500 — réinvestis
+ * dans la finesse de la coque. L'export STL et le rendu Blender reçoivent
+ * toujours les pièces d'atelier RÉELLES.
+ * ⚠️ Rayon extérieur 57,55 (0,2 mm en retrait du Ø115,5 réel) : au même rayon
+ * que le pied de l'abat-jour, les deux cylindres seraient coplanaires et
+ * scintilleraient — la famille de bugs qu'on vient d'éteindre. */
 let _bagueProxy = null, _decoProxy = null;
 function bagueProxy(){
   if(_bagueProxy) return _bagueProxy;
-  _bagueProxy = buildTube(0, 10, ()=>49.5, ()=>57.75, 48, 5, null, 10);
+  _bagueProxy = buildTube(0, 10, ()=>49.5, ()=>57.55, 48, 5, null, 10);
   return _bagueProxy;
 }
 function decoProxy(){
   if(_decoProxy) return _decoProxy;
-  _decoProxy = buildTube(-15.5, -0.5, ()=>50, ()=>57.75, 48, 7.5, null, 10);
+  // fût plein (rayon intérieur quasi nul) : vue par en dessous, la base réelle
+  // a un plancher — le substitut ne doit pas montrer un tunnel à la place
+  _decoProxy = buildTube(-15.5, -0.5, ()=>0.5, ()=>57.55, 48, 7.5, null, 10);
   return _decoProxy;
 }
 
@@ -1226,6 +1210,7 @@ let state = {
   surface: { base:'facette', smoothing:45,
              stries:false, strieCount:18, strieDepthMm:1.6, cross:false, pitchMm:34,
              organique:false, orgAmpMm:2.4, orgPitchMm:40,
+             martele:false, martCount:22, martHMm:12, martDepthMm:1.2,
              congeMm:0,
              // 91 cellules ≈ 24 mm de côté : le motif se lit sans devenir une dentelle
              ajour:false, voroCells:91, voroStrutMm:3.2, voroBandMm:14, voroVariant:1 },
@@ -1573,8 +1558,12 @@ const SURFACE_BASES = {
 const RELIEF_STEP = {
   stries:    { stepMax:3.2, stepMin:1.1 },
   organique: { stepMax:4.2, stepMin:1.2 },
+  martele:   { stepMax:3.5, stepMin:1.0 },
 };
-const hasRelief    = s => !!(s.stries || s.organique);
+// Bornes du champ de martelage, à recalibrer si les constantes du hachage
+// changent (banc : scratchpad, 1er et 98e centile sur 100 000 échantillons).
+const MART_P1 = 0.436, MART_ETENDUE = 1.406;
+const hasRelief    = s => !!(s.stries || s.organique || s.martele);
 /* Un ajourage Voronoï et un passage de câble sont le MÊME problème : percer une
  * coque en la gardant étanche. On passe donc par le même chemin — découpe du
  * contour sur un champ signé — au lieu d'inventer une seconde mécanique. */
@@ -1585,6 +1574,7 @@ function styleLabel(s){
   const parts = [SURFACE_BASES[s.base||'facette'].label];
   if(s.stries)    parts.push(s.cross ? 'stries croisées (losanges)' : 'stries');
   if(s.organique) parts.push('organique');
+  if(s.martele)   parts.push('martelé');
   if(s.ajour)     parts.push('ajouré Voronoï');
   return parts.join(' + ');
 }
@@ -1597,6 +1587,7 @@ function styleStepMm(surf){
   if(surf.base==='lisse') besoins.push(lerp(SURFACE_BASES.lisse));
   if(surf.stries)         besoins.push(lerp(RELIEF_STEP.stries));
   if(surf.organique)      besoins.push(lerp(RELIEF_STEP.organique));
+  if(surf.martele)        besoins.push(lerp(RELIEF_STEP.martele));
   return besoins.length ? Math.min(...besoins) : 0;
 }
 
@@ -1614,10 +1605,12 @@ function angularSegments(surf, chosen){
     // touche pas — l'arrondir à un multiple de 4 transformait un hexagone
     // demandé en octogone. On ne le relève que si une strie ne serait pas
     // résolue, et on le dit alors dans l'interface.
-    return Math.max(3, Math.max(chosen|0, surf.stries ? surf.strieCount*6 : 0));
+    return Math.max(3, Math.max(chosen|0, surf.stries ? surf.strieCount*6 : 0,
+                                surf.martele ? surf.martCount*5 : 0));
   }
   let seg = Math.round(L.segMin + (L.segMax - L.segMin)*t);
-  if(surf.stries) seg = Math.max(seg, surf.strieCount*6);   // résoudre chaque strie
+  if(surf.stries)  seg = Math.max(seg, surf.strieCount*6);   // résoudre chaque strie
+  if(surf.martele) seg = Math.max(seg, surf.martCount*5);    // ~5 segments par facette
   return Math.min(320, Math.ceil(seg/4)*4);
 }
 
@@ -2412,6 +2405,57 @@ function surfaceDisplacement(surf, theta, h){
           + 0.30*Math.sin(5*theta - 1.1*k*h + 1.2)
           + 0.25*Math.sin(2*theta + 0.6*k*h + 2.4));
   }
+  if(surf.martele){
+    /* MARTELÉ : des FACETTES quasi planes qui se partagent la surface et se
+     * rejoignent par une arête vive, comme un métal battu au marteau (photo de
+     * référence Baptiste, 06/08). Une graine jitterée par cellule d'une grille
+     * (tour × hauteur) ; chaque graine porte une plaque, et en un point le
+     * relief est le MAX des plaques voisines (3×3) — l'enveloppe supérieure de
+     * deux plaques voisines creuse un SILLON net, c'est lui qui dessine le
+     * réseau de polygones.
+     * ⚠️ Une calotte parabolique (1 − r²) donne des BOSSES rondes, pas des
+     * facettes : la courbure est étalée partout. Profil en 1 − (r/R)⁴ → le
+     * sommet est PLAT sur les deux tiers de la cellule et toute la pente est
+     * reportée au bord, donc la facette lit plane et l'arête lit vive.
+     * Déterministe (hachage sinusoïdal des indices) et bouclé sur le tour :
+     * la cellule n rejoint la cellule 0 sans couture. */
+    const n   = Math.max(6, surf.martCount|0);
+    const ch  = Math.max(4, surf.martHMm||12);
+    const amp = surf.martDepthMm||0;
+    const u = (theta/(2*Math.PI))*n, v = h/ch;
+    const iu = Math.floor(u), iv = Math.floor(v);
+    let best = -1e9;
+    for(let a2=-1;a2<=1;a2++) for(let b2=-1;b2<=1;b2++){
+      const ci = iu+a2, cj = iv+b2;
+      const cw = ((ci % n)+n)%n;                  // tour bouclé : pas de couture
+      const f = (a,b)=>{ const s=Math.sin(cw*a + cj*b)*43758.5453; return s - Math.floor(s); };
+      const du = u - (ci + 0.5 + 0.90*(f(127.1,311.7) - 0.5));
+      const dv = v - (cj + 0.5 + 0.90*(f(269.5,183.3) - 0.5));
+      /* Pente propre à la facette — c'est ELLE qui fait lire le martelage.
+       * Des facettes plates mais toutes parallèles renvoient la lumière de la
+       * même façon : on ne voit rien. Amplitude choisie pour que l'inclinaison
+       * approche 2·relief/largeur de facette, la pente qu'aurait un vrai coup
+       * de marteau (mesuré ensuite : 9,9° d'écart moyen entre voisines). */
+      const gx = (f(419.2,371.9) - 0.5)*2.8;
+      const gy = (f(53.7,241.3)  - 0.5)*2.8;
+      /* Le terme quadratique arbitre la FORME des cellules, la pente arbitre
+       * leur PLATITUDE — les deux tirent en sens inverse et le réglage se joue
+       * sur leur rapport (banc : six variantes rendues sous Blender, cf.
+       * scratchpad/sweep.mjs). Trop faible (0,22) les cellules s'alignent sur
+       * la grille et le relief lit « briques » ; trop fort (0,95) chaque
+       * facette se bombe et on retombe sur des bosses molles. 2,8 / 0,7 tient
+       * les deux : polygones irréguliers ET facettes planes à arête vive. */
+      const val = gx*du + gy*dv - 0.70*(du*du + dv*dv);
+      if(val > best) best = val;
+    }
+    /* Normalisation MESURÉE sur 100 000 échantillons (1er et 98e centile du
+     * champ brut) : le curseur « relief » est donc bien le creux-à-crête
+     * courant, en millimètres. Les rares points triples plongent plus bas —
+     * ils sont écrêtés, comme l'enclume aplatit le fond d'un martelage. */
+    let x = (best + MART_P1) / MART_ETENDUE;
+    if(x < -0.30) x = -0.30;
+    d += amp * x;
+  }
   return d * fondu;
 }
 
@@ -3134,8 +3178,10 @@ function segFor(bi, mode){
   // garde la pleine résolution, et l'écart est affiché sous l'aperçu
   if(mode==='draft')   return Math.min(seg, 36);
   // un relief a besoin de plus de segments à l'écran, sinon il moutonne ;
-  // l'ébauche du geste reste légère, la passe de qualité est un tir unique
-  return (mode==='preview') ? Math.min(seg, hasRelief(surf) ? 110 : 76) : seg;
+  // l'ébauche du geste reste légère, la passe de qualité est un tir unique.
+  // 144 depuis que bague et base sont des substituts ~500 tris : le budget
+  // qu'elles rendent paie la pleine résolution du relief (« plus smooth »).
+  return (mode==='preview') ? Math.min(seg, hasRelief(surf) ? 144 : 76) : seg;
 }
 // Pas vertical effectif : le plus fin des trois besoins (style, torsion, ajourage).
 // En mode aperçu on plafonne la finesse des styles continus — invisible sur un
@@ -3151,7 +3197,7 @@ function effectiveStepMm(bi, surf, mode){
   }
   const pos = cand.filter(x=>x>0);
   let step = pos.length ? Math.min(...pos) : 0;
-  if(mode==='preview' && step>0) step = Math.max(step, perf ? 2.2 : 1.4);
+  if(mode==='preview' && step>0) step = Math.max(step, perf ? 2.2 : 1.1);
   /* L'ébauche n'existe QUE pendant le geste : 5 mm d'anneau et 36 segments
    * suffisent à juger la silhouette, et le budget passe sous ~6 000 triangles
    * — mesuré : 105 ms → ~35 ms par image. La passe de qualité repasse 170 ms
@@ -3326,9 +3372,9 @@ function buildParts(segList, mode){
         // l'aperçu comme dans l'export, aucune reconstruction
         MESH.bague = { diaExtMm: 115.5, hautMm: 10, reelle: true, nTri: BASE_KIT.nTri, volMm3: BASE_KIT.volMm3 };
         meshes[0] = meshes[0].concat(
-          mode === 'export' ? trianglesBaseKit()
-          : mode === 'draft' ? bagueProxy()
-          : bagueAffichage());
+          // l'export reçoit la VRAIE bague V2 ; l'écran (brouillon ET qualité)
+          // reçoit le substitut fermé — cf. le commentaire de bagueProxy()
+          mode === 'export' ? trianglesBaseKit() : bagueProxy());
       } else {
         // secours si le décodage échoue : reconstruction paramétrique, avec
         // avertissement (renderPoser) — ne pas lancer de série avec ça
@@ -3450,10 +3496,11 @@ function rebuildMesh(){
   if(bagueActive()){
     const dt = trianglesDeco();
     if(dt.length){
-      const deco = { tris: subdiviserAffichage(dt, 8), decor:true, label:'base (visuel seulement)', body:0,
-                     // 0,5 mm plus bas : son plat supérieur (z=0) était coplanaire
-                     // avec le dessous de la bague — même transparence qu'ailleurs
-                     xf:{tx:0,ty:0,tz:-0.5,rot:0,scale:1}, perfore:false, socle:false,
+      // substitut fermé aussi en qualité — la vraie base part au rendu Blender,
+      // jamais à l'écran (cf. bagueProxy : le peintre ne sait pas trier ses
+      // nervures internes derrière le pied)
+      const deco = { tris: decoProxy(), decor:true, label:'base (visuel seulement)', body:0,
+                     xf:{tx:0,ty:0,tz:0,rot:0,scale:1}, perfore:false, socle:false,
                      bague:false, platine:false };
       MESH.preview = [...MESH.preview, deco];
     }
@@ -3592,7 +3639,14 @@ function drawPreview(hq){
     const rotA = (part.xf.rot||0)*Math.PI/180, rc=Math.cos(rotA), rs=Math.sin(rotA);
     // low poly assumé = ombrage plat ; tout le reste = normales lissées
     const lisse = isSmoothMesh(bodySurface(part.body||0));
-    const VN = lisse ? smoothNormals(part, 42) : null;
+    /* Seuil d'arête vive : le test compare la normale MOYENNÉE à celle de la
+     * face, donc le seuil vaut la MOITIÉ du pli conservé — 42° ne garde net
+     * qu'un pli de plus de 84°, et les sillons d'un martelage (mesurés : 10°
+     * de pli médian entre facettes voisines) partaient en bouillie. Sur une
+     * surface martelée on descend à 3,5° : le pas du maillage (2,5° entre
+     * segments, soit 1,25° au test) reste lissé, mais les sillons tranchent.
+     * C'est ce qui fait lire des facettes plates au lieu de bosses molles. */
+    const VN = lisse ? smoothNormals(part, bodySurface(part.body||0).martele ? 3.5 : 42) : null;
     const FN = VN ? part.__fn : null;
     // éclairement d'une normale, dans le repère de la vue
     const ecl = (nx,ny,nz)=>{
@@ -4682,6 +4736,14 @@ function renderSurface(){
       addSlider("Échelle du relief",'orgPitchMm',20,120,1,v=>v.toFixed(0)+' mm');
     });
 
+  addCouche('martele', 'Martelé — facettes bombées',
+    "Comme un métal travaillé au marteau : des calottes bombées se partagent la surface en facettes irrégulières. Le relief est dans la pièce imprimée, pas seulement à l'écran.",
+    ()=>{
+      addSlider('Facettes sur le tour','martCount',8,40,1,v=>v);
+      addSlider('Hauteur des facettes','martHMm',6,30,1,v=>v.toFixed(0)+' mm');
+      addSlider('Bombé','martDepthMm',0.3,3,0.1,v=>v.toFixed(1)+' mm');
+    });
+
   addCouche('ajour', 'Ajourage Voronoï — vrais trous traversants',
     "La paroi ne garde que les nervures du diagramme de Voronoï. Bandes pleines imposées en haut (culot) et en bas (appui), avec un fondu progressif. C'est ce qui économise le plus de matière.",
     ()=>{
@@ -5469,6 +5531,9 @@ function buildDossier(){
       pas_losanges_mm: (state.surface.stries && state.surface.cross) ? state.surface.pitchMm : null,
       organique_amplitude_mm: state.surface.organique ? state.surface.orgAmpMm : null,
       organique_echelle_mm: state.surface.organique ? state.surface.orgPitchMm : null,
+      martele_facettes_tour: state.surface.martele ? state.surface.martCount : null,
+      martele_hauteur_facette_mm: state.surface.martele ? state.surface.martHMm : null,
+      martele_bombe_mm: state.surface.martele ? state.surface.martDepthMm : null,
       segments_angulaires: MESH.stats.segExport,
       note: "Le relief est appliqué à l'identique sur les faces intérieure et extérieure : l'épaisseur de paroi reste constante.",
     },

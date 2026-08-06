@@ -331,8 +331,9 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     <div class="warnbox" id="compoBox"></div>
   </div>
 
-  <!-- 6. CULOT -->
-  <div class="card" style="margin-top:16px">
+  <!-- 6. CULOT — carte masquée (06/08) : une seule connexion possible (module USB 5 V),
+       tout est imposé par l'atelier, rien à choisir. La mécanique JS reste active derrière. -->
+  <div class="card" style="margin-top:16px;display:none">
     <h2><span class="n">7</span>Connexion électrique — liste fermée, 5 V seulement</h2>
     <div id="socketList"></div>
     <div class="warnbox" id="connexionBox"></div>
@@ -395,10 +396,10 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     à l'atelier ou du standard commercial publié, et servent uniquement à borner le rayon mini du point de fixation du profil.</div>
   </div>
 
-  <!-- 7/8. EXPERT + DECOUPE EN MODULES -->
-  <div class="grid" style="margin-top:16px">
+  <!-- 7/8. EXPERT + DECOUPE EN MODULES (découpe masquée 06/08 → pleine largeur) -->
+  <div class="grid full" style="margin-top:16px">
     <div class="card">
-      <h2><span class="n">8</span>Option expert — paramètres par corps</h2>
+      <h2><span class="n">7</span>Option expert — paramètres par corps</h2>
       <label class="socket-opt" id="expertRow">
         <input type="checkbox" id="expertOn">
         <div><div class="t">Mode expert</div>
@@ -410,7 +411,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
       <div id="expertParams"></div>
     </div>
 
-    <div class="card">
+    <div class="card" style="display:none">
       <h2><span class="n">9</span>Découpe en modules imprimés (option multi-pièces)</h2>
       <label class="socket-opt" id="splitToggleRow">
         <input type="checkbox" id="splitOn">
@@ -439,7 +440,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
   <!-- 9. MATIERE -->
   <div class="grid" style="margin-top:16px">
     <div class="card">
-      <h2><span class="n">10</span>Matière &amp; paroi</h2>
+      <h2><span class="n">8</span>Matière &amp; paroi</h2>
       <div class="field">
         <label>Matériau</label>
         <select id="material">
@@ -466,7 +467,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     </div>
 
     <div class="card">
-      <h2><span class="n">11</span>Prix estimé</h2>
+      <h2><span class="n">9</span>Prix estimé</h2>
       <div class="stats">
         <div class="stat"><div class="k">Volume matière</div><div class="v" id="s-vol">—</div></div>
         <div class="stat"><div class="k">Temps impr. estimé</div><div class="v" id="s-time">—</div></div>
@@ -482,7 +483,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
 
   <!-- 11. DOSSIER -->
   <div class="card" style="margin-top:16px">
-    <h2><span class="n">12</span>Dossier de fabrication</h2>
+    <h2><span class="n">10</span>Dossier de fabrication</h2>
     <div class="hint">Génère un dossier <b>texte + JSON</b> qui résume la configuration (dimensions, matière, culot, couleur, prix estimé).
     C'est un dossier de commande/specs à transmettre à l'atelier pour fabrication.</div>
     <div class="row-btn">
@@ -518,7 +519,7 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
 
   <!-- 12. COMMANDE -->
   <div class="card" style="margin-top:16px">
-    <h2><span class="n">13</span>Commande</h2>
+    <h2><span class="n">11</span>Commande</h2>
     <div class="hint">Prépare un email récapitulatif vers <b>contact@deligny-rd.fr</b>. <b>Aucun paiement n'est effectué ici</b> — c'est ton
     client mail qui s'ouvre avec le message pré-rempli, à toi de l'envoyer. Joins manuellement le dossier JSON téléchargé ci-dessus si besoin
     (un lien mailto ne peut pas joindre de fichier automatiquement).</div>

@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-8oVWbCBjzoAEhBARfifzqU0M0kl8GGvaGwlXxU0Ow7I='; style-src-attr 'unsafe-inline'; script-src 'sha256-e8sTd64EMkX8U3wU+2JXUvQ9yF2vnThxSe8j4LI51AU='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data: https://atlas-studio.pro; style-src-elem 'sha256-8oVWbCBjzoAEhBARfifzqU0M0kl8GGvaGwlXxU0Ow7I='; style-src-attr 'unsafe-inline'; script-src 'sha256-qIl0wyBy3WtyjkKo2/BL5f0niEQft6zsjnefgOstZ88='; connect-src 'self' http://127.0.0.1:4555 http://localhost:4555">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Custom 3D Lamp Studio — configurateur de lampe imprimée sur mesure</title>
 <meta name="description" content="Configure une lampe imprimée 3D sur mesure (suspension, à poser, applique) : profil paramétrique, culot électrique standard, prix automatique, dossier de fabrication. Un outil DELIGNY R&D.">
@@ -508,7 +508,12 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
     du haut est déjà borné par le culot choisi, mais le perçage/évidement réel du logement est fait par le professionnel qui assemble.
     En <b>option multi-pièces</b> (4d), un fichier est exporté <b>par module</b>, collier d'emboîtement compris.</div>
     <div class="row-btn" style="align-items:center">
-      <label style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">Facettes (style « Facetté » uniquement)
+      <!-- Le nombre de facettes est un choix ESTHÉTIQUE et ne concerne que le
+           style Facetté : sur une surface lisse il ne pilotait rien, alors qu'il
+           trônait à côté du bouton d'export et se lisait comme LE réglage de
+           qualité. Il est donc masqué hors du style Facetté, et la finesse du
+           maillage a son propre sélecteur, actif quel que soit le style. -->
+      <label id="facetteRow" style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">Facettes du style « Facetté »
         <select id="stlSegments" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
           <option value="5">5 — très anguleux</option>
           <option value="6">6 — hexagonal</option>
@@ -520,8 +525,18 @@ footer .disc{max-width:680px;margin:0 auto 10px;}
           <option value="40">40 — presque lisse</option>
         </select>
       </label>
+      <label style="font-size:12.5px;color:var(--dim2);display:flex;align-items:center;gap:6px">Finesse du maillage exporté
+        <select id="stlQualite" style="background:var(--card2);border:1px solid var(--sep);border-radius:8px;color:var(--txt);padding:6px 8px;font:600 12.5px var(--font)">
+          <option value="0.5">÷2 — fichier léger</option>
+          <option value="1" selected>standard</option>
+          <option value="1.5">×1,5 — fin</option>
+          <option value="2">×2 — très fin</option>
+        </select>
+      </label>
       <button class="btn pri" id="exportStl">⬇ Export STL (maillage 3D imprimable)</button>
     </div>
+    <!-- ce que pèsera le fichier, AVANT de cliquer : à ×2 on passe de 9 à 35 Mo -->
+    <div class="hint" id="stlPrevu" style="margin-top:8px"></div>
     <div class="hint" id="stlInfo" style="margin-top:8px"></div>
   </div>
 
@@ -1601,6 +1616,16 @@ function styleStepMm(surf){
   return besoins.length ? Math.min(...besoins) : 0;
 }
 
+/* FINESSE DU MAILLAGE EXPORTÉ — multiplie la résolution de la pièce livrée.
+ * Le sélecteur voisin (« facettes ») est un choix ESTHÉTIQUE qui ne concerne
+ * que le style Facetté : sur une surface lisse il ne changeait rien, alors
+ * qu'il se lisait comme le réglage de qualité. Celui-ci agit sur tous les
+ * styles — segments du tour ET pas des anneaux — et n'existe que pour
+ * l'export : l'aperçu garde son propre plafond, sinon il s'écroule. */
+function qualiteMaillage(){
+  const v = parseFloat(($('stlQualite')||{}).value);
+  return (v>0 && v<=2) ? v : 1;
+}
 // Résolution angulaire réellement utilisée : les stries fines et les surfaces
 // lisses exigent plus de segments que le réglage « facetté » du client.
 function angularSegments(surf, chosen){
@@ -1608,20 +1633,22 @@ function angularSegments(surf, chosen){
   if(!isSmoothMesh(surf)) return Math.max(3, chosen|0);
   const t = Math.max(0, Math.min(1, (surf.smoothing==null?45:surf.smoothing)/100));
   const L = SURFACE_BASES.lisse;
+  const q = qualiteMaillage();
   // une base facettée garde SES facettes même sous un relief : on ne monte la
   // résolution angulaire que si la base est lisse
   if(surf.base !== 'lisse'){
     // Base facettée : le nombre de facettes est un CHOIX esthétique, on n'y
     // touche pas — l'arrondir à un multiple de 4 transformait un hexagone
-    // demandé en octogone. On ne le relève que si une strie ne serait pas
-    // résolue, et on le dit alors dans l'interface.
-    return Math.max(3, Math.max(chosen|0, surf.stries ? surf.strieCount*6 : 0,
-                                surf.martele ? surf.martCount*5 : 0));
+    // demandé en octogone (et la finesse ne doit pas le gonfler non plus).
+    // On ne le relève que si une strie ne serait pas résolue.
+    return Math.max(3, Math.max(chosen|0,
+      surf.stries  ? Math.round(surf.strieCount*6*q) : 0,
+      surf.martele ? Math.round(surf.martCount*5*q)  : 0));
   }
-  let seg = Math.round(L.segMin + (L.segMax - L.segMin)*t);
-  if(surf.stries)  seg = Math.max(seg, surf.strieCount*12);  // résoudre chaque strie
-  if(surf.martele) seg = Math.max(seg, surf.martCount*10);   // ~10 segments par facette
-  return Math.min(640, Math.ceil(seg/4)*4);
+  let seg = Math.round((L.segMin + (L.segMax - L.segMin)*t) * q);
+  if(surf.stries)  seg = Math.max(seg, Math.round(surf.strieCount*12*q));
+  if(surf.martele) seg = Math.max(seg, Math.round(surf.martCount*10*q));
+  return Math.min(900, Math.max(24, Math.ceil(seg/4)*4));
 }
 
 /* ── AJOURAGE VORONOÏ ─────────────────────────────────────────────────────
@@ -2768,22 +2795,37 @@ function meshCentroid(tris){
   if(Math.abs(vol) < 1e-9) return {x:0,y:0,z:0,vol:0};
   return {x:cx/vol, y:cy/vol, z:cz/vol, vol};
 }
-// Étanchéité : chaque arête orientée doit avoir exactement une jumelle inverse.
-function meshOpenEdges(tris){
+/* Étanchéité : chaque arête orientée doit avoir exactement une jumelle inverse.
+ * Le comptage est INCRÉMENTAL — on alimente un registre commun tranche par
+ * tranche — parce que la passe complète coûte 1,7 s sur 190 000 triangles et
+ * 6,7 s sur 710 000, et qu'elle gelait l'onglet. ⚠️ Découper en comptages
+ * INDÉPENDANTS ne marche pas : chaque coupure inventerait des arêtes de bord.
+ * Un seul registre, plusieurs passages. */
+function edgeLedgerAdd(seen, tris, from, to){
   // `+0` neutralise le zéro négatif : sans lui, -1e-16 s'écrit « -0.000 » et
   // passerait pour un sommet différent de « 0.000 ».
   const q3=v=>((Math.round(v*1000)/1000)+0).toFixed(3);
   const key=(p,q)=>p.map(q3).join(',')+'|'+q.map(q3).join(',');
-  const seen = new Map();
-  for(const [a,b,c] of tris){
-    [[a,b],[b,c],[c,a]].forEach(([p,q])=>{
+  const fin = Math.min(to, tris.length);
+  for(let i=from;i<fin;i++){
+    const [a,b,c] = tris[i];
+    const ar = [[a,b],[b,c],[c,a]];
+    for(let e=0;e<3;e++){
+      const p=ar[e][0], q=ar[e][1];
       const k=key(p,q), rk=key(q,p);
       if(seen.get(rk)) seen.set(rk, seen.get(rk)-1);
       else seen.set(k, (seen.get(k)||0)+1);
-    });
+    }
   }
+}
+function edgeLedgerOpen(seen){
   let open=0; seen.forEach(v=>{ if(v>0) open+=v; });
   return open;
+}
+function meshOpenEdges(tris){
+  const seen = new Map();
+  edgeLedgerAdd(seen, tris, 0, tris.length);
+  return edgeLedgerOpen(seen);
 }
 // Angle de basculement : atan(rayon d'appui / hauteur du centre de gravité).
 function tipAngleDeg(tris, baseRadiusMm, hBottomMm){
@@ -3212,6 +3254,9 @@ function effectiveStepMm(bi, surf, mode){
   }
   const pos = cand.filter(x=>x>0);
   let step = pos.length ? Math.min(...pos) : 0;
+  // Finesse demandée pour la PIÈCE : anneaux resserrés d'autant (l'aperçu et
+  // l'ébauche gardent leurs planchers, imposés juste en dessous).
+  if(step > 0) step /= qualiteMaillage();
   /* Plancher d'aperçu : la finesse des anneaux a doublé côté PIÈCE (07/08), et
    * la reprendre telle quelle à l'écran faisait passer la passe de qualité de
    * 0,26 s à 1,4 s — pour des anneaux déjà sous le pixel. L'aperçu garde donc
@@ -4680,6 +4725,9 @@ function renderPresets(){
 function renderSurface(){
   const seg = $('surface-seg'); if(!seg) return;
   const s = bodySurfaceForEdit();
+  // le compte de facettes ne veut rien dire hors du style Facetté : on le cache
+  const fr = $('facetteRow');
+  if(fr) fr.style.display = (s.base === 'facette') ? '' : 'none';
 
   // Lien entre corps : visible seulement s'il y a plusieurs corps
   const linkBox = $('linkRow');
@@ -5148,11 +5196,22 @@ function renderSplit(){
 }
 
 /* ── Vérifications sur le maillage exporté ───────────────────────────── */
-let checkTimer=null;
+let checkTimer=null, CHECK_JETON=0;
 function renderChecks(){
   const box=$('checksbox'); if(!box) return;
   const s=MESH.stats, pr=state.profile, lines=[];
   if(!pr.length) return;
+  // Poids annoncé AVANT de cliquer : à finesse ×2 le fichier passe de 9 à 35 Mo,
+  // et c'est le genre de surprise qu'on doit à son client d'éviter.
+  const prevu = $('stlPrevu');
+  if(prevu){
+    const mo = (s.tris*50 + 84*MESH.parts.length) / (1024*1024);
+    const q = qualiteMaillage();
+    prevu.innerHTML = `À l'export : <b>${s.tris.toLocaleString('fr')}</b> triangles · <b>${mo.toFixed(1)} Mo</b> · `
+      + `${s.segExport} segments sur le tour`
+      + (q !== 1 ? ` · finesse <b>${q === 0.5 ? '÷2' : '×'+String(q).replace('.',',')}</b>` : '')
+      + (mo > 20 ? ` — <span style="color:var(--amber)">fichier lourd : le trancheur mettra un moment à l'ouvrir</span>` : '');
+  }
   lines.push(['ok', `Maillage exporté : ${s.tris} triangles · ${(s.volMm3/1000).toFixed(1)} cm³ de matière · ${MESH.parts.length>1?MESH.parts.length+' pièces à imprimer':'1 pièce'} · paroi ${state.wall} mm`]);
   /* Îlots de départ — c'est ce que Bambu Studio appelle « floating regions ».
    * On le dit AVANT le tranchage, avec un chiffre, plutôt que de laisser le
@@ -5218,10 +5277,40 @@ function renderChecks(){
   box.innerHTML='';
   lines.forEach(([cl,t])=>{ const d=document.createElement('div'); d.className='line '+cl; d.textContent=t; box.appendChild(d); });
   if(s.openEdges===null){
+    /* ⚠️ Cette vérification est en O(triangles) avec des clés texte : mesurée à
+     * 1,7 s sur 190 000 triangles et 6,7 s sur 710 000 (finesse ×2). Elle
+     * tournait d'un bloc dans un setTimeout — donc l'onglet GELAIT plusieurs
+     * secondes après chaque modification. On la découpe en tranches de
+     * 40 000 triangles rendues à la boucle d'affichage entre chacune : le
+     * résultat est le même, à la milliseconde près, mais l'interface répond. */
     clearTimeout(checkTimer);
     checkTimer = setTimeout(()=>{
-      MESH.stats.openEdges = MESH.parts.reduce((a,p)=>a+meshOpenEdges(p.tris), 0);
-      renderChecks(); renderHud();
+      const jeton = ++CHECK_JETON;               // une modification annule la passe en cours
+      const parts = MESH.parts;
+      let ip = 0, it = 0, ouvertes = 0, seen = new Map();
+      const suite = ()=>{
+        if(jeton !== CHECK_JETON) return;         // périmée : une autre passe a démarré
+        /* Budget par tranche : 20 ms quand quelqu'un regarde (l'interface doit
+         * répondre), sans limite quand l'onglet est masqué — là il n'y a
+         * personne à gêner, et les minuteurs y sont bridés à ~1 s : découper
+         * en 300 tranches ferait durer la vérification plusieurs MINUTES. */
+        const budget = document.hidden ? Infinity : 20;
+        const t0 = performance.now();
+        while(ip < parts.length && performance.now()-t0 < budget){
+          const tris = parts[ip].tris;
+          edgeLedgerAdd(seen, tris, it, it+20000);
+          it += 20000;
+          if(it >= tris.length){ ouvertes += edgeLedgerOpen(seen); seen = new Map(); ip++; it = 0; }
+        }
+        /* ⚠️ setTimeout et pas requestAnimationFrame : dans un onglet en
+         * arrière-plan rAF ne se déclenche PAS, et la vérification restait
+         * bloquée sur « en cours… » pour toujours. Un minuteur, lui, tourne
+         * toujours — au ralenti, mais il tourne. */
+        if(ip < parts.length){ setTimeout(suite, 0); return; }
+        MESH.stats.openEdges = ouvertes;
+        renderChecks(); renderHud();
+      };
+      suite();
     }, 120);
   }
 }
@@ -5725,6 +5814,14 @@ function trianglesToSTLBinaryAvecBase(tris, label, avecBase){
   }
   return buf;
 }
+
+/* ⚠️ Ces deux sélecteurs n'avaient AUCUN écouteur (07/08) : on changeait le
+ * réglage, rien ne se reconstruisait — ni l'aperçu, ni le maillage exporté,
+ * puisque l'export livre MESH.parts tel quel. « La qualité ne change pas »,
+ * et pour cause. Toute commande qui entre dans la géométrie doit déclencher
+ * une reconstruction, sans exception. */
+$('stlSegments').onchange = ()=>renderAll();
+$('stlQualite').onchange  = ()=>renderAll();
 
 $('exportStl').onclick=()=>{
   if(!MESH.parts.length){ alert('Profil insuffisant pour générer un maillage (minimum 2 points).'); return; }
